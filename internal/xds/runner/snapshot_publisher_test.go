@@ -7,7 +7,9 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"math/rand/v2"
 	"testing"
 	"time"
 
@@ -96,52 +98,113 @@ func publishedRevision(p *snapshotPublisher) uint64 {
 	return p.publishedEndpoints.get(testSnapshotKey).Endpoints["orders"]["backend"].Source.Revision
 }
 
+// publishedAddresses returns the addresses in the published orders assignment.
+func publishedAddresses(p *snapshotPublisher) []string {
+	var addresses []string
+	for _, host := range assignmentOf(p.snapshots[testSnapshotKey]).Endpoints[0].LbEndpoints {
+		addresses = append(addresses, host.GetEndpoint().Address.GetSocketAddress().Address)
+	}
+	return addresses
+}
+
 func assignmentOf(snapshot *cachev3.Snapshot) *endpointv3.ClusterLoadAssignment {
 	return snapshot.Resources[cachetypes.Endpoint].Items["orders"].Resource.(*endpointv3.ClusterLoadAssignment)
 }
 
-func TestPublisherBothEndpointArrivalOrders(t *testing.T) {
-	t.Run("fast before full", func(t *testing.T) {
-		p, _ := testPublisher(t)
-		applyFull(p, fullEndpointResult(t, 1, "10.0.0.1", 1))
-		p.endpointUpdates.Add(endpointUpdate(2, "10.0.0.2"))
-		p.processEndpointUpdates()
-		require.Equal(t, uint64(2), publishedRevision(p))
-		applyFull(p, fullEndpointResult(t, 1, "10.0.0.1", 3))
-		require.Equal(t, uint64(2), publishedRevision(p))
-		assignment := assignmentOf(p.snapshots[testSnapshotKey])
-		require.Equal(t, uint32(3), assignment.Endpoints[0].LoadBalancingWeight.Value)
-		require.Equal(t, "10.0.0.2", assignment.Endpoints[0].LbEndpoints[0].GetEndpoint().Address.GetSocketAddress().Address)
-	})
-	t.Run("full before fast", func(t *testing.T) {
-		p, installed := testPublisher(t)
-		applyFull(p, fullEndpointResult(t, 7, "10.0.0.7", 3))
-		for _, revision := range []uint64{6, 7} {
-			p.endpointUpdates.Add(endpointUpdate(revision, "10.0.0.1"))
-			p.processEndpointUpdates()
-		}
-		require.Len(t, *installed, 1)
-		require.Equal(t, uint64(7), publishedRevision(p))
-		p.endpointUpdates.Add(endpointUpdate(8, "10.0.0.8"))
-		p.processEndpointUpdates()
-		require.Equal(t, uint64(8), publishedRevision(p))
-		require.Equal(t, uint32(3), assignmentOf(p.snapshots[testSnapshotKey]).Endpoints[0].LoadBalancingWeight.Value)
-	})
-}
-
-func TestPublisherUnsafeUpdatesAndFallback(t *testing.T) {
-	p, installed := testPublisher(t)
-	applyFull(p, fullEndpointResult(t, 2, "10.0.0.2", 1))
-	p.endpointUpdates.Add(endpointUpdate(3, ""))
-	p.processEndpointUpdates()
-	require.Len(t, *installed, 1)
-	require.Equal(t, uint64(2), publishedRevision(p))
-	p.endpointUpdates.Add(endpointUpdate(4, "10.0.0.4"))
-	p.processEndpointUpdates()
-	require.Equal(t, uint64(4), publishedRevision(p))
-	applyFull(p, fullEndpointResult(t, 3, "", 1))
-	require.Equal(t, uint64(3), publishedRevision(p), "unsafe replay must record the full result's actual endpoints")
-	require.Empty(t, p.publishedEndpoints.get(testSnapshotKey).Endpoints["orders"]["backend"].Endpoints)
+// TestPublisherConvergesToNewestEndpoints interleaves endpoint changes, config
+// changes, full builds and fast updates in random order. A full result always
+// sets the config, and only an empty transition can roll endpoints back. Once
+// the full path catches up (rule 1), the newest endpoints and config are published.
+func TestPublisherConvergesToNewestEndpoints(t *testing.T) {
+	type state struct {
+		revision uint64
+		address  string
+		weight   uint32
+	}
+	for seed := range uint64(500) {
+		t.Run(fmt.Sprintf("seed-%d", seed), func(t *testing.T) {
+			rng := rand.New(rand.NewPCG(seed, 0))
+			p, _ := testPublisher(t)
+			current := state{revision: 1, address: "10.0.0.1", weight: 1}
+			applyFull(p, fullEndpointResult(t, current.revision, current.address, current.weight))
+			hasHosts := func() bool {
+				return len(p.publishedEndpoints.get(testSnapshotKey).Endpoints["orders"]["backend"].Endpoints) > 0
+			}
+			// The recorded endpoints must be the ones in the published snapshot.
+			requireRecorded := func() {
+				var recorded []string
+				for _, e := range p.publishedEndpoints.get(testSnapshotKey).Endpoints["orders"]["backend"].Endpoints {
+					recorded = append(recorded, e.Host)
+				}
+				require.Equal(t, recorded, publishedAddresses(p))
+			}
+			// builds holds full builds that read Kubernetes but haven't published yet,
+			// and fast holds the endpoint controller's updates not yet sent, both oldest first.
+			var builds []state
+			var fast []*endpoint.BackendEndpoints
+			sendFast := func() {
+				n := 1 + rng.IntN(len(fast))
+				for _, update := range fast[:n] {
+					p.endpointUpdates.Add(update)
+				}
+				fast = fast[n:]
+				before := publishedRevision(p)
+				p.processEndpointUpdates()
+				require.GreaterOrEqual(t, publishedRevision(p), before, "a fast update rolled endpoints back")
+				requireRecorded()
+			}
+			finishBuild := func() {
+				build := builds[0]
+				builds = builds[1:]
+				before, hadHosts := publishedRevision(p), hasHosts()
+				applyFull(p, fullEndpointResult(t, build.revision, build.address, build.weight))
+				require.Equal(t, build.weight, assignmentOf(p.snapshots[testSnapshotKey]).Endpoints[0].LoadBalancingWeight.Value)
+				if hadHosts && build.address != "" {
+					require.GreaterOrEqual(t, publishedRevision(p), before, "a full result rolled endpoints back")
+				}
+				requireRecorded()
+			}
+			for range 30 {
+				switch rng.IntN(5) {
+				case 0: // The Service's endpoints change, sometimes to none.
+					current.revision++
+					current.address = ""
+					if rng.IntN(5) != 0 {
+						current.address = fmt.Sprintf("10.0.0.%d", current.revision)
+					}
+					fast = append(fast, endpointUpdate(current.revision, current.address))
+				case 1: // A config change only the full path sees.
+					current.weight++
+				case 2:
+					builds = append(builds, current)
+				case 3:
+					if len(builds) > 0 {
+						finishBuild()
+					}
+				case 4:
+					if len(fast) > 0 {
+						sendFast()
+					}
+				}
+			}
+			// Rule 1: a full build always follows the last change.
+			builds = append(builds, current)
+			for len(builds) > 0 || len(fast) > 0 {
+				if len(fast) > 0 && (len(builds) == 0 || rng.IntN(2) == 0) {
+					sendFast()
+				} else {
+					finishBuild()
+				}
+			}
+			require.Equal(t, current.revision, publishedRevision(p))
+			require.Equal(t, current.weight, assignmentOf(p.snapshots[testSnapshotKey]).Endpoints[0].LoadBalancingWeight.Value)
+			if current.address == "" {
+				require.Empty(t, publishedAddresses(p))
+			} else {
+				require.Equal(t, []string{current.address}, publishedAddresses(p))
+			}
+		})
+	}
 }
 
 func TestPublisherTracksEachConsumerSeparately(t *testing.T) {
