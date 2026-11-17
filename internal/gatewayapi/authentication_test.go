@@ -101,7 +101,10 @@ func TestValidateAuthentication(t *testing.T) {
 		{name: "forwarded username", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.BasicAuth.ForwardUsernameHeader = new("x-user") }, wantErr: "forwardUsernameHeader"},
 		{name: "jwt fail open", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.FailOpen = new(true) }, wantErr: "jwt.failOpen"},
 		{name: "jwt route recomputation", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers[0].RecomputeRoute = new(true) }, wantErr: "recomputeRoute on JWT provider"},
-		{name: "reserved jwt provider name", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers[0].Name = "authentication-any" }, wantErr: "reserves the JWT provider name"},
+		{name: "reserved jwt provider name", change: func(policy *egv1a1.SecurityPolicy) {
+			policy.Spec.JWT.Providers[0].Name = "default/test/authentication-any"
+		}, wantErr: `reserves JWT provider names ending in "/authentication-any"`},
+		{name: "jwt provider name authentication-any", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers[0].Name = "authentication-any" }},
 		{
 			name: "authorization extractor without prefix",
 			change: func(policy *egv1a1.SecurityPolicy) {

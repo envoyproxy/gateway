@@ -96,8 +96,8 @@ does not support:
 - A JWT header extractor on the `Authorization` header with a `valuePrefix` other than
   `Bearer `. JWT authentication would read Basic credentials as an invalid token and
   reject the request.
-- A JWT provider named `authentication-any`, which Envoy Gateway uses to record a
-  verified token.
+- A JWT provider name ending in `/authentication-any`. Envoy Gateway records a verified
+  token under a name with that suffix.
 - `basicAuth.forwardUsernameHeader`. Envoy's Basic authentication filter leaves that
   header untouched when it lets a request through without Basic credentials, so a client
   authenticated by JWT could set it to any username

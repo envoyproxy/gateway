@@ -1438,12 +1438,6 @@ func (b *TrafficFeatures) Validate() error {
 	return errs
 }
 
-// AuthenticationAnyJWTMetadataKey is the jwt_authn dynamic metadata key under
-// which a JWT provider of an AuthenticationAny route records a verified token.
-// It does not depend on the provider name, so the authentication gate keeps
-// matching on connections whose listener still carries a renamed provider.
-const AuthenticationAnyJWTMetadataKey = "authentication-any"
-
 // SecurityFeatures holds the information associated with the Security Policy.
 // +k8s:deepcopy-gen=true
 type SecurityFeatures struct {

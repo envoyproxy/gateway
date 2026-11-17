@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -140,7 +141,10 @@ func buildJWTRequirements(jwt *ir.JWT, authenticationAny bool) (map[string]*jwta
 		}
 
 		if authenticationAny {
-			jwtProvider.HeaderInMetadata = ir.AuthenticationAnyJWTMetadataKey
+			if irProvider.Name == jwt.Name {
+				return nil, nil, fmt.Errorf("jwt provider name %q is the name of its JWT requirement", irProvider.Name)
+			}
+			jwtProvider.HeaderInMetadata = authenticationAnyJWTMetadataKey(jwt)
 		}
 
 		providerKey, err := jwtProviderName(irProvider.Name, jwtProvider)

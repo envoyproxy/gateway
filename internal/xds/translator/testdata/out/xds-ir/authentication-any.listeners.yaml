@@ -38,6 +38,14 @@
             emitDynamicMetadata: true
             users:
               inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+        - disabled: true
+          name: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-4/authentication-any
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuth
+            allowMissing: true
+            emitDynamicMetadata: true
+            users:
+              inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
         - name: envoy.filters.http.oauth2
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
@@ -45,11 +53,11 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              example_405c7d280ba5c005:
+              example_07800a5f216aca12:
                 audiences:
                 - foo.com
                 forward: true
-                headerInMetadata: authentication-any
+                headerInMetadata: default/policy-for-http-route-4/authentication-any
                 issuer: https://www.example.com
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
@@ -63,11 +71,29 @@
                     cluster: localhost_443
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
-              other_cb3f67a0bccff139:
+              example_c06ddb1b0ad448b4:
                 audiences:
                 - foo.com
                 forward: true
-                headerInMetadata: authentication-any
+                headerInMetadata: default/policy-for-http-route-1/authentication-any
+                issuer: https://www.example.com
+                normalizePayloadInMetadata:
+                  spaceDelimitedClaims:
+                  - scope
+                  - scp
+                payloadInMetadata: example
+                remoteJwks:
+                  asyncFetch: {}
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 10s
+                    uri: https://localhost/jwt/public-key/jwks.json
+              other_37a47c143b18b0cc:
+                audiences:
+                - foo.com
+                forward: true
+                headerInMetadata: default/policy-for-http-route-1/authentication-any
                 issuer: https://other.example.com
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
@@ -85,8 +111,13 @@
               default/policy-for-http-route-1/authentication-any:
                 requiresAny:
                   requirements:
-                  - providerName: example_405c7d280ba5c005
-                  - providerName: other_cb3f67a0bccff139
+                  - providerName: example_c06ddb1b0ad448b4
+                  - providerName: other_37a47c143b18b0cc
+                  - allowMissing: {}
+              default/policy-for-http-route-4/authentication-any:
+                requiresAny:
+                  requirements:
+                  - providerName: example_07800a5f216aca12
                   - allowMissing: {}
         - disabled: true
           name: envoy.filters.http.rbac/authentication-any

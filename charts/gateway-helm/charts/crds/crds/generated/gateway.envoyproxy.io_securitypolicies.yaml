@@ -192,8 +192,8 @@ spec:
                       the Authorization header or on a header a JWT provider reads,
                       extAuth.recomputeRoute, jwt.failOpen, JWT route recomputation or
                       basicAuth.forwardUsernameHeader. A JWT header extractor on the
-                      Authorization header must use the valuePrefix "Bearer ", and the JWT
-                      provider name authentication-any is reserved.
+                      Authorization header must use the valuePrefix "Bearer ", and JWT provider
+                      names ending in /authentication-any are reserved.
                     items:
                       description: AuthenticationMethod names an authentication method
                         of a SecurityPolicy.
@@ -8771,11 +8771,11 @@ spec:
                 ''JWT'' in self.authentication.anyOf && has(self.jwt)) ? ((!has(self.jwt.failOpen)
                 || !self.jwt.failOpen) && self.jwt.providers.all(p, !has(p.recomputeRoute)
                 || !p.recomputeRoute)) : true'
-            - message: authentication.anyOf with JWT reserves the JWT provider name
-                authentication-any
+            - message: authentication.anyOf with JWT reserves JWT provider names ending
+                in /authentication-any
               rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
                 ''JWT'' in self.authentication.anyOf && has(self.jwt)) ? self.jwt.providers.all(p,
-                p.name != ''authentication-any'') : true'
+                !p.name.endsWith(''/authentication-any'')) : true'
             - message: authentication.anyOf with BasicAuth does not support basicAuth.forwardUsernameHeader
               rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
                 ''BasicAuth'' in self.authentication.anyOf && has(self.basicAuth))

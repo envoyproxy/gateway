@@ -87,7 +87,7 @@
                   - metadata:
                       filter: envoy.filters.http.jwt_authn
                       path:
-                      - key: authentication-any
+                      - key: default/policy-for-http-route-1/authentication-any
                       value:
                         presentMatch: true
   - domains:
@@ -117,3 +117,43 @@
         cluster: httproute/default/httproute-3/rule/0
         upgradeConfigs:
         - upgradeType: websocket
+  - domains:
+    - www.qux.com
+    name: default/gateway-1/http/www_qux_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /other-any
+      name: httproute/default/httproute-4/rule/0/match/0/www_qux_com
+      route:
+        cluster: httproute/default/httproute-4/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-4/authentication-any:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuthPerRoute
+          users:
+            inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: default/policy-for-http-route-4/authentication-any
+        envoy.filters.http.rbac/authentication-any:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            rules:
+              policies:
+                authenticated:
+                  permissions:
+                  - any: true
+                  principals:
+                  - metadata:
+                      filter: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-4/authentication-any
+                      path:
+                      - key: username
+                      value:
+                        presentMatch: true
+                  - metadata:
+                      filter: envoy.filters.http.jwt_authn
+                      path:
+                      - key: default/policy-for-http-route-4/authentication-any
+                      value:
+                        presentMatch: true

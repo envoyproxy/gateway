@@ -102,9 +102,19 @@ func authenticationPrincipals(security *ir.SecurityFeatures) []*rbacconfigv3.Pri
 		principals = append(principals, metadataPresentPrincipal(basicAuthFilterName(security.BasicAuth), "username"))
 	}
 	if security.JWT != nil {
-		principals = append(principals, metadataPresentPrincipal(egv1a1.EnvoyFilterJWTAuthn.String(), ir.AuthenticationAnyJWTMetadataKey))
+		principals = append(principals, metadataPresentPrincipal(egv1a1.EnvoyFilterJWTAuthn.String(), authenticationAnyJWTMetadataKey(security.JWT)))
 	}
 	return principals
+}
+
+// authenticationAnyJWTMetadataKey is the jwt_authn dynamic metadata key under
+// which the providers of an AuthenticationAny JWT record a verified token. It is
+// the requirement name: unique to the policy, so a token verified for another
+// policy's route never satisfies this gate after a route recomputation, and
+// independent of provider names, so the gate keeps matching on connections whose
+// listener still carries a renamed provider.
+func authenticationAnyJWTMetadataKey(jwt *ir.JWT) string {
+	return jwt.Name
 }
 
 func metadataPresentPrincipal(namespace, key string) *rbacconfigv3.Principal {
