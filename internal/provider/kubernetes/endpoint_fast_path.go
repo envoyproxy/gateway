@@ -107,7 +107,7 @@ func (r *gatewayAPIReconciler) reconcileBackendEndpoints(ctx context.Context, ke
 
 // refreshBackendEndpoints reloads one backend's EndpointSlices from Kubernetes
 // through the revision tracker, which assigns a new revision only when the
-// endpoints changed. Both the endpoint controller and full reconciliation call
+// slices changed. Both the endpoint controller and full reconciliation call
 // it, and the tracker keeps their loads of a backend in order.
 func (r *gatewayAPIReconciler) refreshBackendEndpoints(ctx context.Context, key ir.ServiceKey) (*endpoint.BackendEndpoints, error) {
 	return r.resources.EndpointRevisions.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {

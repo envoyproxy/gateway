@@ -14,6 +14,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+// Port identifies a Service port by name and protocol.
 type Port struct {
 	Name     string
 	Protocol corev1.Protocol
@@ -21,16 +22,10 @@ type Port struct {
 
 // BackendEndpoints contains immutable Kubernetes endpoint data for one backend revision.
 // EndpointsByPort is derived from EndpointSlices; both represent this revision.
-// Consumers may share this data without copying it, but must not modify it.
 type BackendEndpoints struct {
-	Backend        ir.ServiceKey
-	Revision       uint64
-	EndpointSlices []*discoveryv1.EndpointSlice
-	// AddressType is IP or FQDN when every slice has that type, MIXED when they
-	// differ, and nil when there are no slices. It decides the cluster type (EDS
-	// for IP, DNS for FQDN) and whether the backend is valid, so the fast path
-	// leaves an update that changes it to full translation.
-	AddressType     *ir.DestinationAddressType
+	Backend         ir.ServiceKey
+	Revision        uint64
+	EndpointSlices  []*discoveryv1.EndpointSlice
 	EndpointsByPort map[Port][]*ir.DestinationEndpoint
 }
 
@@ -47,17 +42,21 @@ func (in *BackendEndpoints) sourceForPort(portName string, protocol corev1.Proto
 
 // ForPort returns this revision's endpoints, address type, and source for one port.
 func (in *BackendEndpoints) ForPort(portName string, protocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType, *ir.EndpointSource) {
-	return in.EndpointsByPort[Port{Name: portName, Protocol: protocol}], in.AddressType, in.sourceForPort(portName, protocol)
+	return in.EndpointsByPort[Port{Name: portName, Protocol: protocol}], addressType(in.EndpointSlices), in.sourceForPort(portName, protocol)
 }
 
 func NewBackendEndpoints(backend ir.ServiceKey, slices []*discoveryv1.EndpointSlice) *BackendEndpoints {
-	slices = append([]*discoveryv1.EndpointSlice(nil), slices...)
+	// The informer cache lists slices in no fixed order. Sort them the way
+	// Resources.Sort does, so the same endpoints always build the same assignment
+	// and an unchanged one isn't pushed to Envoy again.
 	sort.SliceStable(slices, func(i, j int) bool {
 		if !slices[i].CreationTimestamp.Equal(&slices[j].CreationTimestamp) {
 			return slices[i].CreationTimestamp.Before(&slices[j].CreationTimestamp)
 		}
 		return slices[i].Namespace+"/"+slices[i].Name < slices[j].Namespace+"/"+slices[j].Name
 	})
+
+	// Build the endpoints for each service port.
 	backendEndpoints := &BackendEndpoints{Backend: backend, EndpointSlices: slices, EndpointsByPort: make(map[Port][]*ir.DestinationEndpoint)}
 	for _, slice := range slices {
 		for _, port := range slice.Ports {
@@ -67,6 +66,5 @@ func NewBackendEndpoints(backend ir.ServiceKey, slices []*discoveryv1.EndpointSl
 			}
 		}
 	}
-	backendEndpoints.AddressType = addressType(slices)
 	return backendEndpoints
 }

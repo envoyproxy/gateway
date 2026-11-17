@@ -72,7 +72,7 @@ func endpointUpdate(revision uint64, address string) *endpoint.BackendEndpoints 
 		endpoints = []*ir.DestinationEndpoint{{Host: address, Port: 8080}}
 	}
 	return &endpoint.BackendEndpoints{
-		Backend: testBackend, Revision: revision, AddressType: new(ir.IP),
+		Backend: testBackend, Revision: revision,
 		EndpointsByPort: map[endpoint.Port][]*ir.DestinationEndpoint{{Name: "http", Protocol: corev1.ProtocolTCP}: endpoints},
 	}
 }

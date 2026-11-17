@@ -63,6 +63,9 @@ func portProtocol(port discoveryv1.EndpointPort) corev1.Protocol {
 	return *port.Protocol
 }
 
+// addressType returns IP or FQDN when every slice has that type, MIXED when they
+// differ, and nil when there are no slices. It decides the cluster type (EDS for
+// IP, DNS for FQDN), and MIXED makes the backend invalid.
 func addressType(slices []*discoveryv1.EndpointSlice) *ir.DestinationAddressType {
 	var addressType *ir.DestinationAddressType
 	for _, slice := range slices {
