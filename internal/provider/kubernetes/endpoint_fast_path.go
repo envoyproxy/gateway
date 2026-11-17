@@ -100,7 +100,7 @@ func (r *gatewayAPIReconciler) reconcileBackendEndpoints(ctx context.Context, ke
 	// Queue the update even if Track found no change. Full reconciliation may
 	// have stored this revision first, and its result may not be published yet,
 	// so without this the change would wait on full translation. If the full
-	// result publishes first, the publisher skips this revision as already applied.
+	// result publishes first, the publisher skips this revision as not newer.
 	r.resources.EndpointUpdates.Add(backendEndpoints)
 	return reconcile.Result{}, nil
 }

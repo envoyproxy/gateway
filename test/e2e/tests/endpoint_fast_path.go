@@ -109,9 +109,9 @@ var EndpointFastPathTest = suite.ConformanceTest{
 			if step.fast {
 				// Both paths react to the same EndpointSlice update, and with a small
 				// configuration full translation is quick. If the full result is
-				// published first, the fast update is skipped as already applied
-				// instead of published. Either outcome shows the fast path handled
-				// the update, so count both. Other tests can also move these counters.
+				// published first, the fast update is skipped as not newer instead
+				// of published. Either way the fast path handled the update, which
+				// the refresh histogram counts. Other tests can also move it.
 				require.NoError(t, wait.PollUntilContextTimeout(t.Context(), 3*time.Second, 2*time.Minute, true,
 					func(context.Context) (bool, error) { return fastPathHandled(t, s) > before, nil }),
 					"the fast path did not publish or skip the endpoint update")
@@ -125,12 +125,11 @@ var EndpointFastPathTest = suite.ConformanceTest{
 	},
 }
 
-// fastPathHandled returns how many endpoint updates the fast path has handled, as
-// scraped by Prometheus: snapshots it published, plus updates it skipped because
-// the full path had already published them. Missing counters count as 0.
+// fastPathHandled returns how many times the fast path has applied endpoint
+// updates to a snapshot, as scraped by Prometheus, whether or not it published
+// a new one. A missing histogram counts as 0.
 func fastPathHandled(t *testing.T, s *suite.ConformanceTestSuite) float64 {
-	return queryCount(t, s, `(sum(xds_snapshot_publications_total{path="fast"}) or vector(0)) + `+
-		`(sum(xds_endpoint_refresh_skipped_total{path="fast",reason="already_applied"}) or vector(0))`)
+	return queryCount(t, s, `sum(xds_endpoint_refresh_duration_seconds_count) or vector(0)`)
 }
 
 // fullPublications returns how many snapshots the full path has published.

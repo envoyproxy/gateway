@@ -23,7 +23,7 @@ import (
 
 var (
 	endpointRefreshSkipped = metrics.NewCounter("xds_endpoint_refresh_skipped_total",
-		"Endpoint updates not applied to a cluster, by path (fast or full) and reason: already_applied (fast only), empty_transition or address_type.")
+		"Newer endpoint updates not applied to a cluster, by path (fast or full) and reason: empty_transition or address_type.")
 	endpointSkipReason = metrics.NewLabel("reason")
 	endpointSkipPath   = metrics.NewLabel("path")
 )
@@ -162,18 +162,13 @@ func applyNewerEndpoints(contexts types.EndpointContexts, applied types.Endpoint
 				continue
 			}
 			candidate := incoming(cluster, setting.Name, &have)
-			if candidate == nil {
+			// Newer wins on both paths: skip endpoints that aren't newer than the
+			// ones this setting already has.
+			if candidate == nil || candidate.Source.Revision <= have.Source.Revision {
 				continue
 			}
 			var reason string
 			switch {
-			case candidate.Source.Revision <= have.Source.Revision:
-				// On the full path this just means there is no newer revision, but on the fast path
-				// it means the full path has already published this update, so skip it.
-				if path == pathFull {
-					continue
-				}
-				reason = "already_applied"
 			// TODO(robin): let the fast path handle these once a backend with no
 			// endpoints keeps its cluster: https://github.com/envoyproxy/gateway/issues/10604
 			case (len(candidate.Endpoints) == 0) != (len(have.Endpoints) == 0):
