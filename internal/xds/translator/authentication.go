@@ -25,10 +25,12 @@ import (
 // neither JWT nor BasicAuth recorded a verified identity. It shares the RBAC
 // prefix, so orderAuthenticationGate positions it after sorting.
 //
-// Envoy enables the gate from the route matched first but reads its per-route
-// rules from the current route, which an earlier filter can recompute. The
-// listener-level config therefore denies every request, so a recomputed route
-// without gate rules fails closed.
+// Envoy decides which disabled filters run from the route matched first, while
+// each filter reads its per-route config from the current route, which an
+// earlier filter can recompute. The gate is therefore enabled for every route
+// of the listener and enforces only the rules of the route the request ends on;
+// routes without anyOf carry no gate config, and the listener-level config
+// enforces nothing.
 var authenticationGateName = perRouteFilterName(egv1a1.EnvoyFilterRBAC, "authentication-any")
 
 func init() {
@@ -50,16 +52,13 @@ func (*authenticationGate) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener
 		!slices.ContainsFunc(irListener.Routes, func(route *ir.HTTPRoute) bool { return authenticationAny(route.Security) }) {
 		return nil
 	}
-	gateAny, err := anypb.New(&rbacv3.RBAC{
-		Rules: &rbacconfigv3.RBAC{Action: rbacconfigv3.RBAC_ALLOW},
-	})
+	gateAny, err := anypb.New(&rbacv3.RBAC{})
 	if err != nil {
 		return err
 	}
 	mgr.HttpFilters = append(mgr.HttpFilters, &hcmv3.HttpFilter{
 		Name:       authenticationGateName,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: gateAny},
-		Disabled:   true,
 	})
 	return nil
 }
@@ -112,7 +111,9 @@ func authenticationPrincipals(security *ir.SecurityFeatures) []*rbacconfigv3.Pri
 // the requirement name: unique to the policy, so a token verified for another
 // policy's route never satisfies this gate after a route recomputation, and
 // independent of provider names, so the gate keeps matching on connections whose
-// listener still carries a renamed provider.
+// listener still carries a renamed provider. Providers write their payload
+// under their own name, which gatewayapi requires to be a qualified name; a
+// requirement name is never one, so no payload can take the marker's place.
 func authenticationAnyJWTMetadataKey(jwt *ir.JWT) string {
 	return jwt.Name
 }

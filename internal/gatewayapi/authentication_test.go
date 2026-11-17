@@ -101,10 +101,6 @@ func TestValidateAuthentication(t *testing.T) {
 		{name: "forwarded username", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.BasicAuth.ForwardUsernameHeader = new("x-user") }, wantErr: "forwardUsernameHeader"},
 		{name: "jwt fail open", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.FailOpen = new(true) }, wantErr: "jwt.failOpen"},
 		{name: "jwt route recomputation", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers[0].RecomputeRoute = new(true) }, wantErr: "recomputeRoute on JWT provider"},
-		{name: "reserved jwt provider name", change: func(policy *egv1a1.SecurityPolicy) {
-			policy.Spec.JWT.Providers[0].Name = "default/test/authentication-any"
-		}, wantErr: `reserves JWT provider names ending in "/authentication-any"`},
-		{name: "jwt provider name authentication-any", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers[0].Name = "authentication-any" }},
 		{
 			name: "authorization extractor without prefix",
 			change: func(policy *egv1a1.SecurityPolicy) {
@@ -178,4 +174,30 @@ func TestAuthenticationAnyLongJWTNames(t *testing.T) {
 
 	parent.Name = strings.Repeat("c", 253)
 	require.NotEqual(t, first, jwtName(policy, owners))
+}
+
+// The gate's JWT marker is the requirement name, which must never be a valid
+// provider name, or a provider's payload could stand in for the marker.
+func TestJWTRequirementNameIsNotAProviderName(t *testing.T) {
+	parent := authenticationAnyPolicy()
+	parent.Name = "parent"
+	for _, test := range []struct {
+		name   string
+		owners *securityPolicyOwners
+		policy *egv1a1.SecurityPolicy
+	}{
+		{name: "policy", owners: &securityPolicyOwners{}, policy: authenticationAnyPolicy()},
+		{name: "merged", owners: &securityPolicyOwners{mergedParent: parent}, policy: authenticationAnyPolicy()},
+		{name: "truncated", owners: &securityPolicyOwners{}, policy: func() *egv1a1.SecurityPolicy {
+			policy := authenticationAnyPolicy()
+			policy.Name = strings.Repeat("a", 253)
+			return policy
+		}()},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			name := jwtName(test.policy, test.owners)
+			err := validateJWTProvider([]egv1a1.JWTProvider{{Name: name, Issuer: "https://issuer.example", RemoteJWKS: &egv1a1.RemoteJWKS{URI: "https://issuer.example/keys"}}})
+			require.Error(t, err, name)
+		})
+	}
 }

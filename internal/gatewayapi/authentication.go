@@ -85,12 +85,6 @@ func validateAuthentication(policy *egv1a1.SecurityPolicy) error {
 		if ptr.Deref(provider.RecomputeRoute, false) {
 			return fmt.Errorf("authentication.anyOf does not support recomputeRoute on JWT provider %q", provider.Name)
 		}
-		// jwt_authn writes the provider's payload under its name and the
-		// verified-token marker under the JWT requirement name, which ends in
-		// authenticationAnySuffix; a matching provider name would overwrite it.
-		if strings.HasSuffix(provider.Name, authenticationAnySuffix) {
-			return fmt.Errorf("authentication.anyOf reserves JWT provider names ending in %q, which JWT provider %q uses", authenticationAnySuffix, provider.Name)
-		}
 		// jwt_authn extracts a token wherever valuePrefix occurs in the header
 		// value and rejects a token that fails verification, so an extractor that
 		// can match a Basic credential rejects every BasicAuth request.

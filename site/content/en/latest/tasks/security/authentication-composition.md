@@ -53,10 +53,11 @@ after both methods rejects a request that neither authenticated. That check resp
 and does not send a `WWW-Authenticate` challenge, because Envoy's RBAC filter has no
 configurable deny status.
 
-If a filter that runs before the check changes the request's route, for example a Lua
-script placed by `EnvoyProxy.spec.filterOrder` that rewrites the path, the check uses
-the rules of the new route. When the new route does not use `anyOf`, the check rejects
-the request with 403.
+If a filter placed before the check changes the request's route, for example a Lua
+script placed by `EnvoyProxy.spec.filterOrder` that rewrites the path, the check applies
+the rules of the new route, and credentials verified for another policy's route do not
+count. A filter placed after the check that changes the route bypasses it, as it does
+every other authentication method.
 
 Authorization rules still apply after authentication. A rule with a `jwt` principal only
 matches requests authenticated by JWT:
@@ -96,8 +97,6 @@ does not support:
 - A JWT header extractor on the `Authorization` header with a `valuePrefix` other than
   `Bearer `. JWT authentication would read Basic credentials as an invalid token and
   reject the request.
-- A JWT provider name ending in `/authentication-any`. Envoy Gateway records a verified
-  token under a name with that suffix.
 - `basicAuth.forwardUsernameHeader`. Envoy's Basic authentication filter leaves that
   header untouched when it lets a request through without Basic credentials, so a client
   authenticated by JWT could set it to any username

@@ -119,11 +119,9 @@
                   requirements:
                   - providerName: example_07800a5f216aca12
                   - allowMissing: {}
-        - disabled: true
-          name: envoy.filters.http.rbac/authentication-any
+        - name: envoy.filters.http.rbac/authentication-any
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
-            rules: {}
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
