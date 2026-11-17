@@ -45,10 +45,11 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              example_ced70d98fe975d58:
+              example_405c7d280ba5c005:
                 audiences:
                 - foo.com
                 forward: true
+                headerInMetadata: authentication-any
                 issuer: https://www.example.com
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
@@ -62,10 +63,11 @@
                     cluster: localhost_443
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
-              other_8920e62427dc207f:
+              other_cb3f67a0bccff139:
                 audiences:
                 - foo.com
                 forward: true
+                headerInMetadata: authentication-any
                 issuer: https://other.example.com
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
@@ -83,13 +85,14 @@
               default/policy-for-http-route-1/authentication-any:
                 requiresAny:
                   requirements:
-                  - providerName: example_ced70d98fe975d58
-                  - providerName: other_8920e62427dc207f
+                  - providerName: example_405c7d280ba5c005
+                  - providerName: other_cb3f67a0bccff139
                   - allowMissing: {}
         - disabled: true
           name: envoy.filters.http.rbac/authentication-any
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+            rules: {}
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

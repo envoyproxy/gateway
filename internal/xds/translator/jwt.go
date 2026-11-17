@@ -111,7 +111,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 			jwtAuthn.RequirementMap = make(map[string]*jwtauthnv3.JwtRequirement, len(route.Security.JWT.Providers))
 		}
 
-		providers, reqs, err := buildJWTRequirements(route.Security.JWT)
+		providers, reqs, err := buildJWTRequirements(route.Security.JWT, authenticationAny(route.Security))
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 	return nil
 }
 
-func buildJWTRequirements(jwt *ir.JWT) (map[string]*jwtauthnv3.JwtProvider, []*jwtauthnv3.JwtRequirement, error) {
+func buildJWTRequirements(jwt *ir.JWT, authenticationAny bool) (map[string]*jwtauthnv3.JwtProvider, []*jwtauthnv3.JwtRequirement, error) {
 	providers := make(map[string]*jwtauthnv3.JwtProvider, len(jwt.Providers))
 	reqs := make([]*jwtauthnv3.JwtRequirement, 0, len(jwt.Providers)+1)
 
@@ -137,6 +137,10 @@ func buildJWTRequirements(jwt *ir.JWT) (map[string]*jwtauthnv3.JwtProvider, []*j
 		jwtProvider, err := buildJWTProvider(&irProvider)
 		if err != nil {
 			return nil, nil, err
+		}
+
+		if authenticationAny {
+			jwtProvider.HeaderInMetadata = ir.AuthenticationAnyJWTMetadataKey
 		}
 
 		providerKey, err := jwtProviderName(irProvider.Name, jwtProvider)

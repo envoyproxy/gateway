@@ -24,6 +24,11 @@ import (
 // authenticationGateName is an RBAC filter that rejects a request on which
 // neither JWT nor BasicAuth recorded a verified identity. It shares the RBAC
 // prefix, so orderAuthenticationGate positions it after sorting.
+//
+// Envoy enables the gate from the route matched first but reads its per-route
+// rules from the current route, which an earlier filter can recompute. The
+// listener-level config therefore denies every request, so a recomputed route
+// without gate rules fails closed.
 var authenticationGateName = perRouteFilterName(egv1a1.EnvoyFilterRBAC, "authentication-any")
 
 func init() {
@@ -45,7 +50,9 @@ func (*authenticationGate) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener
 		!slices.ContainsFunc(irListener.Routes, func(route *ir.HTTPRoute) bool { return authenticationAny(route.Security) }) {
 		return nil
 	}
-	gateAny, err := anypb.New(&rbacv3.RBAC{})
+	gateAny, err := anypb.New(&rbacv3.RBAC{
+		Rules: &rbacconfigv3.RBAC{Action: rbacconfigv3.RBAC_ALLOW},
+	})
 	if err != nil {
 		return err
 	}
@@ -95,10 +102,7 @@ func authenticationPrincipals(security *ir.SecurityFeatures) []*rbacconfigv3.Pri
 		principals = append(principals, metadataPresentPrincipal(basicAuthFilterName(security.BasicAuth), "username"))
 	}
 	if security.JWT != nil {
-		for _, provider := range security.JWT.Providers {
-			// jwt_authn writes each verified payload under its provider name (payload_in_metadata).
-			principals = append(principals, metadataPresentPrincipal(egv1a1.EnvoyFilterJWTAuthn.String(), provider.Name))
-		}
+		principals = append(principals, metadataPresentPrincipal(egv1a1.EnvoyFilterJWTAuthn.String(), ir.AuthenticationAnyJWTMetadataKey))
 	}
 	return principals
 }

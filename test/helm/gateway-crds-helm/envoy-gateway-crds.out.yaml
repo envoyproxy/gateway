@@ -33523,15 +33523,18 @@ spec:
                       BasicAuth are both required unless jwt.optional or jwt.failOpen relaxes JWT.
 
                       Each listed method lets a request without its credentials through, and a
-                      request without credentials for any listed method is rejected with
-                      403 Forbidden and no WWW-Authenticate challenge. A request presenting
-                      invalid credentials for a listed method is rejected. jwt.optional has no
-                      effect when JWT is listed. Authorization rules with a jwt principal never
-                      match a request authenticated by BasicAuth.
+                      request without credentials for any listed method is rejected. A request
+                      presenting invalid credentials for a listed method is rejected.
+                      jwt.optional has no effect when JWT is listed. Authorization rules with a
+                      jwt principal never match a request authenticated by BasicAuth.
 
                       AnyOf currently requires both JWT and BasicAuth. It does not support
-                      oidc.forwardAccessToken, oidc.passThroughAuthHeader, extAuth.recomputeRoute,
-                      jwt.failOpen, JWT route recomputation or basicAuth.forwardUsernameHeader.
+                      oidc.forwardAccessToken, oidc.passThroughAuthHeader, oidc.forwardIDToken on
+                      the Authorization header or on a header a JWT provider reads,
+                      extAuth.recomputeRoute, jwt.failOpen, JWT route recomputation or
+                      basicAuth.forwardUsernameHeader. A JWT header extractor on the
+                      Authorization header must use the valuePrefix "Bearer ", and the JWT
+                      provider name authentication-any is reserved.
                     items:
                       description: AuthenticationMethod names an authentication method
                         of a SecurityPolicy.
@@ -42094,6 +42097,11 @@ spec:
                 has(self.oidc)) ? ((!has(self.oidc.forwardAccessToken) || !self.oidc.forwardAccessToken)
                 && (!has(self.oidc.passThroughAuthHeader) || !self.oidc.passThroughAuthHeader))
                 : true'
+            - message: authentication.anyOf does not support oidc.forwardIDToken on
+                the Authorization header
+              rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
+                has(self.oidc) && has(self.oidc.forwardIDToken)) ? self.oidc.forwardIDToken.header.lowerAscii()
+                != ''authorization'' : true'
             - message: authentication.anyOf does not support extAuth.recomputeRoute
               rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
                 has(self.extAuth)) ? (!has(self.extAuth.recomputeRoute) || !self.extAuth.recomputeRoute)
@@ -42104,6 +42112,11 @@ spec:
                 ''JWT'' in self.authentication.anyOf && has(self.jwt)) ? ((!has(self.jwt.failOpen)
                 || !self.jwt.failOpen) && self.jwt.providers.all(p, !has(p.recomputeRoute)
                 || !p.recomputeRoute)) : true'
+            - message: authentication.anyOf with JWT reserves the JWT provider name
+                authentication-any
+              rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
+                ''JWT'' in self.authentication.anyOf && has(self.jwt)) ? self.jwt.providers.all(p,
+                p.name != ''authentication-any'') : true'
             - message: authentication.anyOf with BasicAuth does not support basicAuth.forwardUsernameHeader
               rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
                 ''BasicAuth'' in self.authentication.anyOf && has(self.basicAuth))

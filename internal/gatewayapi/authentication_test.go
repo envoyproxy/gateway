@@ -91,7 +91,7 @@ func TestValidateAuthentication(t *testing.T) {
 				policy.Spec.OIDC = &egv1a1.OIDC{ForwardIDToken: &egv1a1.OIDCTokenForwarding{Header: "x-id-token"}}
 			},
 		},
-		{name: "required api key",change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.APIKeyAuth = &egv1a1.APIKeyAuth{} }},
+		{name: "required api key", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.APIKeyAuth = &egv1a1.APIKeyAuth{} }},
 		{name: "required ext auth", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.ExtAuth = &egv1a1.ExtAuth{} }},
 		{
 			name:    "ext auth route recomputation",
@@ -101,6 +101,33 @@ func TestValidateAuthentication(t *testing.T) {
 		{name: "forwarded username", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.BasicAuth.ForwardUsernameHeader = new("x-user") }, wantErr: "forwardUsernameHeader"},
 		{name: "jwt fail open", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.FailOpen = new(true) }, wantErr: "jwt.failOpen"},
 		{name: "jwt route recomputation", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers[0].RecomputeRoute = new(true) }, wantErr: "recomputeRoute on JWT provider"},
+		{name: "reserved jwt provider name", change: func(policy *egv1a1.SecurityPolicy) { policy.Spec.JWT.Providers[0].Name = "authentication-any" }, wantErr: "reserves the JWT provider name"},
+		{
+			name: "authorization extractor without prefix",
+			change: func(policy *egv1a1.SecurityPolicy) {
+				policy.Spec.JWT.Providers[0].ExtractFrom = &egv1a1.JWTExtractor{Headers: []egv1a1.JWTHeaderExtractor{{Name: "authorization"}}}
+			},
+			wantErr: `valuePrefix "Bearer " on the Authorization header extractor of JWT provider "issuer"`,
+		},
+		{
+			name: "authorization extractor with basic prefix",
+			change: func(policy *egv1a1.SecurityPolicy) {
+				policy.Spec.JWT.Providers[0].ExtractFrom = &egv1a1.JWTExtractor{Headers: []egv1a1.JWTHeaderExtractor{{Name: "Authorization", ValuePrefix: new("Basic ")}}}
+			},
+			wantErr: `valuePrefix "Bearer "`,
+		},
+		{
+			name: "authorization extractor with bearer prefix",
+			change: func(policy *egv1a1.SecurityPolicy) {
+				policy.Spec.JWT.Providers[0].ExtractFrom = &egv1a1.JWTExtractor{Headers: []egv1a1.JWTHeaderExtractor{{Name: "Authorization", ValuePrefix: new("Bearer ")}}}
+			},
+		},
+		{
+			name: "other header extractor without prefix",
+			change: func(policy *egv1a1.SecurityPolicy) {
+				policy.Spec.JWT.Providers[0].ExtractFrom = &egv1a1.JWTExtractor{Headers: []egv1a1.JWTHeaderExtractor{{Name: "x-token"}}}
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			policy := authenticationAnyPolicy()

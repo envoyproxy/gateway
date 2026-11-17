@@ -147,6 +147,18 @@ func TestAuthenticationAnyOf(t *testing.T) {
 			},
 		},
 		{
+			name:    "reserved jwt provider name",
+			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.JWT.Providers[0].Name = "authentication-any" },
+			wantErr: "authentication.anyOf with JWT reserves the JWT provider name authentication-any",
+		},
+		{
+			name: "reserved jwt provider name without anyOf",
+			spec: func(spec *egv1a1.SecurityPolicySpec) {
+				spec.Authentication = nil
+				spec.JWT.Providers[0].Name = "authentication-any"
+			},
+		},
+		{
 			name:    "forwarded username",
 			spec:    func(spec *egv1a1.SecurityPolicySpec) { spec.BasicAuth.ForwardUsernameHeader = new("x-user") },
 			wantErr: "authentication.anyOf with BasicAuth does not support basicAuth.forwardUsernameHeader",

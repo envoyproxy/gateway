@@ -14,6 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const authenticationAnySuffix = "/authentication-any"
@@ -84,6 +85,21 @@ func validateAuthentication(policy *egv1a1.SecurityPolicy) error {
 	for _, provider := range spec.JWT.Providers {
 		if ptr.Deref(provider.RecomputeRoute, false) {
 			return fmt.Errorf("authentication.anyOf does not support recomputeRoute on JWT provider %q", provider.Name)
+		}
+		// jwt_authn writes the provider's payload under its name, which would
+		// overwrite the verified-token marker that the authentication gate reads.
+		if provider.Name == ir.AuthenticationAnyJWTMetadataKey {
+			return fmt.Errorf("authentication.anyOf reserves the JWT provider name %q", provider.Name)
+		}
+		// jwt_authn extracts a token wherever valuePrefix occurs in the header
+		// value and rejects a token that fails verification, so an extractor that
+		// can match a Basic credential rejects every BasicAuth request.
+		if provider.ExtractFrom != nil {
+			for _, extractor := range provider.ExtractFrom.Headers {
+				if strings.EqualFold(extractor.Name, "Authorization") && ptr.Deref(extractor.ValuePrefix, "") != "Bearer " {
+					return fmt.Errorf("authentication.anyOf requires valuePrefix \"Bearer \" on the Authorization header extractor of JWT provider %q", provider.Name)
+				}
+			}
 		}
 	}
 	return nil

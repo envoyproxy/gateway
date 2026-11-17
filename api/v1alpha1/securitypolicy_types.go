@@ -57,6 +57,7 @@ type SecurityPolicy struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && has(self.oidc) && has(self.oidc.forwardIDToken)) ? self.oidc.forwardIDToken.header.lowerAscii() != 'authorization' : true", message="authentication.anyOf does not support oidc.forwardIDToken on the Authorization header"
 // +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && has(self.extAuth)) ? (!has(self.extAuth.recomputeRoute) || !self.extAuth.recomputeRoute) : true", message="authentication.anyOf does not support extAuth.recomputeRoute"
 // +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && 'JWT' in self.authentication.anyOf && has(self.jwt)) ? ((!has(self.jwt.failOpen) || !self.jwt.failOpen) && self.jwt.providers.all(p, !has(p.recomputeRoute) || !p.recomputeRoute)) : true", message="authentication.anyOf with JWT does not support jwt.failOpen or recomputeRoute on JWT providers"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && 'JWT' in self.authentication.anyOf && has(self.jwt)) ? self.jwt.providers.all(p, p.name != 'authentication-any') : true", message="authentication.anyOf with JWT reserves the JWT provider name authentication-any"
 // +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && 'BasicAuth' in self.authentication.anyOf && has(self.basicAuth)) ? !has(self.basicAuth.forwardUsernameHeader) : true", message="authentication.anyOf with BasicAuth does not support basicAuth.forwardUsernameHeader"
 type SecurityPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
@@ -152,7 +153,9 @@ type Authentication struct {
 	// oidc.forwardAccessToken, oidc.passThroughAuthHeader, oidc.forwardIDToken on
 	// the Authorization header or on a header a JWT provider reads,
 	// extAuth.recomputeRoute, jwt.failOpen, JWT route recomputation or
-	// basicAuth.forwardUsernameHeader.
+	// basicAuth.forwardUsernameHeader. A JWT header extractor on the
+	// Authorization header must use the valuePrefix "Bearer ", and the JWT
+	// provider name authentication-any is reserved.
 	//
 	// +listType=set
 	// +kubebuilder:validation:MinItems=2

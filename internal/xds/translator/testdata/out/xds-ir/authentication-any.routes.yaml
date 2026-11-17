@@ -87,13 +87,7 @@
                   - metadata:
                       filter: envoy.filters.http.jwt_authn
                       path:
-                      - key: example
-                      value:
-                        presentMatch: true
-                  - metadata:
-                      filter: envoy.filters.http.jwt_authn
-                      path:
-                      - key: other
+                      - key: authentication-any
                       value:
                         presentMatch: true
   - domains:
