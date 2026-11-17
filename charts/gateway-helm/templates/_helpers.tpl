@@ -245,3 +245,44 @@ proxyTopologyInjector:
   disabled: true
 {{- end }}
 {{- end }}
+
+{{/*
+Renders .Values.extensionManagersByName into an extensionManagers list, as YAML under "items":
+sorted by order and then name, without disabled entries, and with name set from the key.
+*/}}
+{{- define "eg.extensionManagersFromMap" -}}
+{{- $keys := list }}
+{{- range $name, $em := .Values.extensionManagersByName }}
+{{- if not (kindIs "map" $em) }}
+{{- fail (printf "extensionManagersByName.%s must be a map" $name) }}
+{{- end }}
+{{- $enabled := true }}
+{{- if hasKey $em "enabled" }}
+{{- $raw := get $em "enabled" }}
+{{- if kindIs "string" $raw }}
+{{- $rendered := tpl $raw $ | trim }}
+{{- if not (has $rendered (list "true" "false")) }}
+{{- fail (printf "extensionManagersByName.%s.enabled rendered to %q, want true or false" $name $rendered) }}
+{{- end }}
+{{- $enabled = eq $rendered "true" }}
+{{- else if kindIs "bool" $raw }}
+{{- $enabled = $raw }}
+{{- else }}
+{{- fail (printf "extensionManagersByName.%s.enabled must be a bool or a template string" $name) }}
+{{- end }}
+{{- end }}
+{{- if $enabled }}
+{{- $keys = append $keys (printf "%010d/%s" (int (default 0 $em.order)) $name) }}
+{{- end }}
+{{- end }}
+{{- $items := list }}
+{{- range sortAlpha $keys }}
+{{- $name := index (splitList "/" .) 1 }}
+{{- $em := deepCopy (get $.Values.extensionManagersByName $name) }}
+{{- $_ := unset $em "enabled" }}
+{{- $_ = unset $em "order" }}
+{{- $_ = set $em "name" $name }}
+{{- $items = append $items $em }}
+{{- end }}
+{{- toYaml (dict "items" $items) }}
+{{- end }}

@@ -12,4 +12,13 @@ data:
     {{- $baseEnvoyGatewayConfig := include "eg.default-envoy-gateway-config" . | fromYaml }}
     {{- $userEnvoyGatewayConfig := .Values.config.envoyGateway }}
     {{- $mergedEnvoyGatewayConfig := merge $userEnvoyGatewayConfig $baseEnvoyGatewayConfig }}
+    {{- if .Values.extensionManagersByName }}
+    {{- if or $mergedEnvoyGatewayConfig.extensionManagers $mergedEnvoyGatewayConfig.extensionManager }}
+    {{- fail "set extension managers in either extensionManagersByName or config.envoyGateway, not both" }}
+    {{- end }}
+    {{- $extensionManagers := (include "eg.extensionManagersFromMap" . | fromYaml).items }}
+    {{- if $extensionManagers }}
+    {{- $_ := set $mergedEnvoyGatewayConfig "extensionManagers" $extensionManagers }}
+    {{- end }}
+    {{- end }}
     {{- toYaml $mergedEnvoyGatewayConfig | nindent 4 }}

@@ -1,0 +1,1 @@
+Added `extensionManagersByName` to the gateway-helm chart to set extension managers as a map keyed by name instead of the `config.envoyGateway.extensionManagers` list, so an entry can be added, changed or switched off (including with a template that reads other values) without repeating the others.
