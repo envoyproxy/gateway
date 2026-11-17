@@ -73,9 +73,9 @@ endpoints through it, and it bumps the backend's revision whenever its
 EndpointSlices change. Since both paths read from the same tracker, their revisions can be
 compared.
 
-The endpoint controller sends the current endpoints after every refresh, even
-when nothing changed, because the full path may have recorded that revision
-first. The publisher decides whether they're newer.
+The endpoint controller sends the endpoints it loads after every refresh, and the
+publisher decides whether they're newer. It doesn't skip an unchanged revision,
+because the full path may have recorded that revision without publishing it yet.
 
 ## Endpoint context
 
