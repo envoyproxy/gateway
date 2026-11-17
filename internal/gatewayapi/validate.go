@@ -1382,6 +1382,11 @@ func (t *Translator) validateSecretRef(
 	secretObjRef gwapiv1.SecretObjectReference,
 	resources *resource.Resources,
 ) (*corev1.Secret, error) {
+	// validateSecretObjectRef checks the ReferenceGrant against the kind in the ref,
+	// so a ref of any other kind must not be allowed to resolve to a Secret.
+	if secretObjRef.Kind != nil && string(*secretObjRef.Kind) != resource.KindSecret {
+		return nil, fmt.Errorf("secret ref kind must be %s", resource.KindSecret)
+	}
 	if err := t.validateSecretObjectRef(allowCrossNamespace, from, secretObjRef, resources); err != nil {
 		return nil, err
 	}
