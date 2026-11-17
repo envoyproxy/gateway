@@ -170,9 +170,12 @@ xdsIR:
         grpcJSONTranscoder:
           convertGRPCStatus: true
           ignoreUnknownQueryParameters: true
+          maxRequestBodySize: 1048576
+          maxResponseBodySize: 67108864
           name: httproutefilter/default/transcode
           printOptions:
             addWhitespace: true
+            alwaysPrintEnumsAsInts: true
             alwaysPrintPrimitiveFields: true
           protoDescriptorBin: CnkKCmVjaG8ucHJvdG8SB3Rlc3QudjEiDQoLUGluZ1JlcXVlc3QiDgoMUGluZ1Jlc3BvbnNlMjsKBEVjaG8SMwoEUGluZxIULnRlc3QudjEuUGluZ1JlcXVlc3QaFS50ZXN0LnYxLlBpbmdSZXNwb25zZWIGcHJvdG8z
           services:

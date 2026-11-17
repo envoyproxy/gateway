@@ -1,0 +1,1 @@
+Added `maxRequestBodySize`, `maxResponseBodySize` and `printOptions.alwaysPrintEnumsAsInts` to the `grpcJSONTranscoder` of `HTTPRouteFilter`, so a transcoded response can be larger than the stream buffer limit and enums can be printed as integers.

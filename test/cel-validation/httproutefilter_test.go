@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -563,6 +564,40 @@ func TestHTTPRouteFilterGRPCJSONTranscoder(t *testing.T) {
 				})
 			},
 			wantErrors: []string{"valueRef must refer to a core ConfigMap"},
+		},
+		{
+			desc: "body sizes are accepted",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.MaxRequestBodySize = new(resource.MustParse("1Mi"))
+				hrf.Spec.GRPCJSONTranscoder.MaxResponseBodySize = new(resource.MustParse("64Mi"))
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "zero request body size is rejected",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.MaxRequestBodySize = new(resource.MustParse("0"))
+			},
+			wantErrors: []string{"spec.grpcJSONTranscoder.maxRequestBodySize in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
+		},
+		{
+			desc: "negative response body size is rejected",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.MaxResponseBodySize = new(resource.MustParse("-1Mi"))
+			},
+			wantErrors: []string{"spec.grpcJSONTranscoder.maxResponseBodySize in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
 		},
 	}
 

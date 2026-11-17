@@ -28,5 +28,8 @@ http:
       printOptions:
         addWhitespace: true
         alwaysPrintPrimitiveFields: false
+        alwaysPrintEnumsAsInts: true
       ignoreUnknownQueryParameters: true
       convertGRPCStatus: true
+      maxRequestBodySize: 1048576
+      maxResponseBodySize: 67108864

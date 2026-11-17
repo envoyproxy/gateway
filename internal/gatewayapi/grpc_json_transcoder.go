@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"unicode"
@@ -22,6 +23,7 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/known/anypb"
 	corev1 "k8s.io/api/core/v1"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
@@ -95,6 +97,15 @@ func useGRPCUpstream(ds *ir.DestinationSetting) status.Error {
 func (t *Translator) buildGRPCJSONTranscoder(
 	cfg *egv1a1.GRPCJSONTranscoder, name, namespace string,
 ) (*ir.GRPCJSONTranscoder, error) {
+	maxRequestBodySize, err := bodySizeBytes("maxRequestBodySize", cfg.MaxRequestBodySize)
+	if err != nil {
+		return nil, err
+	}
+	maxResponseBodySize, err := bodySizeBytes("maxResponseBodySize", cfg.MaxResponseBodySize)
+	if err != nil {
+		return nil, err
+	}
+
 	descriptor, err := t.loadProtoDescriptor(cfg.ProtoDescriptor, namespace)
 	if err != nil {
 		return nil, err
@@ -122,7 +133,25 @@ func (t *Translator) buildGRPCJSONTranscoder(
 		PrintOptions:                 cfg.PrintOptions,
 		IgnoreUnknownQueryParameters: cfg.IgnoreUnknownQueryParameters,
 		ConvertGRPCStatus:            cfg.ConvertGRPCStatus,
+		MaxRequestBodySize:           maxRequestBodySize,
+		MaxResponseBodySize:          maxResponseBodySize,
 	}, nil
+}
+
+// bodySizeBytes converts a body size limit to bytes. Envoy takes a non-zero uint32.
+func bodySizeBytes(field string, size *apiresource.Quantity) (*uint32, error) {
+	if size == nil {
+		return nil, nil
+	}
+	bytes, ok := size.AsInt64()
+	if !ok {
+		return nil, fmt.Errorf("invalid %s value %s", field, size.String())
+	}
+	if bytes <= 0 || bytes > math.MaxUint32 {
+		return nil, fmt.Errorf("%s value %s is out of range, must be between 1 and %d",
+			field, size.String(), uint32(math.MaxUint32))
+	}
+	return new(uint32(bytes)), nil
 }
 
 // loadProtoDescriptor returns the descriptor set referenced by protoDesc.

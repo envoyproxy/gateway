@@ -131,4 +131,24 @@ func TestBuildGRPCJSONTranscoderConfig(t *testing.T) {
 	require.True(t, got.GetIgnoreUnknownQueryParameters())
 	require.False(t, got.GetConvertGrpcStatus())
 	require.True(t, got.GetMatchIncomingRequestRoute())
+	require.False(t, got.GetPrintOptions().GetAlwaysPrintEnumsAsInts())
+	require.Nil(t, got.GetMaxRequestBodySize())
+	require.Nil(t, got.GetMaxResponseBodySize())
+}
+
+func TestBuildGRPCJSONTranscoderConfigBodySizesAndEnums(t *testing.T) {
+	transcoder := testTranscoder(t)
+	transcoder.PrintOptions = &egv1a1.JSONPrintOptions{AlwaysPrintEnumsAsInts: new(true)}
+	transcoder.MaxRequestBodySize = new(uint32(1024 * 1024))
+	transcoder.MaxResponseBodySize = new(uint32(64 * 1024 * 1024))
+
+	cfg, err := buildGRPCJSONTranscoderConfig(transcoder)
+	require.NoError(t, err)
+
+	got := &grpcjsontranscoder.GrpcJsonTranscoder{}
+	require.NoError(t, cfg.UnmarshalTo(got))
+	require.NoError(t, got.ValidateAll())
+	require.True(t, got.GetPrintOptions().GetAlwaysPrintEnumsAsInts())
+	require.Equal(t, uint32(1024*1024), got.GetMaxRequestBodySize().GetValue())
+	require.Equal(t, uint32(64*1024*1024), got.GetMaxResponseBodySize().GetValue())
 }
