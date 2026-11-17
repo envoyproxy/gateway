@@ -198,7 +198,7 @@ func TestTranslateXds(t *testing.T) {
 				updates := map[ir.ServiceKey]*endpoint.BackendEndpoints{
 					{Kind: "Service", Namespace: "default", Name: "orders"}: {
 						Backend:  ir.ServiceKey{Kind: "Service", Namespace: "default", Name: "orders"},
-						Revision: 2, AddressType: new(ir.IP),
+						Revision: 2,
 						EndpointsByPort: map[endpoint.Port][]*ir.DestinationEndpoint{
 							{Name: "http", Protocol: "TCP"}: {{Host: "10.0.0.2", Port: 8080, Draining: true, Zone: new("zone-b")}},
 						},
