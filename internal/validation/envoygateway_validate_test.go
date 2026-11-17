@@ -1211,6 +1211,19 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			},
 			expect: false,
 		},
+		{
+			name: "EnvoyProxy in EnvoyGateway with maxConnections below minimum",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					EnvoyProxy: &egv1a1.EnvoyProxySpec{
+						OverloadManager: &egv1a1.OverloadManager{MaxConnections: new(int64(-1))},
+					},
+				},
+			},
+			expect: false,
+		},
 	}
 
 	for _, tc := range testCases {
