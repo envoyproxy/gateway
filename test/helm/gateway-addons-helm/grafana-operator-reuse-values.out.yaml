@@ -3,7 +3,7 @@
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: envoy-clusters
+  name: "envoy-clusters"
   namespace: "monitoring"
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
@@ -19,7 +19,7 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: envoy-gateway-global
+  name: "envoy-gateway-global"
   namespace: "monitoring"
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
@@ -35,7 +35,7 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: envoy-proxy-global
+  name: "envoy-proxy-global"
   namespace: "monitoring"
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
@@ -51,7 +51,7 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: global-ratelimit
+  name: "global-ratelimit"
   namespace: "monitoring"
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
@@ -67,7 +67,7 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:
-  name: resources-monitor.gen
+  name: "resources-monitor.gen"
   namespace: "monitoring"
   annotations:
     argocd.argoproj.io/sync-options: ServerSideApply=true
