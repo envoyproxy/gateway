@@ -1,6 +1,6 @@
 # Two routes with different route-derived stat names share one merged BackendCluster. The
-# cluster's AltStatName must not fall back to either route's stat name, since the cluster is
-# not owned by any single route.
+# cluster's AltStatName comes from the BackendCluster's own backend-based stat name, never
+# from either route's stat name, since the cluster is not owned by any single route.
 http:
 - name: "first-listener"
   address: "0.0.0.0"
@@ -28,6 +28,7 @@ http:
       - name: "shared-cluster"
 backendClusters:
 - name: "shared-cluster"
+  statName: "default/shared-backend"
   setting:
     name: "shared-cluster"
     weight: 1

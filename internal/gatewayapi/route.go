@@ -1032,6 +1032,12 @@ func (t *Translator) routeDestinationForListener(
 			continue
 		}
 		backendCluster := t.getOrCreateBackendCluster(gwIR, bd.backendClusterKey, bd.ds)
+		// statName is only set when clusterStatName is configured. Its route operators can't be
+		// resolved for a cluster shared by several routes, so the merged cluster's stats are
+		// named after the backend instead, the same as %BACKEND_REFS% for a single backendRef.
+		if statName != nil && backendCluster.StatName == nil {
+			backendCluster.StatName = new(irBackendClusterStatName(bd.backendClusterKey))
+		}
 		destination.BackendClusterRefs = append(destination.BackendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: bd.ds.Weight})
 	}
 	return destination

@@ -654,6 +654,12 @@ func irBackendClusterName(key *BackendClusterKey) string {
 	return base + "/" + strings.ToLower(string(key.Protocol))
 }
 
+// irBackendClusterStatName names a BackendCluster's stats after its backend, in the same
+// <namespace>/<name> format that %BACKEND_REFS% uses.
+func irBackendClusterStatName(key *BackendClusterKey) string {
+	return fmt.Sprintf("%s/%s", key.Namespace, key.Name)
+}
+
 func irExtensionResourceName(key *ExtensionResourceKey) string {
 	if key.Group == "" {
 		return fmt.Sprintf("%s/%s/%s", strings.ToLower(key.Kind), key.Namespace, key.Name)
