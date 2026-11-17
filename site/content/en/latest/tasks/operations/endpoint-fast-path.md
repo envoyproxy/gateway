@@ -96,8 +96,8 @@ The control-plane metrics include:
 | Metric | Meaning |
 | --- | --- |
 | `xds_snapshot_publications_total` | Snapshots published to the xDS cache, labeled `path=full`, `fast`, or `delete`, and `status=success` or `failure`. |
-| `xds_endpoint_refresh_duration_seconds` | Time to apply a batch of fast endpoint updates to one xDS snapshot and publish it. |
-| `xds_endpoint_refresh_skipped_total` | Endpoint updates not applied to a cluster, by `path` (`fast` or `full`) and `reason`: `already_applied` (fast path only: the cluster already has these or newer endpoints), `empty_transition` (the Service went to or from zero endpoints), or `address_type` (the endpoint address type changed). The last two are left to full translation. |
+| `xds_endpoint_refresh_duration_seconds` | Time to apply a batch of fast endpoint updates to one xDS snapshot and publish it. Updates the cluster already has are counted too. |
+| `xds_endpoint_refresh_skipped_total` | Newer endpoint updates not applied to a cluster, by `path` (`fast` or `full`) and `reason`: `empty_transition` (the Service went to or from zero endpoints) or `address_type` (the endpoints aren't all IP addresses). Both are left to full translation. |
 
 Publication counters describe control-plane commits, not Envoy acknowledgements.
 Use the existing xDS NACK metrics and traffic checks to verify data-plane behavior.
