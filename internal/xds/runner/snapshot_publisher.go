@@ -28,10 +28,14 @@ type fullPublication struct {
 	ctx           context.Context
 }
 
-// snapshotPublisher serializes full results from the full path and endpoint-only
-// updates from the fast path, so the two never race to publish a snapshot.
-// Full translation submits immutable results and deletions through fullResults;
-// the endpoint controller adds updates to endpointUpdates.
+// snapshotPublisher publishes full results and fast endpoint updates. Three rules
+// keep the two paths consistent:
+//  1. The full path still runs for every endpoint change, so the fast path only
+//     publishes the same endpoints earlier, and can skip anything it can't handle.
+//  2. Both paths load endpoints through one RevisionTracker, so a backend's
+//     revisions grow in the order its EndpointSlices were read.
+//  3. This one goroutine publishes everything, and on both paths a cluster
+//     setting only takes endpoints with a newer revision than it has.
 type snapshotPublisher struct {
 	ctx context.Context
 	log logging.Logger
@@ -49,12 +53,8 @@ type snapshotPublisher struct {
 
 	// publishedEndpoints holds, per IR key, the endpoint state of the published
 	// snapshot: each cluster's settings, and the endpoints and revision it was
-	// built with, indexed by backend.
-	//
-	// A full result sets it, and fast updates rebuild clusters from it and
-	// advance its endpoints. Full translation replays endpoints with a newer
-	// revision over its own, so a translation that started before a fast-path
-	// update and finished after it cannot roll that update back.
+	// built with, indexed by backend. A full result sets it, and fast updates
+	// advance its endpoints.
 	publishedEndpoints *publishedEndpointStore
 
 	// publishSnapshot hands a snapshot to the xDS cache, which sends it
@@ -116,7 +116,8 @@ func (p *snapshotPublisher) processFullResults(first watchable.Update[string, *f
 }
 
 func (p *snapshotPublisher) processFull(key string, publication *fullPublication) {
-	// Published endpoints win over the full result's when their revision is newer.
+	// Published endpoints win over the full result's when their revision is newer
+	// (rule 3), so a full build that started before a fast update can't roll it back.
 	contexts := publication.endpointState.Contexts
 	endpoints, replacements, err := translator.ReplayPublishedEndpoints(contexts, publication.endpointState.Endpoints, p.publishedEndpoints.get(key).Endpoints)
 	snapshot := publication.snapshot

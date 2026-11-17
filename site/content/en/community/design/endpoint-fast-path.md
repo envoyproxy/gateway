@@ -49,6 +49,19 @@ There are two paths to Envoy:
 
 Both paths publish through one **snapshot publisher**, so they never race.
 
+## Rules
+
+Three rules keep the two paths consistent. The rest of this document is how
+they're carried out.
+
+1. **The full path still runs for every endpoint change.** The fast path only
+   publishes the same endpoints earlier. Anything it can't handle safely, it
+   skips, and the full path catches up.
+2. **Both paths take revisions from one tracker.** A backend's revision grows in
+   the order its EndpointSlices were read, whichever path read them.
+3. **One publisher, and newer wins.** One goroutine publishes everything, and on
+   both paths a cluster only takes endpoints with a newer revision than it has.
+
 ## Endpoint revisions
 
 Both paths need to tell which endpoints are newer. A backend can span several
@@ -60,9 +73,9 @@ endpoints through it, and it bumps the backend's revision whenever its
 EndpointSlices change. Since both paths read from the same tracker, their revisions can be
 compared.
 
-The endpoint controller sends an update after every refresh, even when nothing
-changed, because the full path may have recorded that revision first. The
-publisher drops updates it has already applied.
+The endpoint controller sends the current endpoints after every refresh, even
+when nothing changed, because the full path may have recorded that revision
+first. The publisher decides whether they're newer.
 
 ## Endpoint context
 
@@ -106,10 +119,9 @@ An update is skipped, and left to full translation, when:
 - the backend goes between no endpoints and some endpoints, since full
   translation turns an empty backend into a direct 503 response
   ([#10604](https://github.com/envoyproxy/gateway/issues/10604));
-- the address type changes, since that changes the cluster type.
+- the endpoints aren't all IP addresses, since EDS only takes IPs.
 
-Skipped updates aren't saved. The existing watches already schedule a full
-reconciliation for the same event.
+Skipped updates aren't saved; the full path handles them (rule 1).
 
 ### Full result
 

@@ -17,10 +17,9 @@ import (
 )
 
 // RevisionTracker gives each backend's endpoints a revision. A higher revision
-// always means a later load, and an unchanged revision means the endpoints did
-// not change. The publisher records the revision each published snapshot was
-// built with. It applies a fast update only if the update is newer, and gives a
-// full result the published endpoints when those are newer than its own.
+// always means a later load, and an unchanged revision means the EndpointSlices
+// did not change. The xDS publisher compares these revisions to keep the newer
+// endpoints.
 type RevisionTracker struct {
 	once sync.Once
 
