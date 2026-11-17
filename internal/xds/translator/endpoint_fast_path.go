@@ -120,8 +120,6 @@ func dropPatchedEndpointContexts(table *types.ResourceVersionTable, policies []*
 // ReplayPublishedEndpoints is the full path. It keeps the full result's
 // configuration and replaces each setting's endpoints with the published ones
 // for the same backend port when those carry a newer revision.
-// This prevents a slow full translation from overwriting newer endpoints that
-// were published by a fast update.
 func ReplayPublishedEndpoints(contexts types.EndpointContexts, candidate, published types.EndpointsByCluster) (types.EndpointsByCluster, map[string]*endpointv3.ClusterLoadAssignment, error) {
 	return applyNewerEndpoints(contexts, candidate, pathFull, func(cluster, setting string, have *types.SettingEndpoints) *types.SettingEndpoints {
 		input, ok := published[cluster][setting]
@@ -146,11 +144,11 @@ func ApplyEndpointUpdates(contexts types.EndpointContexts, applied types.Endpoin
 	})
 }
 
-// applyNewerEndpoints is shared by both paths; path ("fast" or "full") labels the
-// skip metric. incoming returns the candidate endpoints for one applied setting, or nil. A candidate is applied only when
-// its revision is newer and the change is safe; every cluster that changed is
-// rebuilt. It returns the applied endpoints with those clusters replaced, or
-// the input unchanged, and the rebuilt assignments by cluster name.
+// applyNewerEndpoints is shared by both paths. For each setting, incoming returns
+// the candidate endpoints, or nil. A candidate is applied only when its revision
+// is newer and the change is safe, and every cluster that changed is rebuilt.
+// It returns the applied endpoints with those clusters replaced, and the rebuilt
+// assignments by cluster name. path ("fast" or "full") labels the skip metric.
 func applyNewerEndpoints(contexts types.EndpointContexts, applied types.EndpointsByCluster, path string, incoming func(string, string, *types.SettingEndpoints) *types.SettingEndpoints) (types.EndpointsByCluster, map[string]*endpointv3.ClusterLoadAssignment, error) {
 	next := applied
 	changed := make(map[string]*endpointv3.ClusterLoadAssignment)
