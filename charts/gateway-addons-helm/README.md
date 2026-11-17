@@ -4,6 +4,10 @@
 
 An Add-ons Helm chart for Envoy Gateway
 
+> [!WARNING]
+> This chart is designed for **testing and demo purposes only**. It is not intended for production use.
+> If you choose to use it in production, you do so at your own risk.
+
 **Homepage:** <https://gateway.envoyproxy.io/>
 
 ## Maintainers
