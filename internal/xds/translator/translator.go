@@ -151,6 +151,10 @@ type Translator struct {
 	// xdsIR.CACertificates registry. Rebuilt at the start of every Translate() call.
 	caIndex caCertificateIndex
 
+	// listenerDrainType is the drain type of the TCP listeners. Rebuilt at the start of every
+	// Translate() call.
+	listenerDrainType listenerv3.Listener_DrainType
+
 	// ExtensionStats accumulates extension hook call counts and durations across a
 	// single Translate() call. Written by processExtension* functions in extension.go;
 	// read after Translate() returns to emit span attributes.
@@ -244,6 +248,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 	t.extensionIndex = newExtensionResourceIndex(xdsIR)
 	t.caIndex = newCACertificateIndex(xdsIR)
+	t.listenerDrainType = buildListenerDrainType(xdsIR.DrainStrategy)
 	t.ExtensionStats = ExtensionHookStats{}
 
 	tCtx := new(types.ResourceVersionTable)
