@@ -143,11 +143,10 @@ type Authentication struct {
 	// BasicAuth are both required unless jwt.optional or jwt.failOpen relaxes JWT.
 	//
 	// Each listed method lets a request without its credentials through, and a
-	// request without credentials for any listed method is rejected with
-	// 403 Forbidden and no WWW-Authenticate challenge. A request presenting
-	// invalid credentials for a listed method is rejected. jwt.optional has no
-	// effect when JWT is listed. Authorization rules with a jwt principal never
-	// match a request authenticated by BasicAuth.
+	// request without credentials for any listed method is rejected. A request
+	// presenting invalid credentials for a listed method is rejected.
+	// jwt.optional has no effect when JWT is listed. Authorization rules with a
+	// jwt principal never match a request authenticated by BasicAuth.
 	//
 	// AnyOf currently requires both JWT and BasicAuth. It does not support
 	// oidc.forwardAccessToken, oidc.passThroughAuthHeader, oidc.forwardIDToken on
