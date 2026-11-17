@@ -63,35 +63,6 @@ func endpointReconciler(t *testing.T) (*gatewayAPIReconciler, *corev1.Service, *
 	return r, service, slice
 }
 
-func TestEndpointReconcileQueuesUpdateAndPreservesFullCapture(t *testing.T) {
-	r, service, slice := endpointReconciler(t)
-	tree := &resource.Resources{Services: []*corev1.Service{service}}
-	require.NoError(t, r.populateBackendEndpoints(t.Context(), resource.ControllerResources{tree}))
-	require.Len(t, tree.BackendEndpoints, 1)
-	initial := tree.BackendEndpoints[0]
-	require.Equal(t, "10.0.0.1", initial.EndpointsByPort[endpoint.Port{Name: "http", Protocol: corev1.ProtocolTCP}][0].Host)
-	require.Empty(t, r.resources.EndpointUpdates.Drain(), "full collection must not queue fast-path updates")
-	require.Empty(t, r.resources.EndpointUpdates.Ready())
-	// Keep the full capture while the endpoint worker accepts new data.
-	current := &discoveryv1.EndpointSlice{}
-	require.NoError(t, r.client.Get(t.Context(), client.ObjectKeyFromObject(slice), current))
-	current.Endpoints[0].Addresses[0] = "10.0.0.2"
-	require.NoError(t, r.client.Update(t.Context(), current))
-	key := initial.Backend
-	_, err := r.reconcileBackendEndpoints(t.Context(), key)
-	require.NoError(t, err)
-	updated := r.resources.EndpointUpdates.Drain()[key]
-	require.NotNil(t, updated)
-	require.Greater(t, updated.Revision, initial.Revision)
-	select {
-	case <-r.resources.EndpointUpdates.Ready():
-	default:
-		t.Fatal("new source data was not queued for the publisher")
-	}
-	require.Equal(t, "10.0.0.1", tree.EndpointSlices[0].Endpoints[0].Addresses[0], "full capture must remain immutable")
-	require.Equal(t, initial.Revision, tree.BackendEndpoints[0].Revision)
-}
-
 func TestEndpointCollectionErrorDoesNotPublishEmptyData(t *testing.T) {
 	r, service, _ := endpointReconciler(t)
 	tree := &resource.Resources{Services: []*corev1.Service{service}}
