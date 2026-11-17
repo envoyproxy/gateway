@@ -46,6 +46,10 @@ const (
 	// DefaultXdsServerPort is the default listening port of the xds-server.
 	DefaultXdsServerPort = 18000
 
+	// DefaultMaxActiveDownstreamConnections is the default limit of active downstream
+	// connections, shared by all listeners of an Envoy proxy.
+	DefaultMaxActiveDownstreamConnections = 50000
+
 	EnvoyStatsPort = 19001
 
 	EnvoyReadinessPort = 19003
@@ -193,7 +197,8 @@ type StatsMatcherParameters struct {
 }
 
 type overloadManagerParameters struct {
-	MaxHeapSizeBytes uint64
+	MaxHeapSizeBytes               uint64
+	MaxActiveDownstreamConnections int64
 }
 
 type RenderBootstrapConfigOptions struct {
@@ -211,6 +216,8 @@ type RenderBootstrapConfigOptions struct {
 	GatewayNamespaceMode     bool
 	TopologyInjectorDisabled bool
 	ServiceAccountTokenPath  string
+	// MaxActiveDownstreamConnections overrides the default limit of active downstream connections.
+	MaxActiveDownstreamConnections *int64
 }
 
 type SdsConfigPath struct {
@@ -378,6 +385,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			OtelMetricSinks:         metricSinks,
 			ServiceClusterName:      defaultServiceClusterName,
 			ServiceAccountTokenPath: defaultServiceAccountTokenPath,
+			OverloadManager: overloadManagerParameters{
+				MaxActiveDownstreamConnections: DefaultMaxActiveDownstreamConnections,
+			},
 		},
 	}
 
@@ -426,6 +436,9 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		}
 
 		cfg.parameters.OverloadManager.MaxHeapSizeBytes = opts.MaxHeapSizeBytes
+		if opts.MaxActiveDownstreamConnections != nil {
+			cfg.parameters.OverloadManager.MaxActiveDownstreamConnections = *opts.MaxActiveDownstreamConnections
+		}
 		if opts.ServiceClusterName != nil {
 			cfg.parameters.ServiceClusterName = *opts.ServiceClusterName
 		}

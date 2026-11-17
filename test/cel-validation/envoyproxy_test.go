@@ -56,6 +56,35 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"Kubernetes\", \"Host\""},
 		},
 		{
+			desc: "overloadManager maxConnections valid",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					OverloadManager: &egv1a1.OverloadManager{MaxConnections: new(int64(100000))},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "overloadManager maxConnections minimum",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					OverloadManager: &egv1a1.OverloadManager{MaxConnections: new(int64(1))},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "overloadManager maxConnections below minimum",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					OverloadManager: &egv1a1.OverloadManager{MaxConnections: new(int64(0))},
+				}
+			},
+			wantErrors: []string{
+				"spec.overloadManager.maxConnections: Invalid value: 0: spec.overloadManager.maxConnections in body should be greater than or equal to 1",
+			},
+		},
+		{
 			desc: "invalid service type",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{

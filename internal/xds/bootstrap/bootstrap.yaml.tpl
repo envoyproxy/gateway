@@ -339,7 +339,7 @@ overload_manager:
   - name: "envoy.resource_monitors.global_downstream_max_connections"
     typed_config:
       "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
-      max_active_downstream_connections: 50000
+      max_active_downstream_connections: {{ .OverloadManager.MaxActiveDownstreamConnections }}
   {{- with .OverloadManager.MaxHeapSizeBytes }}
   - name: "envoy.resource_monitors.fixed_heap"
     typed_config:
