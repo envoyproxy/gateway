@@ -197,7 +197,7 @@ config:
 # and `enabled` (default true; a bool, or a template string such as
 # "{{ .Values.global.myExtension.enabled }}" that renders to true or false). Can't be combined with
 # `config.envoyGateway.extensionManagers` or `config.envoyGateway.extensionManager`.
-extensionManagersByName: {}
+extensionManagersMap: {}
 
 createNamespace: false
 

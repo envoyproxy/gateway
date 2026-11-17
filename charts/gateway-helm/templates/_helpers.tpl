@@ -247,14 +247,14 @@ proxyTopologyInjector:
 {{- end }}
 
 {{/*
-Renders .Values.extensionManagersByName into an extensionManagers list, as YAML under "items":
+Renders .Values.extensionManagersMap into an extensionManagers list, as YAML under "items":
 sorted by order and then name, without disabled entries, and with name set from the key.
 */}}
 {{- define "eg.extensionManagersFromMap" -}}
 {{- $keys := list }}
-{{- range $name, $em := .Values.extensionManagersByName }}
+{{- range $name, $em := .Values.extensionManagersMap }}
 {{- if not (kindIs "map" $em) }}
-{{- fail (printf "extensionManagersByName.%s must be a map" $name) }}
+{{- fail (printf "extensionManagersMap.%s must be a map" $name) }}
 {{- end }}
 {{- $enabled := true }}
 {{- $raw := index $em "enabled" }}
@@ -262,24 +262,24 @@ sorted by order and then name, without disabled entries, and with name set from 
 {{- if kindIs "string" $raw }}
 {{- $rendered := tpl $raw $ | trim }}
 {{- if not (has $rendered (list "true" "false")) }}
-{{- fail (printf "extensionManagersByName.%s.enabled rendered to %q, want true or false" $name $rendered) }}
+{{- fail (printf "extensionManagersMap.%s.enabled rendered to %q, want true or false" $name $rendered) }}
 {{- end }}
 {{- $enabled = eq $rendered "true" }}
 {{- else if kindIs "bool" $raw }}
 {{- $enabled = $raw }}
 {{- else }}
-{{- fail (printf "extensionManagersByName.%s.enabled must be a bool or a template string" $name) }}
+{{- fail (printf "extensionManagersMap.%s.enabled must be a bool or a template string" $name) }}
 {{- end }}
 {{- end }}
 {{- $order := 0 }}
 {{- $rawOrder := index $em "order" }}
 {{- if and (hasKey $em "order") (not (kindIs "invalid" $rawOrder)) }}
 {{- if not (or (kindIs "int" $rawOrder) (kindIs "int64" $rawOrder) (kindIs "float64" $rawOrder)) }}
-{{- fail (printf "extensionManagersByName.%s.order must be a non-negative integer" $name) }}
+{{- fail (printf "extensionManagersMap.%s.order must be a non-negative integer" $name) }}
 {{- end }}
 {{- $order = int $rawOrder }}
 {{- if or (lt $order 0) (ne (float64 $rawOrder) (float64 $order)) }}
-{{- fail (printf "extensionManagersByName.%s.order must be a non-negative integer" $name) }}
+{{- fail (printf "extensionManagersMap.%s.order must be a non-negative integer" $name) }}
 {{- end }}
 {{- end }}
 {{- if $enabled }}
@@ -291,7 +291,7 @@ sorted by order and then name, without disabled entries, and with name set from 
 {{- range sortAlpha $keys }}
 {{- /* Drop the 20-digit order and the "/" after it; the name itself may contain "/". */}}
 {{- $name := substr 21 (len .) . }}
-{{- $em := deepCopy (get $.Values.extensionManagersByName $name) }}
+{{- $em := deepCopy (get $.Values.extensionManagersMap $name) }}
 {{- $_ := unset $em "enabled" }}
 {{- $_ = unset $em "order" }}
 {{- $_ = set $em "name" $name }}

@@ -7,7 +7,7 @@ global:
     enabled: true
   disabledExtension:
     enabled: false
-extensionManagersByName:
+extensionManagersMap:
   # Renders second: higher order.
   ai-extension:
     order: 20
