@@ -139,8 +139,8 @@ func TestBuildGRPCJSONTranscoderConfig(t *testing.T) {
 func TestBuildGRPCJSONTranscoderConfigBodySizesAndEnums(t *testing.T) {
 	transcoder := testTranscoder(t)
 	transcoder.PrintOptions = &egv1a1.JSONPrintOptions{AlwaysPrintEnumsAsInts: new(true)}
-	transcoder.MaxRequestBodySize = new(uint32(1024 * 1024))
-	transcoder.MaxResponseBodySize = new(uint32(64 * 1024 * 1024))
+	transcoder.MaxRequestBodyBytes = new(uint32(1024 * 1024))
+	transcoder.MaxResponseBodyBytes = new(uint32(64 * 1024 * 1024))
 
 	cfg, err := buildGRPCJSONTranscoderConfig(transcoder)
 	require.NoError(t, err)

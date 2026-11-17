@@ -31,5 +31,5 @@ http:
         alwaysPrintEnumsAsInts: true
       ignoreUnknownQueryParameters: true
       convertGRPCStatus: true
-      maxRequestBodySize: 1048576
-      maxResponseBodySize: 67108864
+      maxRequestBodyBytes: 1048576
+      maxResponseBodyBytes: 67108864

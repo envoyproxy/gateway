@@ -291,8 +291,8 @@ func TestBuildGRPCJSONTranscoder(t *testing.T) {
 	require.Equal(t, "httproutefilter/default/transcode", got.Name)
 	require.Equal(t, grpcEchoDescriptorBin(t), got.ProtoDescriptorBin)
 	require.Equal(t, []string{grpcEchoService}, got.Services)
-	require.Nil(t, got.MaxRequestBodySize)
-	require.Nil(t, got.MaxResponseBodySize)
+	require.Nil(t, got.MaxRequestBodyBytes)
+	require.Nil(t, got.MaxResponseBodyBytes)
 }
 
 func TestBuildGRPCJSONTranscoderBodySizes(t *testing.T) {
@@ -384,8 +384,8 @@ func TestBuildGRPCJSONTranscoderBodySizes(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tc.wantRequest, got.MaxRequestBodySize)
-			require.Equal(t, tc.wantResponse, got.MaxResponseBodySize)
+			require.Equal(t, tc.wantRequest, got.MaxRequestBodyBytes)
+			require.Equal(t, tc.wantResponse, got.MaxResponseBodyBytes)
 		})
 	}
 }

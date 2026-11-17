@@ -103,11 +103,11 @@ func buildGRPCJSONTranscoderConfig(transcoder *ir.GRPCJSONTranscoder) (*anypb.An
 		}
 	}
 
-	if transcoder.MaxRequestBodySize != nil {
-		cfg.MaxRequestBodySize = wrapperspb.UInt32(*transcoder.MaxRequestBodySize)
+	if transcoder.MaxRequestBodyBytes != nil {
+		cfg.MaxRequestBodySize = wrapperspb.UInt32(*transcoder.MaxRequestBodyBytes)
 	}
-	if transcoder.MaxResponseBodySize != nil {
-		cfg.MaxResponseBodySize = wrapperspb.UInt32(*transcoder.MaxResponseBodySize)
+	if transcoder.MaxResponseBodyBytes != nil {
+		cfg.MaxResponseBodySize = wrapperspb.UInt32(*transcoder.MaxResponseBodyBytes)
 	}
 
 	return proto.ToAnyWithValidation(cfg)

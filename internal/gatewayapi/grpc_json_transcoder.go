@@ -97,11 +97,11 @@ func useGRPCUpstream(ds *ir.DestinationSetting) status.Error {
 func (t *Translator) buildGRPCJSONTranscoder(
 	cfg *egv1a1.GRPCJSONTranscoder, name, namespace string,
 ) (*ir.GRPCJSONTranscoder, error) {
-	maxRequestBodySize, err := bodySizeBytes("maxRequestBodySize", cfg.MaxRequestBodySize)
+	maxRequestBodyBytes, err := bodySizeBytes("maxRequestBodySize", cfg.MaxRequestBodySize)
 	if err != nil {
 		return nil, err
 	}
-	maxResponseBodySize, err := bodySizeBytes("maxResponseBodySize", cfg.MaxResponseBodySize)
+	maxResponseBodyBytes, err := bodySizeBytes("maxResponseBodySize", cfg.MaxResponseBodySize)
 	if err != nil {
 		return nil, err
 	}
@@ -133,12 +133,13 @@ func (t *Translator) buildGRPCJSONTranscoder(
 		PrintOptions:                 cfg.PrintOptions,
 		IgnoreUnknownQueryParameters: cfg.IgnoreUnknownQueryParameters,
 		ConvertGRPCStatus:            cfg.ConvertGRPCStatus,
-		MaxRequestBodySize:           maxRequestBodySize,
-		MaxResponseBodySize:          maxResponseBodySize,
+		MaxRequestBodyBytes:          maxRequestBodyBytes,
+		MaxResponseBodyBytes:         maxResponseBodyBytes,
 	}, nil
 }
 
-// bodySizeBytes converts a body size limit to bytes. Envoy takes a non-zero uint32.
+// bodySizeBytes checks the range here because the CRD pattern can't reject a value over
+// the uint32 that Envoy takes.
 func bodySizeBytes(field string, size *apiresource.Quantity) (*uint32, error) {
 	if size == nil {
 		return nil, nil

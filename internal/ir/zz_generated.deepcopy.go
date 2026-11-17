@@ -2289,13 +2289,13 @@ func (in *GRPCJSONTranscoder) DeepCopyInto(out *GRPCJSONTranscoder) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.MaxRequestBodySize != nil {
-		in, out := &in.MaxRequestBodySize, &out.MaxRequestBodySize
+	if in.MaxRequestBodyBytes != nil {
+		in, out := &in.MaxRequestBodyBytes, &out.MaxRequestBodyBytes
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.MaxResponseBodySize != nil {
-		in, out := &in.MaxResponseBodySize, &out.MaxResponseBodySize
+	if in.MaxResponseBodyBytes != nil {
+		in, out := &in.MaxResponseBodyBytes, &out.MaxResponseBodyBytes
 		*out = new(uint32)
 		**out = **in
 	}

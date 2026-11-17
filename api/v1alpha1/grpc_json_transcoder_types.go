@@ -44,30 +44,23 @@ type GRPCJSONTranscoder struct {
 	// +optional
 	ConvertGRPCStatus *bool `json:"convertGRPCStatus,omitempty"`
 
-	// MaxRequestBodySize is the maximum size of a JSON request body to transcode,
-	// for example 1Mi. A larger body is rejected with HTTP 413.
+	// MaxRequestBodySize is the maximum size of a request body to transcode. A larger
+	// body is rejected with HTTP 413.
+	// If not set, the buffer limit of the stream is used.
+	// For example, 1Mi, 64Mi etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
-	//
-	// If not specified, the buffer limit of the stream is used, like for MaxResponseBodySize.
 	//
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
 	MaxRequestBodySize *resource.Quantity `json:"maxRequestBodySize,omitempty"`
 
-	// MaxResponseBodySize is the maximum size of a gRPC response body to transcode,
-	// for example 64Mi. A larger body is replaced with an HTTP 500 response.
+	// MaxResponseBodySize is the maximum size of a response body to transcode. A larger
+	// body is replaced with HTTP 500, or resets the stream of a streaming response.
+	// If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and
+	// 64Ki for HTTP/2 by default.
+	// For example, 1Mi, 64Mi etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
-	//
-	// For a streaming response, the limit applies to each message, and the stream is
-	// reset when it is exceeded.
-	//
-	// If not specified, the buffer limit of the stream is used: the connection buffer
-	// limit (32Ki by default) for an HTTP/1.1 client, or the initial stream window size
-	// (64Ki by default) for an HTTP/2 client. Both can be changed in ClientTrafficPolicy.
-	//
-	// Envoy holds the whole response in memory to transcode it, so a large value
-	// increases memory usage when many requests are in flight.
 	//
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
@@ -108,7 +101,7 @@ type JSONPrintOptions struct {
 	// +optional
 	PreserveProtoFieldNames *bool `json:"preserveProtoFieldNames,omitempty"`
 
-	// AlwaysPrintEnumsAsInts prints the enum values as integers instead of their names.
+	// AlwaysPrintEnumsAsInts prints enums as integers instead of names.
 	//
 	// +optional
 	AlwaysPrintEnumsAsInts *bool `json:"alwaysPrintEnumsAsInts,omitempty"`

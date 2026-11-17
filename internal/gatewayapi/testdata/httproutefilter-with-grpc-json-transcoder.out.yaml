@@ -170,8 +170,8 @@ xdsIR:
         grpcJSONTranscoder:
           convertGRPCStatus: true
           ignoreUnknownQueryParameters: true
-          maxRequestBodySize: 1048576
-          maxResponseBodySize: 67108864
+          maxRequestBodyBytes: 1048576
+          maxResponseBodyBytes: 67108864
           name: httproutefilter/default/transcode
           printOptions:
             addWhitespace: true
