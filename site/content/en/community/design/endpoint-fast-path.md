@@ -56,8 +56,8 @@ EndpointSlices, and Kubernetes resource versions don't give one ordered version
 for the whole set: a deleted slice can make the largest version go backward.
 
 Instead, the provider keeps a revision tracker. Both paths collect a backend's
-endpoints through it, and it bumps the backend's revision whenever its endpoints
-change. Since both paths read from the same tracker, their revisions can be
+endpoints through it, and it bumps the backend's revision whenever its
+EndpointSlices change. Since both paths read from the same tracker, their revisions can be
 compared.
 
 The endpoint controller sends an update after every refresh, even when nothing

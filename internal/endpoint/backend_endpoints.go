@@ -6,7 +6,6 @@
 package endpoint
 
 import (
-	"reflect"
 	"sort"
 
 	corev1 "k8s.io/api/core/v1"
@@ -70,12 +69,4 @@ func NewBackendEndpoints(backend ir.ServiceKey, slices []*discoveryv1.EndpointSl
 	}
 	backendEndpoints.AddressType = addressType(slices)
 	return backendEndpoints
-}
-
-// sameEndpointData compares backend identity and derived endpoints. Revisions
-// and raw EndpointSlice metadata do not determine whether the endpoint data changed.
-func sameEndpointData(previous, current *BackendEndpoints) bool {
-	return previous != nil && previous.Backend == current.Backend &&
-		reflect.DeepEqual(previous.AddressType, current.AddressType) &&
-		reflect.DeepEqual(previous.EndpointsByPort, current.EndpointsByPort)
 }

@@ -43,7 +43,7 @@ func (s *RevisionTracker) init() {
 }
 
 // Track loads a backend's EndpointSlices and returns its endpoints with a
-// revision: the stored one if the endpoints are unchanged, otherwise the next
+// revision: the stored one if the slices are unchanged, otherwise the next
 // one. On error the stored entry is left as is.
 func (s *RevisionTracker) Track(key ir.ServiceKey, load func() ([]*discoveryv1.EndpointSlice, error)) (*BackendEndpoints, error) {
 	s.init()
@@ -56,17 +56,13 @@ func (s *RevisionTracker) Track(key ir.ServiceKey, load func() ([]*discoveryv1.E
 	previous := s.lastLoaded[key]
 	// Most backends are unchanged between full reconciles. If the same slices come
 	// back at the same resource versions, reuse the stored entry and skip the
-	// conversion and comparison below.
+	// conversion below.
 	if sameSliceVersions(previous, slices) {
 		return previous, nil
 	}
 	current := NewBackendEndpoints(key, slices)
-	if sameEndpointData(previous, current) {
-		current.Revision = previous.Revision
-	} else {
-		s.lastRevision++
-		current.Revision = s.lastRevision
-	}
+	s.lastRevision++
+	current.Revision = s.lastRevision
 	s.lastLoaded[key] = current
 	return current, nil
 }
