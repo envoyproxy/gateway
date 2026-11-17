@@ -1,1 +1,0 @@
-A BackendTrafficPolicy targeting a Service, ServiceImport, or Backend now reports `Accepted=False` with reason `NotMerged` on each Gateway that references the backend but has no merged cluster for it, instead of silently doing nothing.

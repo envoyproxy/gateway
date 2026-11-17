@@ -314,6 +314,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
 		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
+		xdsIR[irKey].DrainStrategy = getDrainStrategy(gateway.envoyProxy)
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
 
 		for _, listener := range gateway.listeners {
@@ -340,7 +341,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
-				tlsConfig := irTLSConfigs(&listener.tls)
+				tlsConfig := t.irTLSConfigs(&listener.tls, xdsIR[irKey], gateway)
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -371,7 +372,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
 				listener.httpIR = irListener
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
-				tlsConfig := irTLSConfigsForTCPListener(&listener.tls)
+				tlsConfig := t.irTLSConfigsForTCPListener(&listener.tls, xdsIR[irKey], gateway)
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -557,7 +558,7 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 		validListenerCountByPort[listener.Port]++
 
 		for _, secret := range listener.tls.secrets {
-			if secret.Type == egv1a1.SDSSecretType {
+			if secret.extensionSecret != nil || secret.kubernetesSecret.Type == egv1a1.SDSSecretType {
 				sdsListenersByPort[listener.Port] = append(sdsListenersByPort[listener.Port], listener)
 				break
 			}
@@ -762,6 +763,13 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 		Path:     bootstrap.EnvoyReadinessPath,
 		IPFamily: ipFamily,
 	}
+}
+
+func getDrainStrategy(envoyProxy *egv1a1.EnvoyProxy) egv1a1.DrainStrategy {
+	if envoyProxy == nil || envoyProxy.Spec.Shutdown == nil || envoyProxy.Spec.Shutdown.DrainStrategy == nil {
+		return ""
+	}
+	return *envoyProxy.Spec.Shutdown.DrainStrategy
 }
 
 func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {

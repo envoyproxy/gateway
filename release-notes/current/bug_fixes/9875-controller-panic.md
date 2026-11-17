@@ -1,1 +1,0 @@
-Fixed controller panic when translating backend credential injection with an invalid header.

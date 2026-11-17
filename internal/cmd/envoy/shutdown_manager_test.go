@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -95,6 +96,46 @@ func TestClearShutdownReadyFile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestShutdownReadyResponseOutlivesWriteTimeout(t *testing.T) {
+	for _, ready := range []bool{true, false} {
+		t.Run(fmt.Sprintf("ready=%t", ready), func(t *testing.T) {
+			readyFile := filepath.Join(t.TempDir(), "shutdown-ready")
+			readyErr := make(chan error, 1)
+			server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				if ready {
+					time.AfterFunc(200*time.Millisecond, func() {
+						readyErr <- os.WriteFile(readyFile, nil, 0o600)
+					})
+				}
+				shutdownReadyHandler(w, 1500*time.Millisecond, readyFile)
+			}))
+			server.Config.WriteTimeout = 100 * time.Millisecond
+			server.Start()
+			defer server.Close()
+			client := server.Client()
+			client.Timeout = 10 * time.Second
+
+			resp, err := client.Get(server.URL + ShutdownManagerReadyPath)
+			if ready {
+				require.NoError(t, <-readyErr)
+			}
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			expectedCode := http.StatusInternalServerError
+			if ready {
+				expectedCode = http.StatusOK
+			}
+			require.Equal(t, expectedCode, resp.StatusCode)
+		})
+	}
+}
+
+func TestShutdownReadyWriteDeadlineError(t *testing.T) {
+	writer := httptest.NewRecorder()
+	shutdownReadyHandler(writer, time.Second, filepath.Join(t.TempDir(), "shutdown-ready"))
+	require.Equal(t, http.StatusInternalServerError, writer.Code)
 }
 
 func TestGetTotalConnections(t *testing.T) {

@@ -683,7 +683,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-2", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("sds.example.com"))},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 				{
@@ -710,7 +710,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("*.example.com"))},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 				{
@@ -744,7 +744,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 				{
@@ -761,7 +761,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 				{
@@ -802,7 +802,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 			},

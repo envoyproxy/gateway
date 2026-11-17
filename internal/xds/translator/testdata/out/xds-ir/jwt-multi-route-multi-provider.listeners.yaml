@@ -104,16 +104,16 @@
                     timeout: 10s
                     uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
             requirementMap:
-              example-or-example2_32d8e7367a44f94f:
-                requiresAny:
-                  requirements:
-                  - providerName: example_7e0f64f43618ad77
-                  - providerName: example2_e2fe046d94962359
-              example-or-example2_6521f40c1fdcd711:
+              default/policy-1:
                 requiresAny:
                   requirements:
                   - providerName: example_c464f1a4e10c61a2
                   - providerName: example2_9fb53f4aa4426db0
+              default/policy-2:
+                requiresAny:
+                  requirements:
+                  - providerName: example_7e0f64f43618ad77
+                  - providerName: example2_e2fe046d94962359
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

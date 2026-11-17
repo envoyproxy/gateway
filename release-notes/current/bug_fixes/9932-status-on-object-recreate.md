@@ -1,1 +1,0 @@
-Fixed a Gateway, xRoute, policy, Backend or EnvoyProxy being left with no status when it is deleted and recreated with the same name and an unchanged spec within a single reconcile, which previously left the recreated object stuck at the default status its CRD defines until the controller was restarted.

@@ -647,7 +647,28 @@ type ShutdownConfig struct {
 	//
 	// +optional
 	MinDrainDuration *gwapiv1.Duration `json:"minDrainDuration,omitempty"`
+	// DrainStrategy defines how Envoy drains HTTP connections during the graceful drain process.
+	// TCP and UDP proxy connections are not drained by either strategy.
+	// If unspecified, defaults to "Immediate".
+	//
+	// Switching to or from "Gradual" changes the listener configuration, which makes the running
+	// Envoy proxies replace their listeners and drain the existing connections.
+	//
+	// +optional
+	DrainStrategy *DrainStrategy `json:"drainStrategy,omitempty"`
 }
+
+// DrainStrategy defines the strategy Envoy uses to drain listener connections.
+//
+// +kubebuilder:validation:Enum=Gradual;Immediate
+type DrainStrategy string
+
+const (
+	// DrainStrategyGradual drains HTTP connections progressively within the drain timeout.
+	DrainStrategyGradual DrainStrategy = "Gradual"
+	// DrainStrategyImmediate drains all HTTP connections once the drain process starts.
+	DrainStrategyImmediate DrainStrategy = "Immediate"
+)
 
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyDeployment) && !has(self.envoyDaemonSet)) || (!has(self.envoyDeployment) && has(self.envoyDaemonSet))) || (!has(self.envoyDeployment) && !has(self.envoyDaemonSet))",message="only one of envoyDeployment or envoyDaemonSet can be specified"
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyHpa) && !has(self.envoyDaemonSet)) || (!has(self.envoyHpa) && has(self.envoyDaemonSet))) || (!has(self.envoyHpa) && !has(self.envoyDaemonSet))",message="cannot use envoyHpa if envoyDaemonSet is used"
@@ -843,6 +864,14 @@ const (
 	// `patch` fields configured on this EnvoyProxy were ignored because patching is
 	// disabled in the EnvoyGateway configuration.
 	EnvoyProxyReasonPatchDisabled EnvoyProxyConditionReason = "PatchDisabled"
+
+	// EnvoyProxyReasonInvalidField indicates that one or more fields configured on this
+	// EnvoyProxy are invalid and were ignored, while the rest of the EnvoyProxy is applied.
+	EnvoyProxyReasonInvalidField EnvoyProxyConditionReason = "InvalidField"
+
+	// EnvoyProxyReasonMultipleWarnings is used with the "Warning" condition when the EnvoyProxy
+	// has warnings with different reasons; the condition message lists all of them.
+	EnvoyProxyReasonMultipleWarnings EnvoyProxyConditionReason = "Warnings"
 )
 
 // +kubebuilder:object:root=true

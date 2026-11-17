@@ -176,8 +176,8 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -194,11 +194,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -214,8 +209,8 @@ securityPolicies:
           kind: Backend
           name: backend-fqdn
           port: 3000
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
   status:
@@ -232,11 +227,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:

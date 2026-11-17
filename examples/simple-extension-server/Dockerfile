@@ -1,14 +1,11 @@
-FROM golang:1.27.3@sha256:957861185dbf29d93668ace41e011d091c6e779953d47f0316ef2cc58e28fe2b AS builder
+FROM golang:1.27.4@sha256:08bcb99a38f85a265f9a93d1d3323e2440eec333380f3ea26ee0dec9264bb41c AS builder
 
 ARG GO_LDFLAGS=""
 
 WORKDIR /workspace
-COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod \
-    go mod download
-
 COPY . ./
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod \
+    cd examples/simple-extension-server && \
     CGO_ENABLED=0  \
     GOOS=${TARGETOS} \
     GOARCH=${TARGETARCH} \

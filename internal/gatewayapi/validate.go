@@ -15,6 +15,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -460,10 +461,67 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) bool {
 	return true
 }
 
+// resolveExtensionCertificateRef checks a listener certificate ref to a kind registered in
+// ExtensionManager.SecretResources: that it is permitted and exists. Whether the
+// certificate can be served is decided by the extension when the xDS is translated.
+func (t *Translator) resolveExtensionCertificateRef(
+	listener *ListenerContext,
+	certificateRef gwapiv1.SecretObjectReference,
+	refGroup, refKind string,
+	idx int,
+	resources *resource.Resources,
+) (*unstructured.Unstructured, status.ListenerError) {
+	listenerNamespace := listener.GetNamespace()
+	certNamespace := listenerNamespace
+
+	if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" &&
+		string(*certificateRef.Namespace) != listenerNamespace {
+		fromGroup := gwapiv1.GroupName
+		fromKind := resource.KindGateway
+		if listener.isFromListenerSet() {
+			fromGroup = gwapiv1.GroupVersion.Group
+			fromKind = resource.KindListenerSet
+		}
+
+		if !isCrossNamespaceReferencePermitted(
+			crossNamespaceFrom{
+				group:     fromGroup,
+				kind:      fromKind,
+				namespace: listenerNamespace,
+			},
+			crossNamespaceTo{
+				group:     refGroup,
+				kind:      refKind,
+				namespace: string(*certificateRef.Namespace),
+				name:      string(certificateRef.Name),
+			},
+			resources.ReferenceGrants,
+		) {
+			return nil, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Certificate ref to %s %s/%s not permitted by any ReferenceGrant.",
+					idx, refKind, *certificateRef.Namespace, certificateRef.Name),
+				gwapiv1.ListenerReasonRefNotPermitted,
+			)
+		}
+
+		certNamespace = string(*certificateRef.Namespace)
+	}
+
+	obj := resources.GetExtensionSecret(refGroup, refKind, certNamespace, string(certificateRef.Name))
+	if obj == nil {
+		return nil, status.NewListenerStatusError(
+			fmt.Errorf("certificate refs %d: %s %s/%s does not exist.", idx, refKind, certNamespace, certificateRef.Name),
+			gwapiv1.ListenerReasonInvalidCertificateRef,
+		)
+	}
+
+	return obj, nil
+}
+
 func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 	listener *ListenerContext,
 	resources *resource.Resources,
-) ([]*corev1.Secret, []*x509.Certificate, bool) {
+) ([]listenerSecret, []*x509.Certificate, bool) {
 	if len(listener.TLS.CertificateRefs) == 0 {
 		listener.SetCondition(
 			gwapiv1.ListenerConditionProgrammed,
@@ -477,10 +535,31 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 	var errs []status.ListenerError
 	tlsSecrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
 	sdsSecrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
-	orderedSecrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
+	orderedSecrets := make([]listenerSecret, 0, len(listener.TLS.CertificateRefs))
+	extensionSecretCount := 0
 	resolvedSDSSecretNames := make(map[types.NamespacedName]struct{})
 	for idx, certificateRef := range listener.TLS.CertificateRefs {
-		if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
+		refGroup, refKind := "", resource.KindSecret
+		if certificateRef.Group != nil {
+			refGroup = string(*certificateRef.Group)
+		}
+		if certificateRef.Kind != nil && string(*certificateRef.Kind) != "" {
+			refKind = string(*certificateRef.Kind)
+		}
+
+		// A ref to a kind registered in ExtensionManager.SecretResources is resolved by an extension.
+		if t.isExtensionSecretRef(refGroup, refKind) {
+			cert, err := t.resolveExtensionCertificateRef(listener, certificateRef, refGroup, refKind, idx, resources)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			orderedSecrets = append(orderedSecrets, listenerSecret{extensionSecret: cert})
+			extensionSecretCount++
+			continue
+		}
+
+		if refGroup != "" {
 			errs = append(errs, status.NewListenerStatusError(
 				fmt.Errorf("certificate refs %d: Listener's TLS certificate ref group must be unspecified/empty.", idx),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
@@ -566,7 +645,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			}
 			resolvedSDSSecretNames[name] = struct{}{}
 			sdsSecrets = append(sdsSecrets, secret)
-			orderedSecrets = append(orderedSecrets, secret)
+			orderedSecrets = append(orderedSecrets, listenerSecret{kubernetesSecret: secret})
 			continue
 		}
 
@@ -587,10 +666,10 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 		}
 
 		tlsSecrets = append(tlsSecrets, secret)
-		orderedSecrets = append(orderedSecrets, secret)
+		orderedSecrets = append(orderedSecrets, listenerSecret{kubernetesSecret: secret})
 	}
 
-	if len(tlsSecrets)+len(sdsSecrets) == 0 {
+	if len(tlsSecrets)+len(sdsSecrets)+extensionSecretCount == 0 {
 		// Use RefNotPermitted only if ALL errors are RefNotPermitted
 		// Otherwise use InvalidCertificateRef as the general catch-all
 		reason := gwapiv1.ListenerReasonRefNotPermitted
@@ -600,7 +679,6 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 				break
 			}
 		}
-
 		errList := make([]error, len(errs))
 		for i, e := range errs {
 			errList[i] = e
@@ -619,7 +697,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 	validSecrets, certs, err := parseCertsFromTLSSecretsData(tlsSecrets)
 	if err != nil {
 		if err.Reason() != status.ListenerReasonPartiallyInvalidCertificateRef {
-			if len(validSecrets) == 0 && len(sdsSecrets) > 0 {
+			if len(validSecrets) == 0 && len(sdsSecrets)+extensionSecretCount > 0 {
 				errs = append(errs, err)
 			} else {
 				listener.SetCondition(
@@ -654,19 +732,19 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 		validTLSSecretsByName[name] = append(validTLSSecretsByName[name], secret)
 	}
 
-	resolvedSecrets := make([]*corev1.Secret, 0, len(validSecrets)+len(sdsSecrets))
+	resolvedSecrets := make([]listenerSecret, 0, len(validSecrets)+len(sdsSecrets)+extensionSecretCount)
 	for _, secret := range orderedSecrets {
-		if secret.Type == egv1a1.SDSSecretType {
+		if secret.extensionSecret != nil || secret.kubernetesSecret.Type == egv1a1.SDSSecretType {
 			resolvedSecrets = append(resolvedSecrets, secret)
 			continue
 		}
 
-		name := types.NamespacedName{Namespace: secret.Namespace, Name: secret.Name}
+		name := types.NamespacedName{Namespace: secret.kubernetesSecret.Namespace, Name: secret.kubernetesSecret.Name}
 		matchingSecrets := validTLSSecretsByName[name]
 		if len(matchingSecrets) == 0 {
 			continue
 		}
-		resolvedSecrets = append(resolvedSecrets, matchingSecrets[0])
+		resolvedSecrets = append(resolvedSecrets, listenerSecret{kubernetesSecret: matchingSecrets[0]})
 		validTLSSecretsByName[name] = matchingSecrets[1:]
 	}
 

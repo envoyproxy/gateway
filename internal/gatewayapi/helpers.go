@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"slices"
 	"sort"
@@ -15,6 +16,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,6 +29,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -204,6 +207,15 @@ func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
 	return false
 }
 
+// IsHTTPRouteFilterRef returns true if the extensionRef refers to Envoy Gateway
+// HTTPRouteFilter. Both group and kind must match, since an extension may register
+// a resource with the same kind in a different group.
+func IsHTTPRouteFilterRef(ref *gwapiv1.LocalObjectReference) bool {
+	return ref != nil &&
+		string(ref.Group) == egv1a1.GroupName &&
+		string(ref.Kind) == egv1a1.KindHTTPRouteFilter
+}
+
 // ValidateHTTPRouteFilter validates the provided filter within HTTPRoute.
 func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
@@ -220,8 +232,7 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+		case IsHTTPRouteFilterRef(filter.ExtensionRef):
 			return nil
 		default:
 			for _, gk := range extGKs {
@@ -250,8 +261,7 @@ func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter:
+		case IsHTTPRouteFilterRef(filter.ExtensionRef):
 			return nil
 		default:
 			for _, gk := range extGKs {
@@ -371,16 +381,81 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		if listener.hostnameConflictLoser {
 			continue
 		}
+		// A listener that will not be programmed cannot own a hostname. Letting it delete
+		// one would strip the route from the valid listener and leave it attached to
+		// nothing. The condition is read directly rather than through
+		// isSpecValidForConflictChecks, which short-circuits on specValid and so misses a
+		// listener that validated cleanly and was only conflicted afterwards - duplicate
+		// hostnames with no winner being the case that leaves no flag behind.
+		if hasInvalidCondition(listener) || listener.protocolConflicted {
+			continue
+		}
 		if listenerContext != nil && listenerContext.Port != listener.Port {
 			continue
 		}
 		if listener.Hostname == nil {
 			continue
 		}
-		hostnamesSet.Delete(string(*listener.Hostname))
+		siblingHostname := string(*listener.Hostname)
+
+		// A sibling listener owns a hostname when it matches that hostname at least as
+		// specifically as this listener does. Deleting the sibling's own hostname as a
+		// literal string only landed when the set happened to hold that same string, so
+		// a concrete route hostname under a nested wildcard sibling was never removed.
+		//
+		// Equal specificity means an identical hostname, where the winner is picked by
+		// the hostnameConflictLoser guard above: only the loser reaches this loop with
+		// the winner as its sibling, so the two can never delete each other's hosts.
+		for _, h := range hostnamesSet.UnsortedList() {
+			if hostnameMatches(siblingHostname, h) &&
+				hostnameSpecificity(siblingHostname) >= hostnameSpecificity(listenerHostnameVal) {
+				hostnamesSet.Delete(h)
+			}
+		}
 	}
 
 	return sets.List(hostnamesSet)
+}
+
+// routeIntersectsListener reports whether the route hostnames intersect the listener's
+// own hostname. This decides route acceptance and attachment, so unlike computeHosts it
+// ignores sibling listeners: a route whose hostnames are all owned by a more specific
+// sibling is still accepted by and attached to the listener it references, it just has
+// no hosts to program there.
+func routeIntersectsListener(routeHostnames []string, listener *ListenerContext) bool {
+	// Without a gateway, computeHosts has no sibling listeners to filter against.
+	return len(computeHosts(routeHostnames, &ListenerContext{Listener: listener.Listener})) > 0
+}
+
+// hostnameMatches reports whether listenerHostname matches hostname, treating a
+// leading "*" in listenerHostname as a wildcard. Identical strings match:
+// wildcardHostnameMatchesHostname deliberately returns false when both sides are the
+// same wildcard, so that case is handled here rather than there.
+func hostnameMatches(listenerHostname, hostname string) bool {
+	if listenerHostname == hostname {
+		return true
+	}
+	if strings.HasPrefix(listenerHostname, "*") {
+		return wildcardHostnameMatchesHostname(listenerHostname, hostname)
+	}
+	return false
+}
+
+// hostnameSpecificity ranks how narrowly a listener hostname matches. An exact
+// hostname is more specific than any wildcard; between two wildcards the longer
+// suffix wins, so "*.dev.example.com" outranks "*.example.com"; and an empty
+// hostname, which matches everything, is less specific than either.
+func hostnameSpecificity(hostname string) int {
+	// An empty listener hostname matches every hostname, making it the least specific
+	// listener there is. It has no "*" prefix, so without this it would fall through
+	// to the exact-hostname branch and rank as the most specific instead.
+	if hostname == "" {
+		return -1
+	}
+	if !strings.HasPrefix(hostname, "*") {
+		return math.MaxInt
+	}
+	return len(strings.TrimPrefix(hostname, "*"))
 }
 
 // wildcardHostnameMatchesHostname returns true if wildcardHostname matches hostname.
@@ -461,7 +536,7 @@ func irStringKey(gatewayNs, gatewayName string) string {
 // extractGatewayNameFromListener extracts the gateway name from an IR listener name.
 // The listener name format can be:
 // - Gateway: "namespace/gateway/listener"
-// - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
+// - ListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
 // Returns "namespace/gateway/" in both cases.
 func extractGatewayNameFromListener(listenerName string) string {
 	parts := strings.Split(listenerName, "/")
@@ -591,7 +666,7 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 }
 
 // irTLSConfigs produces a defaulted IR TLSConfig
-func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
+func (t *Translator) irTLSConfigs(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
 	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
@@ -599,8 +674,12 @@ func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 	tlsListenerConfigs := &ir.TLSConfig{
 		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
-	for i, tlsSecret := range config.secrets {
-		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(tlsSecret)
+	for i, secret := range config.secrets {
+		if secret.extensionSecret != nil {
+			tlsListenerConfigs.Certificates[i] = t.getTLSCertificateFromExtensionRef(secret.extensionSecret, gwIR, gatewayCtx)
+			continue
+		}
+		tlsListenerConfigs.Certificates[i] = getTLSCertificateFromSecret(secret.kubernetesSecret)
 	}
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
@@ -656,10 +735,29 @@ func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
 	return cert
 }
 
+// getTLSCertificateFromExtensionRef builds the IR certificate for a listener certificate
+// resolved from an extension-registered kind. No key material is carried: how Envoy obtains
+// the certificate is decided by the extension server via the Secret hook.
+func (t *Translator) getTLSCertificateFromExtensionRef(obj *unstructured.Unstructured, gwIR *ir.Xds, gatewayCtx *GatewayContext) ir.TLSCertificate {
+	return ir.TLSCertificate{
+		Name:         irTLSExtensionCertificateName(obj),
+		ExtensionRef: t.getOrCreateExtensionResource(gwIR, gatewayCtx, obj),
+	}
+}
+
+// irTLSExtensionCertificateName is the IR-level identifier for an extension-resolved
+// certificate. It is scoped by group and kind as well as namespace and name, so two
+// providers may use the same resource name without colliding. This is not the xDS secret
+// name -- that is chosen by the extension server.
+func irTLSExtensionCertificateName(obj *unstructured.Unstructured) string {
+	gvk := obj.GroupVersionKind()
+	return fmt.Sprintf("%s/%s/%s/%s", gvk.Group, gvk.Kind, obj.GetNamespace(), obj.GetName())
+}
+
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
 // for TCP/TLS routes, e.g. disabling ALPN
-func irTLSConfigsForTCPListener(config *ListenerTLSConfig) *ir.TLSConfig {
-	tlsListenerConfigs := irTLSConfigs(config)
+func (t *Translator) irTLSConfigsForTCPListener(config *ListenerTLSConfig, gwIR *ir.Xds, gatewayCtx *GatewayContext) *ir.TLSConfig {
+	tlsListenerConfigs := t.irTLSConfigs(config, gwIR, gatewayCtx)
 
 	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
 	// by setting an empty slice instead of a nil slice
@@ -1679,4 +1777,27 @@ func getOverriddenTargetsMessageForRoute(
 		return fmt.Sprintf("these route rules: %v", routes)
 	}
 	return ""
+}
+
+// deprecatedField describes a deprecated field replaced by replacement, with no planned removal.
+func deprecatedField(replacement string) status.DeprecatedField {
+	return status.DeprecatedField{Replacement: replacement}
+}
+
+// deprecatedFieldScheduledForRemoval describes a deprecated field replaced by replacement that is
+// scheduled for removal in status.DeprecatedFieldsRemovalRelease.
+func deprecatedFieldScheduledForRemoval(replacement string) status.DeprecatedField {
+	return status.DeprecatedField{Replacement: replacement, RemovedIn: status.DeprecatedFieldsRemovalRelease}
+}
+
+// isExtensionSecretRef reports whether a listener certificate ref points at a kind
+// registered in ExtensionManager.SecretResources. Gateway API certificate refs carry
+// no version, so only group and kind are compared.
+func (t *Translator) isExtensionSecretRef(group, kind string) bool {
+	for _, gk := range t.ExtensionSecretGroupKinds {
+		if gk.Group == group && gk.Kind == kind {
+			return true
+		}
+	}
+	return false
 }

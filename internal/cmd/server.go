@@ -161,6 +161,9 @@ func getConfigByPath(stdout, stderr io.Writer, cfgPath string) (*config.Server, 
 	if err != nil {
 		return nil, err
 	}
+	if err := config.ApplyEnvoyGatewaySchemaDefaults(cfg.EnvoyGateway); err != nil {
+		return nil, err
+	}
 
 	for _, w := range warnings {
 		cfg.Logger.Sugar().Warn(w)

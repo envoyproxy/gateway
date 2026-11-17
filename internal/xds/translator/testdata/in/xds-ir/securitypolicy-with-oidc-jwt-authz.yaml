@@ -49,6 +49,7 @@ http:
                 - foobar
               provider: exjwt
       jwt:
+        name: default/policy
         providers:
         - claimToHeaders:
           - claim: email
