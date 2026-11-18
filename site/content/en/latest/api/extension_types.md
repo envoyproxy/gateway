@@ -2544,6 +2544,7 @@ _Appears in:_
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/api-spec/main/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict<br />Deprecated: Use Lua.ValidationType instead. This field will be removed in a future release. |
 | `lua` | _[LuaValidationConfig](#luavalidationconfig)_ |  false  |  | Lua configures how Lua scripts from EnvoyExtensionPolicy resources are<br />validated in the gateway controller. It selects the validation mode and, for the Strict<br />mode, defines the filesystem paths and environment variables the scripts are permitted to<br />access during validation. |
+| `formatStrings` | _[FormatStringValidationConfig](#formatstringvalidationconfig)_ |  false  |  | FormatStrings configures how the gateway controller validates Envoy format strings, the<br />command operators such as %REQ(:AUTHORITY)% or %RESPONSE_CODE%, before the configuration is<br />sent to the proxies. It applies to the access log formats of this EnvoyProxy and to the<br />header values of HTTPRoute filters attached to Gateways that use this EnvoyProxy.<br />Envoy rejects a listener or route configuration that contains an unknown command operator.<br />Running proxies then keep serving their previous configuration, while new proxy pods fail to<br />start with it. |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `wasmModules` | _[WasmModuleEntry](#wasmmoduleentry) array_ |  false  |  | WasmModules defines the set of Wasm modules that are allowed to be used by<br />EnvoyExtensionPolicy resources. Each entry registers a module by a logical<br />name and a source (currently Local path).<br />When EnvoyExtensionPolicy.wasm[].code is omitted, wasm[].name is looked up<br />in this list.<br />The EnvoyProxy owner is responsible for ensuring Local modules are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). EnvoyExtensionPolicy never carries a raw filesystem path. |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
@@ -2947,6 +2948,41 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `minEndpointsInZoneThreshold` | _integer_ |  false  |  | MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone<br />override. This is useful for protecting zones with fewer endpoints. |
+
+
+#### FormatStringValidation
+
+_Underlying type:_ _string_
+
+FormatStringValidation is the validation mode for Envoy format strings.
+
+Format strings are validated against the command operators supported by the Envoy version that
+this Envoy Gateway release ships. A proxy running a newer Envoy image may support operators that
+the validation does not know yet, so keep the Warn mode for custom images.
+
+_Appears in:_
+- [FormatStringValidationConfig](#formatstringvalidationconfig)
+
+| Value | Description |
+| ----- | ----------- |
+| `Warn` | FormatStringValidationWarn is the default mode. Invalid format strings are reported with a<br />Warning condition on the EnvoyProxy for access log formats, and on the route for header<br />values, but the configuration is still sent to the proxies.<br /> | 
+| `Strict` | FormatStringValidationStrict rejects invalid format strings before they reach the proxies.<br />An access log setting with an invalid format is dropped and reported with a Warning condition<br />on the EnvoyProxy. A route with an invalid header value is not accepted by Gateways that use<br />this EnvoyProxy.<br /> | 
+| `Disabled` | FormatStringValidationDisabled disables format string validation.<br /> | 
+
+
+#### FormatStringValidationConfig
+
+
+
+FormatStringValidationConfig configures how Envoy format strings are validated in the gateway
+controller.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `validationType` | _[FormatStringValidation](#formatstringvalidation)_ |  false  | Warn | ValidationType determines how invalid format strings are handled.<br />Default: Warn |
 
 
 #### ForwardProtoConfig
