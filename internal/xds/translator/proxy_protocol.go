@@ -25,8 +25,8 @@ func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, proxyProtocolSet
 		return
 	}
 
-	// The proxy protocol listener filter is not supported on UDP/QUIC listeners.
-	if xdsListener.Address.GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP {
+	// Downstream Proxy Protocol settings apply only to TCP connections.
+	if xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP {
 		return
 	}
 

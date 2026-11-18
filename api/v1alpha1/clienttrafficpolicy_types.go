@@ -52,18 +52,20 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
-	// EnableProxyProtocol interprets the ProxyProtocol header and adds the
+	// EnableProxyProtocol interprets the ProxyProtocol header on downstream TCP connections and adds the
 	// Client Address into the X-Forwarded-For header.
-	// Note Proxy Protocol must be present when this field is set, else the connection
+	// Note Proxy Protocol must be present when this field is set, else the TCP connection
 	// is closed.
+	// This setting does not apply to UDP/QUIC connections and does not disable HTTP/3.
 	//
 	// Deprecated: Use ProxyProtocol instead. This field will be removed in v1.11.
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
-	// ProxyProtocol configures the Proxy Protocol settings. When configured,
+	// ProxyProtocol configures the Proxy Protocol settings for downstream TCP connections. When configured,
 	// the Proxy Protocol header will be interpreted and the Client Address
 	// will be added into the X-Forwarded-For header.
+	// This setting does not apply to UDP/QUIC connections and does not disable HTTP/3.
 	// If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
 	//
 	// +optional
@@ -494,24 +496,25 @@ type HealthCheckSettings struct {
 	Path string `json:"path"`
 }
 
-// ProxyProtocolSettings configures the Proxy Protocol settings. When configured,
+// ProxyProtocolSettings configures the Proxy Protocol settings for downstream TCP connections. When configured,
 // the Proxy Protocol header will be interpreted and the Client Address
 // will be added into the X-Forwarded-For header.
+// These settings do not apply to UDP/QUIC connections and do not disable HTTP/3.
 // If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
 //
 // +kubebuilder:validation:MinProperties=0
 type ProxyProtocolSettings struct {
-	// Optional allows requests without a Proxy Protocol header to be proxied.
-	// If set to true, the listener will accept requests without a Proxy Protocol header.
-	// If set to false, the listener will reject requests without a Proxy Protocol header.
-	// If not set, the default behavior is to reject requests without a Proxy Protocol header.
+	// Optional allows downstream TCP connections without a Proxy Protocol header to be proxied.
+	// If set to true, the listener will accept TCP connections without a Proxy Protocol header.
+	// If set to false, the listener will reject TCP connections without a Proxy Protocol header.
+	// If not set, the default behavior is to reject TCP connections without a Proxy Protocol header.
 	// Warning: Optional breaks conformance with the specification. Only enable if ALL traffic to the listener comes from a trusted source.
 	// For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
 	//
 	//
 	// +optional
 	Optional *bool `json:"optional,omitempty"`
-	// ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+	// ForwardProtoConfig infers the x-forwarded-proto header for downstream TCP connections from the PROXY protocol
 	// destination port. Only takes effect when PROXY protocol is enabled.
 	//
 	// This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and
