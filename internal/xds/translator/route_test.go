@@ -570,10 +570,13 @@ func TestGRPCWebOnSharedListener(t *testing.T) {
 			listener := &ir.HTTPListener{Routes: tc.routes, GRPC: &ir.GRPCSettings{EnableGRPCWeb: tc.enableWeb}}
 			require.Equal(t, tc.wantFilter, grpcWebEnabled(listener))
 
+			grpcWebOnlyForGRPCRoutes := defaultGRPCWebForGRPCRoutes(listener)
 			for _, irRoute := range tc.routes {
 				otherConfig := &anypb.Any{TypeUrl: "example.com/existing"}
 				route := &routev3.Route{TypedPerFilterConfig: map[string]*anypb.Any{"existing": otherConfig}}
-				require.NoError(t, patchRouteWithGRPCWeb(route, irRoute, listener))
+				if grpcWebOnlyForGRPCRoutes && !isGRPCRoute(irRoute) {
+					require.NoError(t, disableGRPCWebForRoute(route))
+				}
 				require.Same(t, otherConfig, route.TypedPerFilterConfig["existing"])
 
 				config := route.TypedPerFilterConfig["envoy.filters.http.grpc_web"]

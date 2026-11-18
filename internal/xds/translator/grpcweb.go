@@ -23,14 +23,16 @@ func grpcWebEnabled(listener *ir.HTTPListener) bool {
 	if listener.GRPC != nil && listener.GRPC.EnableGRPCWeb != nil {
 		return *listener.GRPC.EnableGRPCWeb
 	}
-	return slices.ContainsFunc(listener.Routes, isGRPCRoute)
+	return defaultGRPCWebForGRPCRoutes(listener)
 }
 
-func patchRouteWithGRPCWeb(route *routev3.Route, irRoute *ir.HTTPRoute, listener *ir.HTTPListener) error {
-	if isGRPCRoute(irRoute) || (listener.GRPC != nil && listener.GRPC.EnableGRPCWeb != nil) || !grpcWebEnabled(listener) {
-		return nil
-	}
+// defaultGRPCWebForGRPCRoutes reports whether this listener uses route-scoped defaults.
+func defaultGRPCWebForGRPCRoutes(listener *ir.HTTPListener) bool {
+	return (listener.GRPC == nil || listener.GRPC.EnableGRPCWeb == nil) &&
+		slices.ContainsFunc(listener.Routes, isGRPCRoute)
+}
 
+func disableGRPCWebForRoute(route *routev3.Route) error {
 	// Preserve all other per-route settings on shared listeners.
 	config, err := anypb.New(&routev3.FilterConfig{Disabled: true})
 	if err != nil {

@@ -816,6 +816,7 @@ func (t *Translator) addRouteToRouteConfig(
 
 	// Compute listener-wide GeoIP header removals once for all routes.
 	geoIPHeaders := geoIPHeadersToRemove(httpListener)
+	grpcWebOnlyForGRPCRoutes := defaultGRPCWebForGRPCRoutes(httpListener)
 
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 	for _, httpRoute := range httpListener.Routes {
@@ -870,6 +871,13 @@ func (t *Translator) addRouteToRouteConfig(
 			// skip this route if failed to build xds route
 			errs = errors.Join(errs, err)
 			continue
+		}
+
+		if grpcWebOnlyForGRPCRoutes && !isGRPCRoute(httpRoute) {
+			if err := disableGRPCWebForRoute(xdsRoute); err != nil {
+				errs = errors.Join(errs, err)
+				continue
+			}
 		}
 
 		// Check if an extension want to modify the route we just generated

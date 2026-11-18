@@ -632,7 +632,6 @@ xdsIR:
       externalPort: 8082
       grpc:
         enableGRPCStats: true
-        enableGRPCWeb: true
       hostnames:
       - '*'
       metadata:
