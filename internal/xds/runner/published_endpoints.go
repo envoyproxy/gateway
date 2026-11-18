@@ -33,9 +33,9 @@ func (a *publishedEndpointStore) get(key string) types.EndpointContexts {
 }
 
 // set replaces a key's published endpoint contexts and reindexes them.
-func (a *publishedEndpointStore) set(key string, next types.EndpointContexts) {
-	a.reindex(key, a.byKey[key], next)
-	a.byKey[key] = next
+func (a *publishedEndpointStore) set(key string, updatedContexts types.EndpointContexts) {
+	a.reindex(key, a.byKey[key], updatedContexts)
+	a.byKey[key] = updatedContexts
 }
 
 // forget drops a key's published endpoints and index entries.
