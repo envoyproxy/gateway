@@ -38,7 +38,7 @@ backends:
   spec:
     endpoints:
     - fqdn:
-        hostname: backend-no-endpoint-host.example.com
+        hostname: backend-no-endpoint-host.example.com.
         port: 443
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1

@@ -1036,7 +1036,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
 					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
-					al.Authority = host
+					al.Authority = strings.TrimSuffix(host, ".")
 				}
 
 				// For OpenTelemetry, text (body) and attributes can be used together.
@@ -1090,7 +1090,7 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
 		}
 		ds = destinationSettingFromHostAndPort(settingName, host, port)
-		authority = host
+		authority = strings.TrimSuffix(host, ".")
 	}
 
 	gw := gwCtx.Gateway
@@ -1284,7 +1284,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		// Fallback to deprecated host/port
 		if len(ds) == 0 && sink.OpenTelemetry.Host != nil {
 			ds = destinationSettingFromHostAndPort(settingName, *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port))
-			authority = *sink.OpenTelemetry.Host
+			authority = strings.TrimSuffix(*sink.OpenTelemetry.Host, ".")
 		}
 
 		if len(ds) > 0 && len(ds[0].Endpoints) > 0 {
