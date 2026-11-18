@@ -628,7 +628,8 @@ spec:
                   FormatStrings configures how the gateway controller validates Envoy format strings, the
                   command operators such as %REQ(:AUTHORITY)% or %RESPONSE_CODE%, before the configuration is
                   sent to the proxies. It applies to the access log formats of this EnvoyProxy and to the
-                  header values of HTTPRoute filters attached to Gateways that use this EnvoyProxy.
+                  header values of HTTPRoute and GRPCRoute filters attached to Gateways that use this
+                  EnvoyProxy.
 
                   Envoy rejects a listener or route configuration that contains an unknown command operator.
                   Running proxies then keep serving their previous configuration, while new proxy pods fail to

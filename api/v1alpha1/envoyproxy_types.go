@@ -227,7 +227,8 @@ type EnvoyProxySpec struct {
 	// FormatStrings configures how the gateway controller validates Envoy format strings, the
 	// command operators such as %REQ(:AUTHORITY)% or %RESPONSE_CODE%, before the configuration is
 	// sent to the proxies. It applies to the access log formats of this EnvoyProxy and to the
-	// header values of HTTPRoute filters attached to Gateways that use this EnvoyProxy.
+	// header values of HTTPRoute and GRPCRoute filters attached to Gateways that use this
+	// EnvoyProxy.
 	//
 	// Envoy rejects a listener or route configuration that contains an unknown command operator.
 	// Running proxies then keep serving their previous configuration, while new proxy pods fail to
@@ -317,8 +318,8 @@ const (
 
 	// FormatStringValidationStrict rejects invalid format strings before they reach the proxies.
 	// An access log setting with an invalid format is dropped and reported with a Warning condition
-	// on the EnvoyProxy. A route with an invalid header value is not accepted by Gateways that use
-	// this EnvoyProxy.
+	// on the EnvoyProxy. An HTTPRoute or GRPCRoute with an invalid header value is not accepted by
+	// Gateways that use this EnvoyProxy.
 	FormatStringValidationStrict FormatStringValidation = "Strict"
 
 	// FormatStringValidationDisabled disables format string validation.
