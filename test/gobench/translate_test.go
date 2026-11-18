@@ -601,7 +601,7 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 
 	for _, tc := range cases {
 		b.Run(tc.name, func(b *testing.B) {
-			rs, err := resource.LoadResourcesFromYAMLBytes([]byte(tc.yaml), true, nil)
+			rs, err := loadBenchResources(tc.name, tc.yaml)
 			if err != nil {
 				b.Fatalf("load: %v", err)
 			}
@@ -622,6 +622,24 @@ func BenchmarkGatewayAPItoXDS(b *testing.B) {
 			}
 		})
 	}
+}
+
+// benchResources caches the resources loaded for each BenchmarkGatewayAPItoXDS case.
+// Loading validates and defaults every object against its CRD schema, which takes far longer
+// than the translation being measured, and -count runs each sub-benchmark's setup again.
+// Reusing the resources is safe: every iteration already translates the same rs.
+var benchResources = map[string]*resource.Resources{}
+
+func loadBenchResources(name, yaml string) (*resource.Resources, error) {
+	if rs, ok := benchResources[name]; ok {
+		return rs, nil
+	}
+	rs, err := resource.LoadResourcesFromYAMLBytes([]byte(yaml), true, nil)
+	if err != nil {
+		return nil, err
+	}
+	benchResources[name] = rs
+	return rs, nil
 }
 
 // BenchmarkXdsIRDeepCopy measures the copy the watchable map performs on every store and
