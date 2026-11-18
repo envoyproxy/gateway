@@ -1168,7 +1168,7 @@ func getAuthorityFromDestination(ds []*ir.DestinationSetting) string {
 		host := dest.Endpoints[0].Host
 		if _, err := netip.ParseAddr(host); err != nil {
 			// Not an IP - use as authority
-			return host
+			return strings.TrimSuffix(host, ".")
 		}
 
 		// Priority 3: Derive from metadata when endpoint is an IP

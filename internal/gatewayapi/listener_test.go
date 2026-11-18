@@ -1349,6 +1349,13 @@ func TestGetAuthorityFromDestination(t *testing.T) {
 			expected: "backend.local",
 		},
 		{
+			name: "hostname endpoint with trailing dot",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "backend.local."}},
+			}},
+			expected: "backend.local",
+		},
+		{
 			name: "TLS without SNI uses hostname endpoint",
 			input: []*ir.DestinationSetting{{
 				TLS:       &ir.TLSUpstreamConfig{},
