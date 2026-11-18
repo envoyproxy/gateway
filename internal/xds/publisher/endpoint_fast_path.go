@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package runner
+package publisher
 
 import (
 	"maps"
@@ -18,7 +18,7 @@ import (
 // processEndpointUpdates takes the pending endpoint updates, rebuilds the EDS
 // resources they affect using the new endpoints, and publishes the updated
 // snapshots.
-func (p *snapshotPublisher) processEndpointUpdates() {
+func (p *Publisher) processEndpointUpdates() {
 	// Group one drained batch by IR key so each affected cluster is rebuilt once.
 	updatesByKey := make(map[string]map[ir.ServiceKey]*endpoint.BackendEndpoints)
 	for _, backendEndpoints := range p.endpointUpdates.Drain() {
@@ -37,7 +37,7 @@ func (p *snapshotPublisher) processEndpointUpdates() {
 
 // applyEndpointUpdates rebuilds one snapshot's EDS resources from the updated
 // backends and publishes the result.
-func (p *snapshotPublisher) applyEndpointUpdates(key string, updates map[ir.ServiceKey]*endpoint.BackendEndpoints) {
+func (p *Publisher) applyEndpointUpdates(key string, updates map[ir.ServiceKey]*endpoint.BackendEndpoints) {
 	start := time.Now()
 	defer func() { endpointRefreshDuration.Record(time.Since(start).Seconds()) }()
 	published, current := p.publishedEndpoints.get(key), p.snapshots[key]
