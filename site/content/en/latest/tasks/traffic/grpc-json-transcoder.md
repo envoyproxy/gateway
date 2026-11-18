@@ -131,6 +131,30 @@ the stream is reset when it is exceeded. Both limits must be at most `4294967295
 buffer limit of the stream lowers the limit. A large limit increases the memory used by Envoy when many requests are in
 flight.
 
+## Streaming Responses
+
+By default, the messages of a server streaming method are returned as a JSON array, so the client can only parse the
+response when the stream ends. Set `printOptions.streamNewlineDelimited` to return one JSON message per line, or
+`printOptions.streamSSEStyleDelimited` to return [Server-Sent Events][] that a browser can read with `EventSource`:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: grpc-transcoder
+spec:
+  grpcJSONTranscoder:
+    protoDescriptor:
+      valueRef:
+        group: ""
+        kind: ConfigMap
+        name: greeter-proto-descriptor
+    printOptions:
+      streamSSEStyleDelimited: true
+```
+
+The two options can't both be `true`.
+
 ## Policies and Routing
 
 The transcoder changes the path of the request to the gRPC method, for example `/example.Greeter/SayHello`, but the
@@ -196,3 +220,4 @@ Check out the [Developer Guide](/community/develop) to get involved in the proje
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
+[Server-Sent Events]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events

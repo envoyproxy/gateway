@@ -599,6 +599,47 @@ func TestHTTPRouteFilterGRPCJSONTranscoder(t *testing.T) {
 			},
 			wantErrors: []string{"spec.grpcJSONTranscoder.maxResponseBodySize in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
 		},
+		{
+			desc: "newline delimited stream is accepted",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.PrintOptions = &egv1a1.JSONPrintOptions{
+					StreamNewlineDelimited: new(true),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "SSE stream with newline delimited disabled is accepted",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.PrintOptions = &egv1a1.JSONPrintOptions{
+					StreamNewlineDelimited:  new(false),
+					StreamSSEStyleDelimited: new(true),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "newline delimited and SSE stream are rejected together",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.PrintOptions = &egv1a1.JSONPrintOptions{
+					StreamNewlineDelimited:  new(true),
+					StreamSSEStyleDelimited: new(true),
+				}
+			},
+			wantErrors: []string{"streamNewlineDelimited and streamSSEStyleDelimited are mutually exclusive"},
+		},
 	}
 
 	for _, tc := range cases {

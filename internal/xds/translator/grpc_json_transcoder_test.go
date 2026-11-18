@@ -132,13 +132,18 @@ func TestBuildGRPCJSONTranscoderConfig(t *testing.T) {
 	require.False(t, got.GetConvertGrpcStatus())
 	require.True(t, got.GetMatchIncomingRequestRoute())
 	require.False(t, got.GetPrintOptions().GetAlwaysPrintEnumsAsInts())
+	require.False(t, got.GetPrintOptions().GetStreamNewlineDelimited())
+	require.False(t, got.GetPrintOptions().GetStreamSseStyleDelimited())
 	require.Nil(t, got.GetMaxRequestBodySize())
 	require.Nil(t, got.GetMaxResponseBodySize())
 }
 
-func TestBuildGRPCJSONTranscoderConfigBodySizesAndEnums(t *testing.T) {
+func TestBuildGRPCJSONTranscoderConfigOptionalFields(t *testing.T) {
 	transcoder := testTranscoder(t)
-	transcoder.PrintOptions = &egv1a1.JSONPrintOptions{AlwaysPrintEnumsAsInts: new(true)}
+	transcoder.PrintOptions = &egv1a1.JSONPrintOptions{
+		AlwaysPrintEnumsAsInts:  new(true),
+		StreamSSEStyleDelimited: new(true),
+	}
 	transcoder.MaxRequestBodyBytes = new(uint32(1024 * 1024))
 	transcoder.MaxResponseBodyBytes = new(uint32(64 * 1024 * 1024))
 
@@ -149,6 +154,8 @@ func TestBuildGRPCJSONTranscoderConfigBodySizesAndEnums(t *testing.T) {
 	require.NoError(t, cfg.UnmarshalTo(got))
 	require.NoError(t, got.ValidateAll())
 	require.True(t, got.GetPrintOptions().GetAlwaysPrintEnumsAsInts())
+	require.True(t, got.GetPrintOptions().GetStreamSseStyleDelimited())
+	require.False(t, got.GetPrintOptions().GetStreamNewlineDelimited())
 	require.Equal(t, uint32(1024*1024), got.GetMaxRequestBodySize().GetValue())
 	require.Equal(t, uint32(64*1024*1024), got.GetMaxResponseBodySize().GetValue())
 }

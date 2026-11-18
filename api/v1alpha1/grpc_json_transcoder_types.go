@@ -46,7 +46,8 @@ type GRPCJSONTranscoder struct {
 
 	// MaxRequestBodySize is the maximum size of a request body to transcode. A larger
 	// body is rejected with HTTP 413.
-	// If not set, the buffer limit of the stream is used.
+	// If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and
+	// 64Ki for HTTP/2 by default.
 	// For example, 1Mi, 64Mi etc.
 	// Note that when the suffix is not provided, the value is interpreted as bytes.
 	//
@@ -83,6 +84,7 @@ type ProtoDescriptor struct {
 }
 
 // JSONPrintOptions defines how the gRPC response is printed as JSON.
+// +kubebuilder:validation:XValidation:rule="!(has(self.streamNewlineDelimited) && self.streamNewlineDelimited && has(self.streamSSEStyleDelimited) && self.streamSSEStyleDelimited)",message="streamNewlineDelimited and streamSSEStyleDelimited are mutually exclusive"
 type JSONPrintOptions struct {
 	// AddWhitespace adds spaces, line breaks and indentation to the JSON output.
 	//
@@ -105,4 +107,20 @@ type JSONPrintOptions struct {
 	//
 	// +optional
 	AlwaysPrintEnumsAsInts *bool `json:"alwaysPrintEnumsAsInts,omitempty"`
+
+	// StreamNewlineDelimited prints a streaming response as newline-delimited JSON
+	// messages instead of a JSON array.
+	//
+	// Mutually exclusive with StreamSSEStyleDelimited.
+	//
+	// +optional
+	StreamNewlineDelimited *bool `json:"streamNewlineDelimited,omitempty"`
+
+	// StreamSSEStyleDelimited prints a streaming response as Server-Sent Events, with
+	// each message framed as `data: <message>`.
+	//
+	// Mutually exclusive with StreamNewlineDelimited.
+	//
+	// +optional
+	StreamSSEStyleDelimited *bool `json:"streamSSEStyleDelimited,omitempty"`
 }

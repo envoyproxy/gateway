@@ -177,6 +177,7 @@ xdsIR:
             addWhitespace: true
             alwaysPrintEnumsAsInts: true
             alwaysPrintPrimitiveFields: true
+            streamNewlineDelimited: true
           protoDescriptorBin: CnkKCmVjaG8ucHJvdG8SB3Rlc3QudjEiDQoLUGluZ1JlcXVlc3QiDgoMUGluZ1Jlc3BvbnNlMjsKBEVjaG8SMwoEUGluZxIULnRlc3QudjEuUGluZ1JlcXVlc3QaFS50ZXN0LnYxLlBpbmdSZXNwb25zZWIGcHJvdG8z
           services:
           - test.v1.Echo

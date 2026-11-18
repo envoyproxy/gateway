@@ -409,7 +409,8 @@ spec:
                     description: |-
                       MaxRequestBodySize is the maximum size of a request body to transcode. A larger
                       body is rejected with HTTP 413.
-                      If not set, the buffer limit of the stream is used.
+                      If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and
+                      64Ki for HTTP/2 by default.
                       For example, 1Mi, 64Mi etc.
                       Note that when the suffix is not provided, the value is interpreted as bytes.
                     x-kubernetes-int-or-string: true
@@ -450,7 +451,26 @@ spec:
                           PreserveProtoFieldNames uses the field names in the proto file instead of
                           lowerCamelCase names.
                         type: boolean
+                      streamNewlineDelimited:
+                        description: |-
+                          StreamNewlineDelimited prints a streaming response as newline-delimited JSON
+                          messages instead of a JSON array.
+
+                          Mutually exclusive with StreamSSEStyleDelimited.
+                        type: boolean
+                      streamSSEStyleDelimited:
+                        description: |-
+                          StreamSSEStyleDelimited prints a streaming response as Server-Sent Events, with
+                          each message framed as `data: <message>`.
+
+                          Mutually exclusive with StreamNewlineDelimited.
+                        type: boolean
                     type: object
+                    x-kubernetes-validations:
+                    - message: streamNewlineDelimited and streamSSEStyleDelimited
+                        are mutually exclusive
+                      rule: '!(has(self.streamNewlineDelimited) && self.streamNewlineDelimited
+                        && has(self.streamSSEStyleDelimited) && self.streamSSEStyleDelimited)'
                   protoDescriptor:
                     description: ProtoDescriptor defines where to find the protobuf
                       descriptor set of the gRPC services.

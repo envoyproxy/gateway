@@ -26,6 +26,7 @@
             printOptions:
               addWhitespace: true
               alwaysPrintEnumsAsInts: true
+              streamNewlineDelimited: true
             protoDescriptorBin: CrsBChNleGFtcGxlL2hlbGxvLnByb3RvEgdleGFtcGxlIiIKDEhlbGxvUmVxdWVzdBISCgRuYW1lGAEgASgJUgRuYW1lIikKDUhlbGxvUmVzcG9uc2USGAoHbWVzc2FnZRgBIAEoCVIHbWVzc2FnZTJECgdHcmVldGVyEjkKCFNheUhlbGxvEhUuZXhhbXBsZS5IZWxsb1JlcXVlc3QaFi5leGFtcGxlLkhlbGxvUmVzcG9uc2ViBnByb3RvMw==
             services:
             - example.Greeter

@@ -29,6 +29,7 @@ http:
         addWhitespace: true
         alwaysPrintPrimitiveFields: false
         alwaysPrintEnumsAsInts: true
+        streamNewlineDelimited: true
       ignoreUnknownQueryParameters: true
       convertGRPCStatus: true
       maxRequestBodyBytes: 1048576

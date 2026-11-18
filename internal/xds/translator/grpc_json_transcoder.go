@@ -100,6 +100,8 @@ func buildGRPCJSONTranscoderConfig(transcoder *ir.GRPCJSONTranscoder) (*anypb.An
 			AlwaysPrintPrimitiveFields: ptr.Deref(o.AlwaysPrintPrimitiveFields, false),
 			PreserveProtoFieldNames:    ptr.Deref(o.PreserveProtoFieldNames, false),
 			AlwaysPrintEnumsAsInts:     ptr.Deref(o.AlwaysPrintEnumsAsInts, false),
+			StreamNewlineDelimited:     ptr.Deref(o.StreamNewlineDelimited, false),
+			StreamSseStyleDelimited:    ptr.Deref(o.StreamSSEStyleDelimited, false),
 		}
 	}
 
