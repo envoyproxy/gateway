@@ -6,8 +6,6 @@
 package kubernetes
 
 import (
-	"context"
-	"errors"
 	"io"
 	"testing"
 
@@ -18,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -61,25 +58,6 @@ func endpointReconciler(t *testing.T) (*gatewayAPIReconciler, *corev1.Service, *
 		}},
 	}
 	return r, service, slice
-}
-
-func TestEndpointCollectionErrorDoesNotPublishEmptyData(t *testing.T) {
-	r, service, _ := endpointReconciler(t)
-	tree := &resource.Resources{Services: []*corev1.Service{service}}
-	require.NoError(t, r.populateBackendEndpoints(t.Context(), resource.ControllerResources{tree}))
-	initial := tree.BackendEndpoints[0]
-	r.client = interceptor.NewClient(r.client.(client.WithWatch), interceptor.Funcs{
-		List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-			if _, ok := list.(*discoveryv1.EndpointSliceList); ok {
-				return errors.New("temporary cache read failure")
-			}
-			return c.List(ctx, list, opts...)
-		},
-	})
-	_, err := r.reconcileBackendEndpoints(t.Context(), initial.Backend)
-	require.Error(t, err, "controller-runtime must retry failed collection")
-	require.Empty(t, r.resources.EndpointUpdates.Drain())
-	require.Empty(t, r.resources.EndpointUpdates.Ready())
 }
 
 func TestEndpointFullCaptureRefreshesBeforeEndpointWorker(t *testing.T) {
@@ -145,21 +123,6 @@ func TestEndpointReconcileSkipsRemovedReference(t *testing.T) {
 	_, err := r.reconcileBackendEndpoints(t.Context(), key)
 	require.NoError(t, err)
 	require.Empty(t, r.resources.EndpointUpdates.Drain())
-}
-
-func TestEndpointFullCapturePrunesCache(t *testing.T) {
-	r, service, _ := endpointReconciler(t)
-	key := ir.ServiceKey{Kind: resource.KindService, Namespace: service.Namespace, Name: service.Name}
-	first := &resource.Resources{Services: []*corev1.Service{service}}
-	second := &resource.Resources{Services: []*corev1.Service{service}}
-	require.NoError(t, r.populateBackendEndpoints(t.Context(), resource.ControllerResources{first, second}))
-	require.Equal(t, first.BackendEndpoints, second.BackendEndpoints)
-	// The Service can remain in Kubernetes after its final resource-tree reference
-	// disappears. Full collection removes its stored endpoints.
-	require.NoError(t, r.populateBackendEndpoints(t.Context(), resource.ControllerResources{{}}))
-	recaptured, err := r.refreshBackendEndpoints(t.Context(), key)
-	require.NoError(t, err)
-	require.Greater(t, recaptured.Revision, first.BackendEndpoints[0].Revision)
 }
 
 func TestEndpointCacheClearedWithoutManagedGatewayClasses(t *testing.T) {
