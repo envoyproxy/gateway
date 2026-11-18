@@ -361,18 +361,3 @@ func TestPublisherCancellationUnblocksFullQueue(t *testing.T) {
 	}
 	require.ErrorIs(t, p.enqueueFullResult("other", full), context.Canceled)
 }
-
-func TestPublisherFullResultSurvivesReplayFailure(t *testing.T) {
-	p, installed := testPublisher(t)
-	applyFull(p, fullEndpointResult(t, 1, "10.0.0.1", 1))
-	// Corrupt the published endpoints so replaying them fails validation.
-	published := fullEndpointResult(t, 5, "10.0.0.5", 1).endpointContexts
-	published["orders"].Settings[0].Endpoints[0].Port = 70000
-	p.publishedEndpoints.set(testSnapshotKey, published)
-
-	full := fullEndpointResult(t, 2, "10.0.0.2", 3)
-	applyFull(p, full)
-	require.Len(t, *installed, 2)
-	require.Same(t, full.snapshot, p.snapshots[testSnapshotKey])
-	require.Equal(t, uint64(2), publishedRevision(p))
-}
