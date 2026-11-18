@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package runner
+package publisher
 
 import (
 	"context"
@@ -76,32 +76,32 @@ func endpointUpdate(revision uint64, address string) *endpoint.BackendEndpoints 
 	}
 }
 
-func testPublisher(t *testing.T) (*snapshotPublisher, *[]*cachev3.Snapshot) {
+func testPublisher(t *testing.T) (*Publisher, *[]*cachev3.Snapshot) {
 	t.Helper()
 	var updates endpoint.UpdateQueue
 	var installed []*cachev3.Snapshot
-	p := newSnapshotPublisher(context.Background(), &updates, func(_ string, snapshot *cachev3.Snapshot, _ context.Context) error {
+	p := New(context.Background(), &updates, func(_ string, snapshot *cachev3.Snapshot, _ context.Context) error {
 		installed = append(installed, snapshot)
 		return nil
 	}, logging.DefaultLogger(io.Discard, egv1a1.LogLevelError))
 	return p, &installed
 }
 
-func applyFull(p *snapshotPublisher, publication *fullPublication) {
+func applyFull(p *Publisher, publication *fullPublication) {
 	p.processFullResults(watchable.Update[string, *fullPublication]{Key: testSnapshotKey, Value: publication, Delete: publication.snapshot == nil})
 }
 
 // publishedSetting returns the one setting of a published cluster.
-func publishedSetting(p *snapshotPublisher, key, cluster string) *ir.DestinationSetting {
+func publishedSetting(p *Publisher, key, cluster string) *ir.DestinationSetting {
 	return p.publishedEndpoints.get(key)[cluster].Settings[0]
 }
 
-func publishedRevision(p *snapshotPublisher) uint64 {
+func publishedRevision(p *Publisher) uint64 {
 	return publishedSetting(p, testSnapshotKey, "orders").EndpointSource.Revision
 }
 
 // publishedAddresses returns the addresses in the published orders assignment.
-func publishedAddresses(p *snapshotPublisher) []string {
+func publishedAddresses(p *Publisher) []string {
 	hosts := assignmentOf(p.snapshots[testSnapshotKey]).Endpoints[0].LbEndpoints
 	addresses := make([]string, 0, len(hosts))
 	for _, host := range hosts {
@@ -300,7 +300,7 @@ func TestPublisherSerializesRefreshAndFullPublication(t *testing.T) {
 	entered, release := make(chan struct{}), make(chan struct{})
 	installed := make(chan *cachev3.Snapshot, 4)
 	first := true
-	publisher := newSnapshotPublisher(ctx, &updates, func(_ string, snapshot *cachev3.Snapshot, _ context.Context) error {
+	publisher := New(ctx, &updates, func(_ string, snapshot *cachev3.Snapshot, _ context.Context) error {
 		if first {
 			first = false
 			close(entered)
@@ -310,7 +310,7 @@ func TestPublisherSerializesRefreshAndFullPublication(t *testing.T) {
 		return nil
 	}, logging.DefaultLogger(io.Discard, egv1a1.LogLevelError))
 	done := make(chan struct{})
-	go func() { publisher.run(); close(done) }()
+	go func() { publisher.Run(); close(done) }()
 	require.NoError(t, publisher.enqueueFullResult("gateway", fullEndpointResult(t, 1, "10.0.0.1", 1)))
 	<-entered
 	updates.Add(endpointUpdate(2, "10.0.0.2"))

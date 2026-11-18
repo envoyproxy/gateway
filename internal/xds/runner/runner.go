@@ -43,6 +43,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
+	"github.com/envoyproxy/gateway/internal/xds/publisher"
 	"github.com/envoyproxy/gateway/internal/xds/server/kubejwt"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
@@ -94,7 +95,7 @@ type Config struct {
 
 type Runner struct {
 	Config
-	publisher *snapshotPublisher
+	publisher *publisher.Publisher
 
 	// done tracks goroutines started by Start so that Close can block until
 	// they have all exited, ensuring shared state they write to is not
@@ -249,8 +250,8 @@ func (r *Runner) Start(ctx context.Context) error {
 	})
 
 	if r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath) {
-		r.publisher = newSnapshotPublisher(ctx, &r.ProviderResources.EndpointUpdates, r.cache.PublishSnapshot, r.Logger)
-		r.done.Go(r.publisher.run)
+		r.publisher = publisher.New(ctx, &r.ProviderResources.EndpointUpdates, r.cache.PublishSnapshot, r.Logger)
+		r.done.Go(r.publisher.Run)
 	}
 
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
@@ -452,7 +453,7 @@ func (r *Runner) publishFullResult(key string, result *xtypes.ResourceVersionTab
 	if err != nil {
 		return err
 	}
-	return r.publisher.enqueueFullResult(key, &fullPublication{snapshot: snapshot, endpointContexts: result.EndpointContexts, ctx: ctx})
+	return r.publisher.Publish(ctx, key, snapshot, result.EndpointContexts)
 }
 
 // deleteFullResult deletes the key's snapshot, through the publisher when the
@@ -461,7 +462,7 @@ func (r *Runner) deleteFullResult(key string, ctx context.Context) error {
 	if r.publisher == nil {
 		return r.cache.GenerateNewSnapshot(key, nil, ctx)
 	}
-	return r.publisher.enqueueFullResult(key, &fullPublication{ctx: ctx})
+	return r.publisher.Delete(ctx, key)
 }
 
 func (r *Runner) loadTLSConfig() (*tls.Config, error) {
