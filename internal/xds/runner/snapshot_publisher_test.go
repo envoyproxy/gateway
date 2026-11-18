@@ -100,8 +100,9 @@ func publishedRevision(p *snapshotPublisher) uint64 {
 
 // publishedAddresses returns the addresses in the published orders assignment.
 func publishedAddresses(p *snapshotPublisher) []string {
-	var addresses []string
-	for _, host := range assignmentOf(p.snapshots[testSnapshotKey]).Endpoints[0].LbEndpoints {
+	hosts := assignmentOf(p.snapshots[testSnapshotKey]).Endpoints[0].LbEndpoints
+	addresses := make([]string, 0, len(hosts))
+	for _, host := range hosts {
 		addresses = append(addresses, host.GetEndpoint().Address.GetSocketAddress().Address)
 	}
 	return addresses
@@ -123,7 +124,7 @@ func TestPublisherConvergesToNewestEndpoints(t *testing.T) {
 	}
 	for seed := range uint64(500) {
 		t.Run(fmt.Sprintf("seed-%d", seed), func(t *testing.T) {
-			rng := rand.New(rand.NewPCG(seed, 0))
+			rng := rand.New(rand.NewPCG(seed, 0)) //nolint:gosec // seeded on purpose so failures replay
 			p, _ := testPublisher(t)
 			current := state{revision: 1, address: "10.0.0.1", weight: 1}
 			applyFull(p, fullEndpointResult(t, current.revision, current.address, current.weight))
@@ -132,8 +133,9 @@ func TestPublisherConvergesToNewestEndpoints(t *testing.T) {
 			}
 			// The recorded endpoints must be the ones in the published snapshot.
 			requireRecorded := func() {
-				var recorded []string
-				for _, e := range p.publishedEndpoints.get(testSnapshotKey).Endpoints["orders"]["backend"].Endpoints {
+				endpoints := p.publishedEndpoints.get(testSnapshotKey).Endpoints["orders"]["backend"].Endpoints
+				recorded := make([]string, 0, len(endpoints))
+				for _, e := range endpoints {
 					recorded = append(recorded, e.Host)
 				}
 				require.Equal(t, recorded, publishedAddresses(p))
