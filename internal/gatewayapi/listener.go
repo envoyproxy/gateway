@@ -1395,7 +1395,8 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 		if ds.TLS != nil && ds.TLS.SNI == nil && kind == resource.KindBackend {
 			backend := t.GetBackend(ns, string(ref.Name))
 			if len(backend.Spec.Endpoints) == 1 && backend.Spec.Endpoints[0].FQDN != nil {
-				ds.TLS.SNI = &backend.Spec.Endpoints[0].FQDN.Hostname
+				sni := strings.TrimSuffix(backend.Spec.Endpoints[0].FQDN.Hostname, ".")
+				ds.TLS.SNI = &sni
 			}
 		}
 
