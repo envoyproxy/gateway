@@ -118,7 +118,7 @@ func dropPatchedEndpointContexts(table *types.ResourceVersionTable, policies []*
 // configuration and replaces each setting's endpoints with the published ones
 // for the same backend port when those carry a newer revision.
 func ReplayPublishedEndpoints(candidate, published types.EndpointContexts) (types.EndpointContexts, map[string]*endpointv3.ClusterLoadAssignment, error) {
-	return applyNewerEndpoints(candidate, maps.Keys(candidate), pathFull, func(cluster string, have *ir.DestinationSetting) *ir.DestinationSetting {
+	return applyNewerEndpoints(pathFull, candidate, maps.Keys(candidate), func(cluster string, have *ir.DestinationSetting) *ir.DestinationSetting {
 		args := published[cluster]
 		if args == nil {
 			return nil
@@ -139,7 +139,7 @@ func ReplayPublishedEndpoints(candidate, published types.EndpointContexts) (type
 // published settings and replaces each setting's endpoints with the updated
 // backend's, for the port the setting uses, when the update carries a newer revision.
 func ApplyEndpointUpdates(published types.EndpointContexts, clusters iter.Seq[string], updates map[ir.ServiceKey]*endpoint.BackendEndpoints) (types.EndpointContexts, map[string]*endpointv3.ClusterLoadAssignment, error) {
-	return applyNewerEndpoints(published, clusters, pathFast, func(_ string, have *ir.DestinationSetting) *ir.DestinationSetting {
+	return applyNewerEndpoints(pathFast, published, clusters, func(_ string, have *ir.DestinationSetting) *ir.DestinationSetting {
 		backendEndpoints := updates[have.EndpointSource.Service]
 		if backendEndpoints == nil {
 			return nil
@@ -154,16 +154,21 @@ func ApplyEndpointUpdates(published types.EndpointContexts, clusters iter.Seq[st
 // A candidate is applied only when its revision is newer and the change is safe,
 // and every cluster that changed is rebuilt. It returns the contexts with those
 // clusters replaced, and the rebuilt assignments. path labels the skip metric.
-func applyNewerEndpoints(contexts types.EndpointContexts, clusters iter.Seq[string], path string, incoming func(string, *ir.DestinationSetting) *ir.DestinationSetting) (types.EndpointContexts, map[string]*endpointv3.ClusterLoadAssignment, error) {
-	next := contexts
+func applyNewerEndpoints(path string, contexts types.EndpointContexts, clusters iter.Seq[string], incoming func(string, *ir.DestinationSetting) *ir.DestinationSetting) (types.EndpointContexts, map[string]*endpointv3.ClusterLoadAssignment, error) {
+	var updatedContexts types.EndpointContexts // copied on the first change
 	changed := make(map[string]*endpointv3.ClusterLoadAssignment)
 	for cluster := range clusters {
 		args := contexts[cluster]
 		if args == nil {
 			continue
 		}
+
+		// Replace each setting's endpoints with the candidate's when it has a newer revision and the change is safe.
 		var settings []*ir.DestinationSetting
 		for i, have := range args.Settings {
+			// Leave alone settings whose endpoints don't come from a Service's
+			// EndpointSlices, and invalid ones (e.g. a missing backend), which
+			// must not get endpoints until full translation fixes them.
 			if have.EndpointSource == nil || have.Invalid {
 				continue
 			}
@@ -175,6 +180,8 @@ func applyNewerEndpoints(contexts types.EndpointContexts, clusters iter.Seq[stri
 			}
 			var reason string
 			switch {
+			// Endpoints transitions from empty to non-empty or vice versa are not safe. They need a full translation to
+			// add or remove the cluster.
 			// TODO(robin): let the fast path handle these once a backend with no
 			// endpoints keeps its cluster: https://github.com/envoyproxy/gateway/issues/10604
 			case (len(candidate.Endpoints) == 0) != (len(have.Endpoints) == 0):
@@ -191,23 +198,28 @@ func applyNewerEndpoints(contexts types.EndpointContexts, clusters iter.Seq[stri
 			if settings == nil {
 				settings = slices.Clone(args.Settings)
 			}
-			updated := *have
-			updated.Endpoints, updated.AddressType, updated.EndpointSource = candidate.Endpoints, candidate.AddressType, candidate.EndpointSource
-			settings[i] = &updated
+			setting := *have
+			setting.Endpoints, setting.AddressType, setting.EndpointSource = candidate.Endpoints, candidate.AddressType, candidate.EndpointSource
+			settings[i] = &setting
 		}
 		if settings == nil {
 			continue
 		}
-		rebuilt := *args
-		rebuilt.Settings = settings
-		assignment := buildXdsClusterLoadAssignment(cluster, &rebuilt)
+
+		// Rebuild the cluster's assignment with the updated settings.
+		updatedArgs := *args
+		updatedArgs.Settings = settings
+		assignment := buildXdsClusterLoadAssignment(cluster, &updatedArgs)
 		if err := proto.Validate(assignment); err != nil {
 			return nil, nil, err
 		}
-		if len(changed) == 0 {
-			next = maps.Clone(contexts)
+		if updatedContexts == nil {
+			updatedContexts = maps.Clone(contexts)
 		}
-		next[cluster], changed[cluster] = &rebuilt, assignment
+		updatedContexts[cluster], changed[cluster] = &updatedArgs, assignment
 	}
-	return next, changed, nil
+	if updatedContexts == nil {
+		return contexts, changed, nil
+	}
+	return updatedContexts, changed, nil
 }

@@ -47,7 +47,7 @@ func (p *snapshotPublisher) applyEndpointUpdates(key string, updates map[ir.Serv
 			affected[name] = struct{}{}
 		}
 	}
-	next, replacements, err := translator.ApplyEndpointUpdates(published, maps.Keys(affected), updates)
+	updatedContexts, replacements, err := translator.ApplyEndpointUpdates(published, maps.Keys(affected), updates)
 	if err != nil {
 		p.log.Error(err, "failed to refresh endpoints", "ir-key", key)
 		return
@@ -58,10 +58,14 @@ func (p *snapshotPublisher) applyEndpointUpdates(key string, updates map[ir.Serv
 		return
 	}
 
-	// Update the published endpoints and snapshot in the publisher.
 	if len(replacements) != 0 {
+		// Save the new snapshot as the published one. Only its endpoint
+		// assignments differ; listeners, routes and clusters are shared.
 		p.snapshots[key] = snapshot
-		p.publishedEndpoints.set(key, next)
+
+		// Save the endpoints just applied, so the next update compares its
+		// revisions against them.
+		p.publishedEndpoints.set(key, updatedContexts)
 	}
 	if snapshot != current {
 		p.publish(p.ctx, pathFast, key, snapshot)
