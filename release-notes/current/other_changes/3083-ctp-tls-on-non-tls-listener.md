@@ -1,0 +1,1 @@
+ClientTrafficPolicy now sets a `Warning` condition with reason `TLSNotTerminated` when its `tls` settings have no effect because none of the listeners it applies to terminate TLS, instead of silently ignoring them. Listeners that are not programmed, for example because of invalid `certificateRefs`, do not trigger this warning, since their own status already reports the cause.
