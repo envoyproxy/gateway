@@ -34,8 +34,8 @@ type ResourceVersionTable struct {
 	EnvoyPatchPolicyStatuses
 	GlobalResourceStatus
 
-	// EndpointState is filled only when the endpoint fast path is enabled.
-	EndpointState EndpointState
+	// EndpointContexts is filled only when the endpoint fast path is enabled.
+	EndpointContexts EndpointContexts
 
 	clustersByName map[string]*clusterv3.Cluster
 }

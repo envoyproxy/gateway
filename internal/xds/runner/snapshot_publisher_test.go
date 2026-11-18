@@ -58,13 +58,10 @@ func fullEndpointResult(t *testing.T, revision uint64, address string, weight ui
 	require.NoError(t, err)
 	return &fullPublication{
 		ctx: context.Background(), snapshot: snapshot,
-		endpointState: types.EndpointState{
-			Contexts: types.EndpointContexts{"orders": {Settings: []*ir.DestinationSetting{{Name: "backend", Weight: new(weight)}}}},
-			Endpoints: types.EndpointsByCluster{"orders": {"backend": {
-				Endpoints: endpoints, AddressType: new(ir.IP),
-				Source: &ir.EndpointSource{Service: testBackend, PortName: "http", Protocol: "TCP", Revision: revision},
-			}}},
-		},
+		endpointContexts: types.EndpointContexts{"orders": {Settings: []*ir.DestinationSetting{{
+			Name: "backend", Weight: new(weight), Endpoints: endpoints, AddressType: new(ir.IP),
+			EndpointSource: &ir.EndpointSource{Service: testBackend, PortName: "http", Protocol: "TCP", Revision: revision},
+		}}}},
 	}
 }
 
@@ -94,8 +91,13 @@ func applyFull(p *snapshotPublisher, publication *fullPublication) {
 	p.processFullResults(watchable.Update[string, *fullPublication]{Key: testSnapshotKey, Value: publication, Delete: publication.snapshot == nil})
 }
 
+// publishedSetting returns the one setting of a published cluster.
+func publishedSetting(p *snapshotPublisher, key, cluster string) *ir.DestinationSetting {
+	return p.publishedEndpoints.get(key)[cluster].Settings[0]
+}
+
 func publishedRevision(p *snapshotPublisher) uint64 {
-	return p.publishedEndpoints.get(testSnapshotKey).Endpoints["orders"]["backend"].Source.Revision
+	return publishedSetting(p, testSnapshotKey, "orders").EndpointSource.Revision
 }
 
 // publishedAddresses returns the addresses in the published orders assignment.
@@ -129,11 +131,11 @@ func TestPublisherConvergesToNewestEndpoints(t *testing.T) {
 			current := state{revision: 1, address: "10.0.0.1", weight: 1}
 			applyFull(p, fullEndpointResult(t, current.revision, current.address, current.weight))
 			hasHosts := func() bool {
-				return len(p.publishedEndpoints.get(testSnapshotKey).Endpoints["orders"]["backend"].Endpoints) > 0
+				return len(publishedSetting(p, testSnapshotKey, "orders").Endpoints) > 0
 			}
 			// The recorded endpoints must be the ones in the published snapshot.
 			requireRecorded := func() {
-				endpoints := p.publishedEndpoints.get(testSnapshotKey).Endpoints["orders"]["backend"].Endpoints
+				endpoints := publishedSetting(p, testSnapshotKey, "orders").Endpoints
 				recorded := make([]string, 0, len(endpoints))
 				for _, e := range endpoints {
 					recorded = append(recorded, e.Host)
@@ -218,14 +220,13 @@ func TestPublisherTracksEachConsumerSeparately(t *testing.T) {
 	var err error
 	full.snapshot, err = cache.PrepareSnapshot(context.Background(), types.XdsResources{resourcev3.EndpointType: {assignmentOf(full.snapshot), secondAssignment}})
 	require.NoError(t, err)
-	full.endpointState.Contexts["empty"] = empty.endpointState.Contexts["orders"]
-	full.endpointState.Endpoints["empty"] = empty.endpointState.Endpoints["orders"]
+	full.endpointContexts["empty"] = empty.endpointContexts["orders"]
 	applyFull(p, full)
 	p.endpointUpdates.Add(endpointUpdate(2, "10.0.0.2"))
 	p.processEndpointUpdates()
 	require.Equal(t, uint64(2), publishedRevision(p))
-	require.Equal(t, uint64(1), p.publishedEndpoints.get(testSnapshotKey).Endpoints["empty"]["backend"].Source.Revision)
-	require.Empty(t, p.publishedEndpoints.get(testSnapshotKey).Endpoints["empty"]["backend"].Endpoints)
+	require.Equal(t, uint64(1), publishedSetting(p, testSnapshotKey, "empty").EndpointSource.Revision)
+	require.Empty(t, publishedSetting(p, testSnapshotKey, "empty").Endpoints)
 }
 
 func TestPublisherNoClusterDropsPreviouslyPublishedInputs(t *testing.T) {
@@ -241,8 +242,7 @@ func TestPublisherNoClusterDropsPreviouslyPublishedInputs(t *testing.T) {
 	p.endpointUpdates.Add(endpointUpdate(2, "10.0.0.2"))
 	p.processEndpointUpdates()
 	require.Same(t, snapshot, p.snapshots[testSnapshotKey])
-	require.Empty(t, p.publishedEndpoints.get(testSnapshotKey).Contexts)
-	require.Empty(t, p.publishedEndpoints.get(testSnapshotKey).Endpoints)
+	require.Empty(t, p.publishedEndpoints.get(testSnapshotKey))
 }
 
 func TestPublisherSharedBackendAcrossKeys(t *testing.T) {
@@ -259,7 +259,7 @@ func TestPublisherSharedBackendAcrossKeys(t *testing.T) {
 	p.processEndpointUpdates()
 	for key, weight := range map[string]uint32{testSnapshotKey: 1, otherKey: 3} {
 		require.Len(t, installed[key], 2)
-		require.Equal(t, uint64(2), p.publishedEndpoints.get(key).Endpoints["orders"]["backend"].Source.Revision)
+		require.Equal(t, uint64(2), publishedSetting(p, key, "orders").EndpointSource.Revision)
 		assignment := assignmentOf(p.snapshots[key])
 		require.Equal(t, "10.0.0.2", assignment.Endpoints[0].LbEndpoints[0].GetEndpoint().Address.GetSocketAddress().Address)
 		require.Equal(t, weight, assignment.Endpoints[0].LoadBalancingWeight.Value)
@@ -273,7 +273,7 @@ func TestPublisherSharedBackendAcrossKeys(t *testing.T) {
 	require.Len(t, installed[testSnapshotKey], 3, "the deleted key must not receive endpoint publications")
 	require.Nil(t, installed[testSnapshotKey][2])
 	require.Len(t, installed[otherKey], 3)
-	require.Equal(t, uint64(3), p.publishedEndpoints.get(otherKey).Endpoints["orders"]["backend"].Source.Revision)
+	require.Equal(t, uint64(3), publishedSetting(p, otherKey, "orders").EndpointSource.Revision)
 
 	p.processFullResults(watchable.Update[string, *fullPublication]{Key: otherKey, Value: &fullPublication{ctx: t.Context()}, Delete: true})
 	require.Empty(t, p.snapshots)
@@ -366,8 +366,8 @@ func TestPublisherFullResultSurvivesReplayFailure(t *testing.T) {
 	p, installed := testPublisher(t)
 	applyFull(p, fullEndpointResult(t, 1, "10.0.0.1", 1))
 	// Corrupt the published endpoints so replaying them fails validation.
-	published := fullEndpointResult(t, 5, "10.0.0.5", 1).endpointState
-	published.Endpoints["orders"]["backend"].Endpoints[0].Port = 70000
+	published := fullEndpointResult(t, 5, "10.0.0.5", 1).endpointContexts
+	published["orders"].Settings[0].Endpoints[0].Port = 70000
 	p.publishedEndpoints.set(testSnapshotKey, published)
 
 	full := fullEndpointResult(t, 2, "10.0.0.2", 3)

@@ -194,7 +194,7 @@ func TestTranslateXds(t *testing.T) {
 			tCtx, err := tr.Translate(t.Context(), x)
 			if strings.HasPrefix(inputFileName, "endpoint-fast-path") {
 				require.NoError(t, err)
-				require.ElementsMatch(t, cfg.endpointContexts, slices.Collect(maps.Keys(tCtx.EndpointState.Contexts)))
+				require.ElementsMatch(t, cfg.endpointContexts, slices.Collect(maps.Keys(tCtx.EndpointContexts)))
 				updates := map[ir.ServiceKey]*endpoint.BackendEndpoints{
 					{Kind: "Service", Namespace: "default", Name: "orders"}: {
 						Backend:  ir.ServiceKey{Kind: "Service", Namespace: "default", Name: "orders"},
@@ -204,7 +204,7 @@ func TestTranslateXds(t *testing.T) {
 						},
 					},
 				}
-				_, replacements, err := ApplyEndpointUpdates(tCtx.EndpointState.Contexts, tCtx.EndpointState.Endpoints, updates)
+				_, replacements, err := ApplyEndpointUpdates(tCtx.EndpointContexts, maps.Keys(tCtx.EndpointContexts), updates)
 				require.NoError(t, err)
 				for i, value := range tCtx.XdsResources[resourcev3.EndpointType] {
 					name := value.(*endpointv3.ClusterLoadAssignment).ClusterName

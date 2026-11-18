@@ -94,8 +94,8 @@ doesn't apply them.
 The publisher is one goroutine shared by all IR keys. For each key it keeps:
 
 - the published snapshot;
-- the endpoint context of that snapshot;
-- the endpoints and revision each cluster setting was built with;
+- the endpoint context of that snapshot, with the endpoints and revision each
+  cluster setting was built with;
 - an index from each backend to the clusters that use it.
 
 It handles two inputs one at a time:
