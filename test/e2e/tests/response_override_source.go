@@ -95,7 +95,7 @@ func checkResponseOverrideSource(t *testing.T, timeoutConfig *config.TimeoutConf
 		Path:   path,
 	}
 
-	httputils.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(_ time.Duration) bool {
+	httputils.AwaitConvergence(t, *timeoutConfig, func(_ time.Duration) bool {
 		req, err := http.NewRequest(http.MethodGet, reqURL.String(), nil)
 		if err != nil {
 			tlog.Logf(t, "failed to build request: %v", err)

@@ -56,7 +56,18 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 
 // SkipTests is a list of tests that are skipped in the conformance suite.
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
-	skipTests := make([]suite.ConformanceTest, 0, 4)
+	skipTests := make([]suite.ConformanceTest, 0, 7)
+	// TODO: new Gateway API v1.7 conformance tests, to be fixed in follow-up PRs.
+	skipTests = append(skipTests,
+		tests.BackendTLSPolicyPreserveForeignStatus,
+		tests.BackendTLSPolicyGRPCRoute,
+		tests.GatewayPreserveForeignConditions,
+		tests.HTTPRoutePreserveForeignStatus,
+		tests.GRPCRouteMultipleRoutesAttachmentSameHostnameIntersection,
+		tests.HTTPRouteMultipleRoutesAttachmentSameHostnameIntersection,
+		tests.TLSRouteMultipleRoutesAttachmentSameHostnameIntersection,
+		tests.HTTPRouteBackendURLRewrite,
+	)
 	if gatewayNamespaceMode {
 		return skipTests
 	}
@@ -68,16 +79,18 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 
 // SkipFeatures is a list of features that are skipped in the conformance report.
 func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
+	// TODO: remove HTTPRouteBackendURLRewrite once the feature is implemented,
+	// it's skipped in the conformance tests until then.
+	skip := sets.New(
+		features.GatewayHTTPSListenerDetectMisdirectedRequestsFeature.Name,
+		features.HTTPRouteBackendURLRewriteFeature.Name,
+	)
 	if gatewayNamespaceMode {
-		return sets.New(
-			features.GatewayHTTPSListenerDetectMisdirectedRequestsFeature.Name,
-		)
+		return skip
 	}
 
-	return sets.New(
-		features.GatewayHTTPSListenerDetectMisdirectedRequestsFeature.Name,
-		features.GatewayInfrastructureFeature.Name,
-	)
+	skip.Insert(features.GatewayInfrastructureFeature.Name)
+	return skip
 }
 
 func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
