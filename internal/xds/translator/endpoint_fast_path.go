@@ -6,7 +6,9 @@
 package translator
 
 import (
+	"iter"
 	"maps"
+	"slices"
 
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -35,37 +37,35 @@ const (
 )
 
 func captureEndpointContext(table *types.ResourceVersionTable, args *xdsClusterArgs, assignmentArgs *types.LoadAssignmentArgs) {
-	if table.EndpointState.Contexts == nil || args.endpointType != EndpointTypeStatic {
+	if table.EndpointContexts == nil || args.endpointType != EndpointTypeStatic {
 		return
 	}
 	var hasSource bool
+	names := make(map[string]struct{}, len(assignmentArgs.Settings))
 	settings := make([]*ir.DestinationSetting, len(assignmentArgs.Settings))
-	settingEndpoints := make(map[string]types.SettingEndpoints, len(assignmentArgs.Settings))
 	for i, setting := range assignmentArgs.Settings {
-		if _, duplicate := settingEndpoints[setting.Name]; duplicate {
+		// A full result's settings are matched to the published ones by name.
+		if _, duplicate := names[setting.Name]; duplicate {
 			return
 		}
+		names[setting.Name] = struct{}{}
 		hasSource = hasSource || setting.EndpointSource != nil
 		// Keep every field by default, so a field the builder starts reading is
-		// kept too. Drop the endpoint fields (endpoints, address type, source),
-		// which are saved separately and change with each update, and the filters
-		// and TLS material, which the assignment doesn't use; only TLS presence does.
+		// kept too. Drop the filters and TLS material, which the assignment
+		// doesn't use; only TLS presence does.
 		kept := *setting
-		kept.Endpoints, kept.AddressType, kept.EndpointSource = nil, nil, nil
 		kept.Filters = nil
 		if setting.TLS != nil {
 			kept.TLS = &ir.TLSUpstreamConfig{}
 		}
 		settings[i] = &kept
-		settingEndpoints[setting.Name] = types.SettingEndpoints{Endpoints: setting.Endpoints, AddressType: setting.AddressType, Source: setting.EndpointSource}
 	}
 	if !hasSource {
 		return
 	}
 	saved := *assignmentArgs
 	saved.Settings = settings
-	table.EndpointState.Contexts[args.name] = &saved
-	table.EndpointState.Endpoints[args.name] = settingEndpoints
+	table.EndpointContexts[args.name] = &saved
 }
 
 // endpointsMayBePatched reports whether anything after cluster construction can
@@ -91,14 +91,13 @@ func (t *Translator) endpointsMayBePatched(xdsIR *ir.Xds) bool {
 // doesn't apply them. A patch is enough even if it changed nothing: one that
 // matches no endpoint now may match a new endpoint later.
 func dropPatchedEndpointContexts(table *types.ResourceVersionTable, policies []*ir.EnvoyPatchPolicy) {
-	if len(table.EndpointState.Contexts) == 0 {
+	if len(table.EndpointContexts) == 0 {
 		return
 	}
 	for _, policy := range policies {
 		for _, patch := range policy.JSONPatches {
 			if patch.Type == resourcev3.EndpointType {
-				delete(table.EndpointState.Contexts, patch.Name)
-				delete(table.EndpointState.Endpoints, patch.Name)
+				delete(table.EndpointContexts, patch.Name)
 			}
 		}
 	}
@@ -108,11 +107,9 @@ func dropPatchedEndpointContexts(table *types.ResourceVersionTable, policies []*
 			assignments[assignment.ClusterName] = assignment
 		}
 	}
-	for name, context := range table.EndpointState.Contexts {
-		unpatched := buildXdsClusterLoadAssignment(name, context.WithEndpoints(table.EndpointState.Endpoints[name]))
-		if !protobuf.Equal(unpatched, assignments[name]) {
-			delete(table.EndpointState.Contexts, name)
-			delete(table.EndpointState.Endpoints, name)
+	for name, args := range table.EndpointContexts {
+		if !protobuf.Equal(buildXdsClusterLoadAssignment(name, args), assignments[name]) {
+			delete(table.EndpointContexts, name)
 		}
 	}
 }
@@ -120,49 +117,60 @@ func dropPatchedEndpointContexts(table *types.ResourceVersionTable, policies []*
 // ReplayPublishedEndpoints is the full path. It keeps the full result's
 // configuration and replaces each setting's endpoints with the published ones
 // for the same backend port when those carry a newer revision.
-func ReplayPublishedEndpoints(contexts types.EndpointContexts, candidate, published types.EndpointsByCluster) (types.EndpointsByCluster, map[string]*endpointv3.ClusterLoadAssignment, error) {
-	return applyNewerEndpoints(contexts, candidate, pathFull, func(cluster, setting string, have *types.SettingEndpoints) *types.SettingEndpoints {
-		input, ok := published[cluster][setting]
-		if !ok || input.Source == nil || !input.Source.SamePort(have.Source) {
+func ReplayPublishedEndpoints(candidate, published types.EndpointContexts) (types.EndpointContexts, map[string]*endpointv3.ClusterLoadAssignment, error) {
+	return applyNewerEndpoints(candidate, maps.Keys(candidate), pathFull, func(cluster string, have *ir.DestinationSetting) *ir.DestinationSetting {
+		args := published[cluster]
+		if args == nil {
 			return nil
 		}
-		return &input
+		for _, setting := range args.Settings {
+			if setting.Name == have.Name {
+				if setting.EndpointSource == nil || !setting.EndpointSource.SamePort(have.EndpointSource) {
+					return nil
+				}
+				return setting
+			}
+		}
+		return nil
 	})
 }
 
-// ApplyEndpointUpdates is the fast path. It keeps the current contexts and
-// replaces each setting's endpoints with the updated backend's, for the port
-// the setting uses, when the update carries a newer revision.
-func ApplyEndpointUpdates(contexts types.EndpointContexts, applied types.EndpointsByCluster, updates map[ir.ServiceKey]*endpoint.BackendEndpoints) (types.EndpointsByCluster, map[string]*endpointv3.ClusterLoadAssignment, error) {
-	return applyNewerEndpoints(contexts, applied, pathFast, func(_, _ string, have *types.SettingEndpoints) *types.SettingEndpoints {
-		backendEndpoints := updates[have.Source.Service]
+// ApplyEndpointUpdates is the fast path. For the given clusters, it keeps the
+// published settings and replaces each setting's endpoints with the updated
+// backend's, for the port the setting uses, when the update carries a newer revision.
+func ApplyEndpointUpdates(published types.EndpointContexts, clusters iter.Seq[string], updates map[ir.ServiceKey]*endpoint.BackendEndpoints) (types.EndpointContexts, map[string]*endpointv3.ClusterLoadAssignment, error) {
+	return applyNewerEndpoints(published, clusters, pathFast, func(_ string, have *ir.DestinationSetting) *ir.DestinationSetting {
+		backendEndpoints := updates[have.EndpointSource.Service]
 		if backendEndpoints == nil {
 			return nil
 		}
-		endpoints, addressType, source := backendEndpoints.ForPort(have.Source.PortName, corev1.Protocol(have.Source.Protocol))
-		return &types.SettingEndpoints{Endpoints: endpoints, AddressType: addressType, Source: source}
+		endpoints, addressType, source := backendEndpoints.ForPort(have.EndpointSource.PortName, corev1.Protocol(have.EndpointSource.Protocol))
+		return &ir.DestinationSetting{Endpoints: endpoints, AddressType: addressType, EndpointSource: source}
 	})
 }
 
-// applyNewerEndpoints is shared by both paths. For each setting, incoming returns
-// the candidate endpoints, or nil. A candidate is applied only when its revision
-// is newer and the change is safe, and every cluster that changed is rebuilt.
-// It returns the applied endpoints with those clusters replaced, and the rebuilt
-// assignments by cluster name. path ("fast" or "full") labels the skip metric.
-func applyNewerEndpoints(contexts types.EndpointContexts, applied types.EndpointsByCluster, path string, incoming func(string, string, *types.SettingEndpoints) *types.SettingEndpoints) (types.EndpointsByCluster, map[string]*endpointv3.ClusterLoadAssignment, error) {
-	next := applied
+// applyNewerEndpoints is shared by both paths. For each setting of the given
+// clusters, incoming returns a setting holding the candidate endpoints, or nil.
+// A candidate is applied only when its revision is newer and the change is safe,
+// and every cluster that changed is rebuilt. It returns the contexts with those
+// clusters replaced, and the rebuilt assignments. path labels the skip metric.
+func applyNewerEndpoints(contexts types.EndpointContexts, clusters iter.Seq[string], path string, incoming func(string, *ir.DestinationSetting) *ir.DestinationSetting) (types.EndpointContexts, map[string]*endpointv3.ClusterLoadAssignment, error) {
+	next := contexts
 	changed := make(map[string]*endpointv3.ClusterLoadAssignment)
-	for cluster, context := range contexts {
-		var updated map[string]types.SettingEndpoints
-		for _, setting := range context.Settings {
-			have, ok := applied[cluster][setting.Name]
-			if !ok || have.Source == nil || setting.Invalid {
+	for cluster := range clusters {
+		args := contexts[cluster]
+		if args == nil {
+			continue
+		}
+		var settings []*ir.DestinationSetting
+		for i, have := range args.Settings {
+			if have.EndpointSource == nil || have.Invalid {
 				continue
 			}
-			candidate := incoming(cluster, setting.Name, &have)
 			// Newer wins on both paths: skip endpoints that aren't newer than the
 			// ones this setting already has.
-			if candidate == nil || candidate.Source.Revision <= have.Source.Revision {
+			candidate := incoming(cluster, have)
+			if candidate == nil || candidate.EndpointSource.Revision <= have.EndpointSource.Revision {
 				continue
 			}
 			var reason string
@@ -180,22 +188,26 @@ func applyNewerEndpoints(contexts types.EndpointContexts, applied types.Endpoint
 				endpointRefreshSkipped.With(endpointSkipPath.Value(path), endpointSkipReason.Value(reason)).Increment()
 				continue
 			}
-			if updated == nil {
-				updated = maps.Clone(applied[cluster])
+			if settings == nil {
+				settings = slices.Clone(args.Settings)
 			}
-			updated[setting.Name] = *candidate
+			updated := *have
+			updated.Endpoints, updated.AddressType, updated.EndpointSource = candidate.Endpoints, candidate.AddressType, candidate.EndpointSource
+			settings[i] = &updated
 		}
-		if updated == nil {
+		if settings == nil {
 			continue
 		}
-		assignment := buildXdsClusterLoadAssignment(cluster, context.WithEndpoints(updated))
+		rebuilt := *args
+		rebuilt.Settings = settings
+		assignment := buildXdsClusterLoadAssignment(cluster, &rebuilt)
 		if err := proto.Validate(assignment); err != nil {
 			return nil, nil, err
 		}
 		if len(changed) == 0 {
-			next = maps.Clone(applied)
+			next = maps.Clone(contexts)
 		}
-		next[cluster], changed[cluster] = updated, assignment
+		next[cluster], changed[cluster] = &rebuilt, assignment
 	}
 	return next, changed, nil
 }

@@ -6,13 +6,13 @@
 package runner
 
 import (
+	"maps"
 	"time"
 
 	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
-	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 // processEndpointUpdates takes the pending endpoint updates, rebuilds the EDS
@@ -41,13 +41,13 @@ func (p *snapshotPublisher) applyEndpointUpdates(key string, updates map[ir.Serv
 	start := time.Now()
 	defer func() { endpointRefreshDuration.Record(time.Since(start).Seconds()) }()
 	published, current := p.publishedEndpoints.get(key), p.snapshots[key]
-	affected := make(types.EndpointContexts)
+	affected := make(map[string]struct{})
 	for backend := range updates {
 		for name := range p.publishedEndpoints.snapshotsUsing(backend)[key] {
-			affected[name] = published.Contexts[name]
+			affected[name] = struct{}{}
 		}
 	}
-	next, replacements, err := translator.ApplyEndpointUpdates(affected, published.Endpoints, updates)
+	next, replacements, err := translator.ApplyEndpointUpdates(published, maps.Keys(affected), updates)
 	if err != nil {
 		p.log.Error(err, "failed to refresh endpoints", "ir-key", key)
 		return
@@ -61,7 +61,7 @@ func (p *snapshotPublisher) applyEndpointUpdates(key string, updates map[ir.Serv
 	// Update the published endpoints and snapshot in the publisher.
 	if len(replacements) != 0 {
 		p.snapshots[key] = snapshot
-		p.publishedEndpoints.set(key, types.EndpointState{Contexts: published.Contexts, Endpoints: next})
+		p.publishedEndpoints.set(key, next)
 	}
 	if snapshot != current {
 		p.publish(p.ctx, pathFast, key, snapshot)

@@ -22,10 +22,10 @@ import (
 
 type fullPublication struct {
 	snapshot *cachev3.Snapshot
-	// endpointState holds the cluster settings, endpoints and revisions this
+	// endpointContexts holds the cluster settings, endpoints and revisions this
 	// full result was built from.
-	endpointState types.EndpointState
-	ctx           context.Context
+	endpointContexts types.EndpointContexts
+	ctx              context.Context
 }
 
 // snapshotPublisher publishes full results and fast endpoint updates. Three rules
@@ -51,7 +51,7 @@ type snapshotPublisher struct {
 	// snapshots holds the published snapshot per IR key.
 	snapshots map[string]*cachev3.Snapshot
 
-	// publishedEndpoints holds, per IR key, the endpoint state of the published
+	// publishedEndpoints holds, per IR key, the endpoint contexts of the published
 	// snapshot: each cluster's settings, and the endpoints and revision it was
 	// built with, indexed by backend. A full result sets it, and fast updates
 	// advance its endpoints.
@@ -118,8 +118,7 @@ func (p *snapshotPublisher) processFullResults(first watchable.Update[string, *f
 func (p *snapshotPublisher) processFull(key string, publication *fullPublication) {
 	// Published endpoints win over the full result's when their revision is newer
 	// (rule 3), so a full build that started before a fast update can't roll it back.
-	contexts := publication.endpointState.Contexts
-	endpoints, replacements, err := translator.ReplayPublishedEndpoints(contexts, publication.endpointState.Endpoints, p.publishedEndpoints.get(key).Endpoints)
+	contexts, replacements, err := translator.ReplayPublishedEndpoints(publication.endpointContexts, p.publishedEndpoints.get(key))
 	snapshot := publication.snapshot
 	if err == nil {
 		snapshot, err = cache.ReplaceEndpoints(publication.snapshot, replacements)
@@ -128,10 +127,10 @@ func (p *snapshotPublisher) processFull(key string, publication *fullPublication
 		// Unlikely, mostly a guard against code bugs. Publish the full result as
 		// built rather than drop it, so its other changes still go out.
 		p.log.Error(err, "failed to replay published endpoints, publishing the full result as built", "ir-key", key)
-		snapshot, endpoints = publication.snapshot, publication.endpointState.Endpoints
+		snapshot, contexts = publication.snapshot, publication.endpointContexts
 	}
 	p.snapshots[key] = snapshot
-	p.publishedEndpoints.set(key, types.EndpointState{Contexts: contexts, Endpoints: endpoints})
+	p.publishedEndpoints.set(key, contexts)
 	p.publish(publication.ctx, pathFull, key, snapshot)
 }
 
@@ -140,7 +139,7 @@ func (p *snapshotPublisher) processDelete(key string, ctx context.Context) {
 	p.publish(ctx, pathDelete, key, nil)
 }
 
-// forget drops a key's snapshot and published endpoint state.
+// forget drops a key's snapshot and published endpoint contexts.
 func (p *snapshotPublisher) forget(key string) {
 	p.publishedEndpoints.forget(key)
 	delete(p.snapshots, key)

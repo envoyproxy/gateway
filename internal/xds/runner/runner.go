@@ -452,7 +452,7 @@ func (r *Runner) publishFullResult(key string, result *xtypes.ResourceVersionTab
 	if err != nil {
 		return err
 	}
-	return r.publisher.enqueueFullResult(key, &fullPublication{snapshot: snapshot, endpointState: result.EndpointState, ctx: ctx})
+	return r.publisher.enqueueFullResult(key, &fullPublication{snapshot: snapshot, endpointContexts: result.EndpointContexts, ctx: ctx})
 }
 
 // deleteFullResult deletes the key's snapshot, through the publisher when the

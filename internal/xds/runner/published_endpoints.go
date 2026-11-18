@@ -10,10 +10,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-// publishedEndpointStore holds, per IR key, the endpoint state of the
+// publishedEndpointStore holds, per IR key, the endpoint contexts of the
 // published snapshot, with its endpoints indexed by backend.
 type publishedEndpointStore struct {
-	byKey map[string]types.EndpointState
+	byKey map[string]types.EndpointContexts
 
 	// dependentsByBackend lists, per backend, the IR keys and EDS cluster names
 	// whose endpoints come from it, so an endpoint update finds the affected
@@ -23,24 +23,24 @@ type publishedEndpointStore struct {
 
 func newPublishedEndpointStore() *publishedEndpointStore {
 	return &publishedEndpointStore{
-		byKey:               make(map[string]types.EndpointState),
+		byKey:               make(map[string]types.EndpointContexts),
 		dependentsByBackend: make(map[ir.ServiceKey]map[string]map[string]struct{}),
 	}
 }
 
-func (a *publishedEndpointStore) get(key string) types.EndpointState {
+func (a *publishedEndpointStore) get(key string) types.EndpointContexts {
 	return a.byKey[key]
 }
 
-// set replaces a key's published endpoint state and reindexes it.
-func (a *publishedEndpointStore) set(key string, next types.EndpointState) {
-	a.reindex(key, a.byKey[key].Endpoints, next.Endpoints)
+// set replaces a key's published endpoint contexts and reindexes them.
+func (a *publishedEndpointStore) set(key string, next types.EndpointContexts) {
+	a.reindex(key, a.byKey[key], next)
 	a.byKey[key] = next
 }
 
 // forget drops a key's published endpoints and index entries.
 func (a *publishedEndpointStore) forget(key string) {
-	a.reindex(key, a.byKey[key].Endpoints, nil)
+	a.reindex(key, a.byKey[key], nil)
 	delete(a.byKey, key)
 }
 
@@ -53,19 +53,19 @@ func (a *publishedEndpointStore) snapshotsUsing(backend ir.ServiceKey) map[strin
 
 // reindex swaps a key's index entries from the backends its old published
 // endpoints used to the backends its new ones use.
-func (a *publishedEndpointStore) reindex(key string, old, next types.EndpointsByCluster) {
+func (a *publishedEndpointStore) reindex(key string, old, next types.EndpointContexts) {
 	for backend := range backendsOf(old) {
 		delete(a.dependentsByBackend[backend], key)
 		if len(a.dependentsByBackend[backend]) == 0 {
 			delete(a.dependentsByBackend, backend)
 		}
 	}
-	for cluster, settings := range next {
-		for _, input := range settings {
-			if input.Source == nil {
+	for cluster, args := range next {
+		for _, setting := range args.Settings {
+			if setting.EndpointSource == nil {
 				continue
 			}
-			backend := input.Source.Service
+			backend := setting.EndpointSource.Service
 			if a.dependentsByBackend[backend] == nil {
 				a.dependentsByBackend[backend] = make(map[string]map[string]struct{})
 			}
@@ -77,12 +77,12 @@ func (a *publishedEndpointStore) reindex(key string, old, next types.EndpointsBy
 	}
 }
 
-func backendsOf(endpoints types.EndpointsByCluster) map[ir.ServiceKey]struct{} {
+func backendsOf(contexts types.EndpointContexts) map[ir.ServiceKey]struct{} {
 	backends := make(map[ir.ServiceKey]struct{})
-	for _, settings := range endpoints {
-		for _, entry := range settings {
-			if entry.Source != nil {
-				backends[entry.Source.Service] = struct{}{}
+	for _, args := range contexts {
+		for _, setting := range args.Settings {
+			if setting.EndpointSource != nil {
+				backends[setting.EndpointSource.Service] = struct{}{}
 			}
 		}
 	}

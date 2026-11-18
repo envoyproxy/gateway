@@ -253,10 +253,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 
 	tCtx := new(types.ResourceVersionTable)
 	if t.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath) {
-		tCtx.EndpointState = types.EndpointState{
-			Contexts:  make(types.EndpointContexts),
-			Endpoints: make(types.EndpointsByCluster),
-		}
+		tCtx.EndpointContexts = make(types.EndpointContexts)
 	}
 	tCtx.EnableClusterIndex()
 
