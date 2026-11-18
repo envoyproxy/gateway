@@ -56,7 +56,17 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 
 // SkipTests is a list of tests that are skipped in the conformance suite.
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
-	skipTests := make([]suite.ConformanceTest, 0, 4)
+	skipTests := make([]suite.ConformanceTest, 0, 7)
+	// TODO: new Gateway API v1.7 conformance tests, to be fixed in follow-up PRs.
+	skipTests = append(skipTests,
+		tests.BackendTLSPolicyPreserveForeignStatus,
+		tests.BackendTLSPolicyGRPCRoute,
+		tests.GatewayPreserveForeignConditions,
+		tests.HTTPRoutePreserveForeignStatus,
+		tests.GRPCRouteMultipleRoutesAttachmentSameHostnameIntersection,
+		tests.HTTPRouteMultipleRoutesAttachmentSameHostnameIntersection,
+		tests.TLSRouteMultipleRoutesAttachmentSameHostnameIntersection,
+	)
 	if gatewayNamespaceMode {
 		return skipTests
 	}

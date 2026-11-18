@@ -95,8 +95,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					// check connection_limit stats from Prometheus
 					v, err := promClient.QuerySum(t.Context(), promQL)

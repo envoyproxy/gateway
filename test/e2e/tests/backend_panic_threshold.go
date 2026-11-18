@@ -64,8 +64,7 @@ var BackendPanicThresholdHTTPTest = suite.ConformanceTest{
 
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					// check hc failure stats from Prometheus
 					v, err := promClient.QuerySum(ctx, hcFailPromQL)
@@ -103,8 +102,7 @@ var BackendPanicThresholdHTTPTest = suite.ConformanceTest{
 
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					// check panic mode stats from Prometheus
 					v, err := promClient.QuerySum(ctx, panicModePromQL)

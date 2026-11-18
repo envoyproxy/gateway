@@ -218,8 +218,7 @@ var ExtProcTest = suite.ConformanceTest{
 		t.Run("health check events appear in logs for ext-proc cluster", func(t *testing.T) {
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
 					if err != nil {

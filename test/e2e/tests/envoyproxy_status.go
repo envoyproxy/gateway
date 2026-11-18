@@ -13,6 +13,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -50,7 +51,7 @@ var EnvoyProxyStatus = suite.ConformanceTest{
 		})
 
 		// Remove parametersRef from gc1, and make sure the status is removed from EnvoyProxy.
-		http.AwaitConvergence(t, 1, suite.TimeoutConfig.MaxTimeToConsistency, func(_ time.Duration) bool {
+		http.AwaitConvergence(t, config.TimeoutConfig{RequiredConsecutiveSuccesses: 1, MaxTimeToConsistency: suite.TimeoutConfig.MaxTimeToConsistency}, func(_ time.Duration) bool {
 			// Get gc1 and remove parametersRef.
 			gc1 := &gwapiv1.GatewayClass{}
 			if err := suite.Client.Get(t.Context(), types.NamespacedName{
