@@ -106,10 +106,10 @@ metadata:
   name: dns-policy-custom-dns
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: httproute-with-dynamic-resolver-backend-host-rewrite-custom-dns-cache
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-dynamic-resolver-backend-host-rewrite-custom-dns-cache
   dns:
     dnsRefreshRate: "1s"
     lookupFamily: IPv4AndIPv6

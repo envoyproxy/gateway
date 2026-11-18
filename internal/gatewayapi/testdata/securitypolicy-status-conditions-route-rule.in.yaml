@@ -49,8 +49,8 @@ securityPolicies:
     namespace: default
     name: policy-for-route-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     cors:
@@ -62,8 +62,8 @@ securityPolicies:
     namespace: default
     name: policy-for-route-1-as-well
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     cors:
@@ -75,8 +75,8 @@ securityPolicies:
     namespace: default
     name: policy-for-route-1-section-name
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-1
@@ -89,8 +89,8 @@ securityPolicies:
     namespace: default
     name: policy-for-route-1-section-name-as-well
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-1
