@@ -86,9 +86,12 @@ The regex transforms only the path; the original query string is preserved. Use 
 (`\1`, not `$1`) and single-quoted YAML strings to preserve backslashes. Unanchored patterns replace all
 matching portions. Substitutions must be non-empty and cannot contain NUL, CR, LF, `?` or `#`.
 
-The transformation regex does not decide whether the route matches. If it does not match the path, the
-redirect still applies with the unchanged path. Use appropriate HTTPRoute matches to avoid a
-redirect back to the same URL.
+The redirect applies only when both the HTTPRoute matches and the transformation regex match the
+request path. The transformation check excludes the query string and does not change route
+precedence. It uses the path at the start of the HTTP filter chain; subsequent path changes by other
+HTTP filters are not reflected in this check. If the pattern does not match, Envoy considers the next
+matching route instead of sending a redirect. Ensure that substitutions do not produce the original
+URL or create cycles between redirect rules.
 
 Only one redirect extension and at most one native `RequestRedirect` filter are supported per HTTPRoute
 rule. If present, the native filter must not specify `path`, since it would conflict with the

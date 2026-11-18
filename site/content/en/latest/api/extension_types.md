@@ -3605,7 +3605,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  true  |  | Path transforms the path in the redirect Location header using RE2 matching<br />and substitution. The query string is preserved. Capture groups use backslash<br />references such as \1, not $1. All matching portions are replaced.<br />If the pattern does not match, the path is unchanged but the redirect still<br />occurs. Constrain the HTTPRoute matches to avoid redirecting to the same URL.<br />An optional native RequestRedirect can override the scheme, hostname, port<br />and status code.<br />Substitution must be non-empty and must not contain NUL, CR, LF, '?' or '#'. |
+| `path` | _[HTTPPathModifier](#httppathmodifier)_ |  true  |  | Path transforms the path in the redirect Location header using RE2 matching<br />and substitution. The query string is preserved. Capture groups use backslash<br />references such as \1, not $1. All matching portions are replaced.<br />The redirect applies only when the pattern matches the request path, without<br />the query string, in addition to the configured HTTPRoute matches.<br />Ensure the substitution changes the URL and does not create redirect cycles.<br />An optional native RequestRedirect can override the scheme, hostname, port<br />and status code.<br />Substitution must be non-empty and must not contain NUL, CR, LF, '?' or '#'. |
 
 
 #### HTTPRequestMirrorFilter

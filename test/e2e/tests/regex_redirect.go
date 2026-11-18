@@ -23,7 +23,7 @@ func init() {
 
 var RegexRedirectTest = suite.ConformanceTest{
 	ShortName:   "RegexRedirect",
-	Description: "Regex redirects work standalone or compose with native redirects in either filter order",
+	Description: "Regex redirects preserve route precedence and redirect only paths matching the transformation",
 	Manifests:   []string{"testdata/regex-redirect.yaml"},
 	Test: func(t *testing.T, s *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
@@ -36,17 +36,33 @@ var RegexRedirectTest = suite.ConformanceTest{
 		}{
 			{"/standalone/123", "http://redirect.example/post-123", 302},
 			{"/standalone/123?utm_source=email&x=%2F", "http://redirect.example/post-123?utm_source=email&x=%2F", 302},
+			{"/standalone/abc", "", 418},
+			{"/standalone/abc?next=/standalone/123", "", 418},
+			{"/standalone/123/", "", 418},
+			{"/standalone/999", "", 202},
 			{"/blogs/123", "https://example.com/post-123", 301},
 			{"/blogs/123?utm_source=email&x=1", "https://example.com/post-123?utm_source=email&x=1", 301},
-			{"/blogs/not-a-number", "https://example.com/blogs/not-a-number", 301},
-			{"/blogs/123/", "https://example.com/blogs/123/", 301},
+			{"/blogs/abc", "", 418},
+			{"/blogs/not-a-number", "", 418},
+			{"/blogs/123/", "", 418},
 			{"/articles/456", "https://example.com:8443/post-456", 302},
 			{"/articles/456?x=%2F", "https://example.com:8443/post-456?x=%2F", 302},
+			{"/regex/12", "http://redirect.example/post-12", 302},
+			{"/regex/123", "", 418},
+			{"/exact/123", "http://redirect.example/post-123", 302},
+			{"/exact/456", "", 418},
+			{"/unanchored/legacy/item", "http://redirect.example/unanchored/modern/item", 302},
+			{"/unanchored/legacy/item?next=legacy", "http://redirect.example/unanchored/modern/item?next=legacy", 302},
+			{"/unanchored/modern/item?next=legacy", "", 418},
 		} {
 			t.Run(tc.path, func(t *testing.T) {
+				headers := map[string]string{}
+				if tc.location != "" {
+					headers["Location"] = tc.location
+				}
 				expected := http.ExpectedResponse{
 					Request:   http.Request{Host: "redirect.example", Path: tc.path, UnfollowRedirect: true},
-					Response:  http.Response{StatusCode: tc.code, Headers: map[string]string{"Location": tc.location}},
+					Response:  http.Response{StatusCode: tc.code, Headers: headers},
 					Namespace: ns,
 				}
 				http.MakeRequestAndExpectEventuallyConsistentResponse(t, s.RoundTripper, s.TimeoutConfig, address, expected)

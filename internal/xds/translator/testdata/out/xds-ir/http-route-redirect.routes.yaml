@@ -6,6 +6,11 @@
     name: first-listener/*
     routes:
     - match:
+        filterState:
+        - key: envoy_gateway.regex_redirect.path
+          stringMatch:
+            safeRegex:
+              regex: (?s:.*)(?:^/blogs/([0-9]+)$)(?s:.*)
         safeRegex:
           regex: ^/blogs/([0-9]+)$
       name: regex-redirect-route

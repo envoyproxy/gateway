@@ -336,7 +336,7 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters, t.FilterOrder)
-	return nil
+	return patchHCMWithRegexRedirectPath(mgr, irListener)
 }
 
 // patchRouteWithPerRouteConfig appends per-route filter configuration to the

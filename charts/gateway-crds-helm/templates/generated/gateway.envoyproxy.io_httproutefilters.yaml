@@ -543,8 +543,9 @@ spec:
                       Path transforms the path in the redirect Location header using RE2 matching
                       and substitution. The query string is preserved. Capture groups use backslash
                       references such as \1, not $1. All matching portions are replaced.
-                      If the pattern does not match, the path is unchanged but the redirect still
-                      occurs. Constrain the HTTPRoute matches to avoid redirecting to the same URL.
+                      The redirect applies only when the pattern matches the request path, without
+                      the query string, in addition to the configured HTTPRoute matches.
+                      Ensure the substitution changes the URL and does not create redirect cycles.
                       An optional native RequestRedirect can override the scheme, hostname, port
                       and status code.
                       Substitution must be non-empty and must not contain NUL, CR, LF, '?' or '#'.

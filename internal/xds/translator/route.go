@@ -73,6 +73,9 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 	case httpRoute.DirectResponse != nil:
 		router.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
 	case httpRoute.Redirect != nil:
+		if path := httpRoute.Redirect.Path; path != nil && path.RegexMatchReplace != nil {
+			addRegexRedirectMatch(router.Match, path.RegexMatchReplace.Pattern)
+		}
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch, backendIndex)
