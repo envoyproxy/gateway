@@ -63,8 +63,12 @@ jobs:
       # PRs from forks cannot write security events, so report through the
       # failed check and the SARIF artifact instead of code scanning.
       upload-sarif: false
+      # examples/ and site/ are not part of any release artifact, so their
+      # dependencies should not block a release-branch PR.
       scan-args: |-
         --config tools/osv-scanner/vulnerability-scan-config.toml
+        --x-exclude=examples
+        --x-exclude=site
         --recursive
         ./
     permissions:
