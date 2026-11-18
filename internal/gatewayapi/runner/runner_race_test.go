@@ -48,10 +48,9 @@ func TestRunnerDataRace(t *testing.T) {
 				Provider: &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeCustom,
 					Custom: &egv1a1.EnvoyGatewayCustomProvider{
-						Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-							Type: egv1a1.InfrastructureProviderTypeHost,
-							Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-						},
+						// No TLS config for the Wasm cache, so it is skipped and
+						// translation starts straight away.
+						Resource: egv1a1.EnvoyGatewayResourceProvider{Type: egv1a1.ResourceProviderTypeFile},
 					},
 				},
 			},
@@ -124,10 +123,9 @@ func TestRunnerDataRaceAggressive(t *testing.T) {
 						Provider: &egv1a1.EnvoyGatewayProvider{
 							Type: egv1a1.ProviderTypeCustom,
 							Custom: &egv1a1.EnvoyGatewayCustomProvider{
-								Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-									Type: egv1a1.InfrastructureProviderTypeHost,
-									Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-								},
+								// No TLS config for the Wasm cache, so it is skipped and
+								// translation starts straight away.
+								Resource: egv1a1.EnvoyGatewayResourceProvider{Type: egv1a1.ResourceProviderTypeFile},
 							},
 						},
 					},
@@ -197,10 +195,9 @@ func TestRunnerDataRaceImmediate(t *testing.T) {
 				Provider: &egv1a1.EnvoyGatewayProvider{
 					Type: egv1a1.ProviderTypeCustom,
 					Custom: &egv1a1.EnvoyGatewayCustomProvider{
-						Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
-							Type: egv1a1.InfrastructureProviderTypeHost,
-							Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
-						},
+						// No TLS config for the Wasm cache, so it is skipped and
+						// translation starts straight away.
+						Resource: egv1a1.EnvoyGatewayResourceProvider{Type: egv1a1.ResourceProviderTypeFile},
 					},
 				},
 			},

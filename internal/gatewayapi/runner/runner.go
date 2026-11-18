@@ -8,13 +8,13 @@ package runner
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"math"
 	"os"
 	"path"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/telepresenceio/watchable"
@@ -66,10 +66,12 @@ type Config struct {
 
 type Runner struct {
 	Config
-	// wasmCache is published by startWasmCache and read by subscribeAndTranslate.
-	wasmCache atomic.Pointer[wasm.HTTPServer]
-	// wasmCacheReady is closed once wasmCache is published.
-	wasmCacheReady chan struct{}
+	// wasmCache is set by startWasmCache before it closes wasmCacheDone, and is
+	// only read by the translation, which waits for wasmCacheDone.
+	wasmCache wasm.Cache
+	// wasmCacheDone is closed when startWasmCache returns, whether or not the
+	// Wasm cache was started.
+	wasmCacheDone chan struct{}
 	// wasmListenAddr overrides the Wasm HTTP server address in tests.
 	wasmListenAddr string
 
@@ -161,9 +163,9 @@ func mergeEnvoyProxyStatus(aggregated, incoming *egv1a1.EnvoyProxyStatus) *egv1a
 
 func New(cfg *Config) *Runner {
 	return &Runner{
-		Config:         *cfg,
-		keyCache:       newKeyCache(),
-		wasmCacheReady: make(chan struct{}),
+		Config:        *cfg,
+		keyCache:      newKeyCache(),
+		wasmCacheDone: make(chan struct{}),
 	}
 }
 
@@ -188,6 +190,15 @@ func (r *Runner) Start(ctx context.Context) error {
 	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
 	r.done.Go(func() {
+		// The Wasm cache is required to translate EnvoyExtensionPolicies with HTTP
+		// or Image Wasm sources, so hold off translation until it has started.
+		// Updates received meanwhile are coalesced by the subscription.
+		select {
+		case <-r.wasmCacheDone:
+		default:
+			r.Logger.Info("waiting for the wasm cache to start before translating resources")
+			<-r.wasmCacheDone
+		}
 		r.subscribeAndTranslate(c)
 	})
 	r.Logger.Info("started")
@@ -195,6 +206,8 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) startWasmCache(ctx context.Context) {
+	defer close(r.wasmCacheDone)
+
 	// Start the wasm cache server
 	// EG reuse the OIDC HMAC secret as a hash salt to generate an unguessable
 	// downloading path for the Wasm module.
@@ -216,13 +229,19 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		attempt++
 		var loadErr error
 		if tlsConfig, salt, loadErr = r.loadTLSConfig(ctx); loadErr != nil {
+			if errors.Is(loadErr, errNoWasmCacheTLSConfig) {
+				// Retrying will not help, so translate without the Wasm cache.
+				return false, loadErr
+			}
 			r.Logger.Error(loadErr, "failed to start wasm cache, retrying", "attempt", attempt)
 			return false, nil
 		}
 		return true, nil
 	})
 	if err != nil {
-		// ctx is done before the TLS config could be loaded.
+		if ctx.Err() == nil {
+			r.Logger.Error(err, "failed to start wasm cache")
+		}
 		return
 	}
 	cacheOption := wasm.CacheOptions{}
@@ -246,80 +265,13 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		},
 		cacheOption, r.ControllerNamespace, r.Logger)
 	wasmCache.Start(ctx)
-	r.wasmCache.Store(wasmCache)
-	close(r.wasmCacheReady)
-}
-
-// getWasmCache returns the Wasm cache, or nil if it has not been started yet.
-func (r *Runner) getWasmCache() wasm.Cache {
-	// Avoid returning a typed nil pointer as a non-nil interface.
-	if c := r.wasmCache.Load(); c != nil {
-		return c
-	}
-	return nil
-}
-
-// retranslateOnWasmCacheReady forwards the snapshots from sub. Once the Wasm cache
-// is ready, it replays the latest state so that resources translated without the
-// cache, such as EnvoyExtensionPolicies with HTTP or Image Wasm sources, recover
-// without waiting for an unrelated resource change.
-func (r *Runner) retranslateOnWasmCacheReady(
-	sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext],
-) <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext] {
-	out := make(chan watchable.Snapshot[string, *resource.ControllerResourcesContext])
-	go func() {
-		defer close(out)
-		var state map[string]*resource.ControllerResourcesContext
-	waitForCache:
-		for {
-			select {
-			case snapshot, ok := <-sub:
-				if !ok {
-					return
-				}
-				select {
-				case <-r.wasmCacheReady:
-					// This snapshot is translated with the cache, so there is
-					// nothing to replay.
-					state = nil
-					out <- snapshot
-					break waitForCache
-				default:
-				}
-				state = snapshot.State
-				out <- snapshot
-			case <-r.wasmCacheReady:
-				break waitForCache
-			}
-		}
-		// Nothing has been translated yet if no snapshot was received, and the
-		// first one will be translated with the cache.
-		if len(state) > 0 {
-			replay := watchable.Snapshot[string, *resource.ControllerResourcesContext]{State: state}
-			for key, val := range state {
-				// The translator must not share the values of the original snapshot,
-				// and the replay is not reported as queue latency.
-				val = val.DeepCopy()
-				if val != nil {
-					val.StoredAt = time.Time{}
-				}
-				replay.Updates = append(replay.Updates,
-					watchable.Update[string, *resource.ControllerResourcesContext]{Key: key, Value: val})
-			}
-			r.Logger.Info("wasm cache is ready, translating the latest resources again")
-			out <- replay
-		}
-		for snapshot := range sub {
-			out <- snapshot
-		}
-	}()
-	return out
+	r.wasmCache = wasmCache
 }
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
 	message.HandleSubscription(
 		r.Logger,
-		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, r.retranslateOnWasmCacheReady(sub),
+		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
 		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
 			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 
@@ -430,7 +382,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
 					MergeBackends:                   gatewayapi.ResolveMergeBackendsConfig(resources),
 					PerResourceSystemCASecret:       r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.PerResourceSystemCASecret),
-					WasmCache:                       r.getWasmCache(),
+					WasmCache:                       r.wasmCache,
 					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
 					InfraRemotelyManaged:            r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsInfraManagedRemotely(),
 					Logger:                          traceLogger,
@@ -746,6 +698,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 	r.Logger.Info("shutting down")
 }
 
+// errNoWasmCacheTLSConfig is returned by loadTLSConfig when the provider has no
+// TLS config for the Wasm cache.
+var errNoWasmCacheTLSConfig = errors.New("no valid tls certificates")
+
 func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error) {
 	switch {
 	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
@@ -792,7 +748,7 @@ func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error)
 		return tlsConfig, salt, nil
 
 	default:
-		return nil, nil, fmt.Errorf("no valid tls certificates")
+		return nil, nil, errNoWasmCacheTLSConfig
 	}
 }
 

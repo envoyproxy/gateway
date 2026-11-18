@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/telepresenceio/watchable"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -39,6 +38,13 @@ func TestRunner(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	// No TLS config for the Wasm cache, so translation does not wait for it.
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+		Custom: &egv1a1.EnvoyGatewayCustomProvider{
+			Resource: egv1a1.EnvoyGatewayResourceProvider{Type: egv1a1.ResourceProviderTypeFile},
+		},
+	}
 	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
 	require.NoError(t, err)
 	defer closeFunc()
@@ -581,9 +587,12 @@ func TestStartWasmCacheRetriesUntilTLSConfigLoads(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 	require.NoError(t, os.WriteFile(hmacFile, hmacSecret, 0o600))
 
-	require.Eventually(t, func() bool {
-		return r.getWasmCache() != nil
-	}, 5*time.Second, 50*time.Millisecond, "wasm cache was not initialized after the HMAC secret became available")
+	select {
+	case <-r.wasmCacheDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("wasm cache was not initialized after the HMAC secret became available")
+	}
+	require.NotNil(t, r.wasmCache)
 
 	cancel()
 	<-done
@@ -613,88 +622,51 @@ func TestStartWasmCacheStopsRetryingOnContextDone(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("startWasmCache did not return after the context was cancelled")
 	}
-	require.Nil(t, r.getWasmCache())
+	require.Nil(t, r.wasmCache)
 	select {
-	case <-r.wasmCacheReady:
-		t.Fatal("wasmCacheReady was closed although the wasm cache was not started")
+	case <-r.wasmCacheDone:
 	default:
+		t.Fatal("wasmCacheDone was not closed, so translation would never start")
 	}
 }
 
-func TestRetranslateOnWasmCacheReady(t *testing.T) {
-	newSnapshot := func(val *resource.ControllerResourcesContext) watchable.Snapshot[string, *resource.ControllerResourcesContext] {
-		return watchable.Snapshot[string, *resource.ControllerResourcesContext]{
-			State: map[string]*resource.ControllerResourcesContext{"test": val},
-			Updates: []watchable.Update[string, *resource.ControllerResourcesContext]{
-				{Key: "test", Value: val},
-			},
-		}
-	}
-	receive := func(t *testing.T, out <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) watchable.Snapshot[string, *resource.ControllerResourcesContext] {
-		t.Helper()
-		select {
-		case snapshot, ok := <-out:
-			require.True(t, ok, "channel closed unexpectedly")
-			return snapshot
-		case <-time.After(5 * time.Second):
-			t.Fatal("timed out waiting for a snapshot")
-		}
-		return watchable.Snapshot[string, *resource.ControllerResourcesContext]{}
-	}
+// TestStartWasmCacheGivesUpWithoutTLSConfig verifies that startWasmCache returns
+// straight away when the provider has no TLS config for the Wasm cache, so
+// translation is not held off forever.
+func TestStartWasmCacheGivesUpWithoutTLSConfig(t *testing.T) {
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+		Custom: &egv1a1.EnvoyGatewayCustomProvider{
+			Resource: egv1a1.EnvoyGatewayResourceProvider{Type: egv1a1.ResourceProviderTypeFile},
+		},
+	}
 
-	t.Run("replays the latest state once the cache is ready", func(t *testing.T) {
-		r := New(&Config{Server: *cfg})
-		sub := make(chan watchable.Snapshot[string, *resource.ControllerResourcesContext])
-		out := r.retranslateOnWasmCacheReady(sub)
+	r := New(&Config{Server: *cfg})
+	done := make(chan struct{})
+	go func() {
+		r.startWasmCache(t.Context())
+		close(done)
+	}()
 
-		val := &resource.ControllerResourcesContext{
-			Resources: &resource.ControllerResources{
-				{GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "eg"}}},
-			},
-			StoredAt: time.Now(),
-		}
-		sub <- newSnapshot(val)
-		require.Equal(t, newSnapshot(val), receive(t, out))
-
-		close(r.wasmCacheReady)
-		replay := receive(t, out)
-		require.Len(t, replay.Updates, 1)
-		update := replay.Updates[0]
-		require.Equal(t, "test", update.Key)
-		require.False(t, update.Delete)
-		require.NotSame(t, val, update.Value)
-		require.Equal(t, val.Resources, update.Value.Resources)
-		require.True(t, update.Value.StoredAt.IsZero())
-
-		// Later snapshots are forwarded unchanged.
-		sub <- newSnapshot(val)
-		require.Equal(t, newSnapshot(val), receive(t, out))
-		close(sub)
-		_, ok := <-out
-		require.False(t, ok)
-	})
-
-	t.Run("does not replay before the first snapshot", func(t *testing.T) {
-		r := New(&Config{Server: *cfg})
-		sub := make(chan watchable.Snapshot[string, *resource.ControllerResourcesContext])
-		close(r.wasmCacheReady)
-		out := r.retranslateOnWasmCacheReady(sub)
-
-		val := &resource.ControllerResourcesContext{StoredAt: time.Now()}
-		sub <- newSnapshot(val)
-		require.Equal(t, newSnapshot(val), receive(t, out))
-		close(sub)
-		_, ok := <-out
-		require.False(t, ok)
-	})
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("startWasmCache kept retrying although the provider has no TLS config")
+	}
+	require.Nil(t, r.wasmCache)
+	select {
+	case <-r.wasmCacheDone:
+	default:
+		t.Fatal("wasmCacheDone was not closed, so translation would never start")
+	}
 }
 
-// TestWasmPolicyRecoversOnceWasmCacheStarts verifies that an EnvoyExtensionPolicy
-// rejected because the Wasm cache was not started yet is translated again, and
-// accepted, once the cache starts, without any further resource change.
-func TestWasmPolicyRecoversOnceWasmCacheStarts(t *testing.T) {
+// TestTranslationWaitsForWasmCache verifies that resources are not translated
+// while the Wasm cache is starting, so an EnvoyExtensionPolicy with an HTTP Wasm
+// source is accepted once the cache is up instead of being rejected first.
+func TestTranslationWaitsForWasmCache(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	cfg, hmacFile, hmacSecret := writeHostModeCerts(t)
 
@@ -771,10 +743,11 @@ func TestWasmPolicyRecoversOnceWasmCacheStarts(t *testing.T) {
 		return ""
 	}
 
-	// The HMAC secret is missing, so the policy is rejected.
-	require.Eventually(t, func() bool {
-		return strings.Contains(policyMessage(), "wasm cache is not initialized")
-	}, 5*time.Second, 50*time.Millisecond)
+	// The HMAC secret is missing, so the Wasm cache cannot start and nothing is
+	// translated yet.
+	require.Never(t, func() bool {
+		return policyMessage() != ""
+	}, time.Second, 50*time.Millisecond, "policy status: %s", policyMessage())
 
 	// The HMAC secret becomes available, and the policy is accepted with no
 	// change to the resources.
