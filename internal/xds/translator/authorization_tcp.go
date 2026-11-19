@@ -39,7 +39,7 @@ func buildTCPRBACConfig(statPrefix string, authorization *ir.Authorization) (*ne
 			return nil, err
 		}
 
-		ruleAction, err := buildRBACAction(rule.Name, rule.Action)
+		ruleAction, err := buildRBACAction(rule.Name, ruleAllows(rule))
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +57,7 @@ func buildTCPRBACConfig(statPrefix string, authorization *ir.Authorization) (*ne
 		})
 	}
 
-	defaultAction, err := buildRBACAction(rbacDefaultActionName, authorization.DefaultAction)
+	defaultAction, err := buildRBACAction(rbacDefaultActionName, defaultAllows(authorization))
 	if err != nil {
 		return nil, err
 	}
