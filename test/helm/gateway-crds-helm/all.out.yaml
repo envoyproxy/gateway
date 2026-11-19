@@ -57102,6 +57102,41 @@ spec:
                   It can only be used in the rule filters of an HTTPRoute. It is not supported in a
                   GRPCRoute or in the filters of a backendRef.
                 properties:
+                  bodySize:
+                    description: BodySize defines the maximum size of the request
+                      and response bodies to transcode.
+                    properties:
+                      maxRequest:
+                        allOf:
+                        - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: |-
+                          MaxRequest is the maximum size of a request body to transcode. A larger
+                          body is rejected with HTTP 413.
+                          If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and
+                          64Ki for HTTP/2 by default.
+                          For example, 1Mi, 64Mi etc.
+                          Note that when the suffix is not provided, the value is interpreted as bytes.
+                        x-kubernetes-int-or-string: true
+                      maxResponse:
+                        allOf:
+                        - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: |-
+                          MaxResponse is the maximum size of a response body to transcode. A larger
+                          body is replaced with HTTP 500, or resets the stream of a streaming response.
+                          If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and
+                          64Ki for HTTP/2 by default.
+                          For example, 1Mi, 64Mi etc.
+                          Note that when the suffix is not provided, the value is interpreted as bytes.
+                        x-kubernetes-int-or-string: true
+                    type: object
                   convertGRPCStatus:
                     description: |-
                       ConvertGRPCStatus converts the gRPC status of an error response to the HTTP
@@ -57115,36 +57150,6 @@ spec:
                       If false, a request with such a parameter is not transcoded and is sent to the
                       backend as is.
                     type: boolean
-                  maxRequestBodySize:
-                    allOf:
-                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
-                    anyOf:
-                    - type: integer
-                    - type: string
-                    description: |-
-                      MaxRequestBodySize is the maximum size of a request body to transcode. A larger
-                      body is rejected with HTTP 413.
-                      If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and
-                      64Ki for HTTP/2 by default.
-                      For example, 1Mi, 64Mi etc.
-                      Note that when the suffix is not provided, the value is interpreted as bytes.
-                    x-kubernetes-int-or-string: true
-                  maxResponseBodySize:
-                    allOf:
-                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
-                    anyOf:
-                    - type: integer
-                    - type: string
-                    description: |-
-                      MaxResponseBodySize is the maximum size of a response body to transcode. A larger
-                      body is replaced with HTTP 500, or resets the stream of a streaming response.
-                      If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and
-                      64Ki for HTTP/2 by default.
-                      For example, 1Mi, 64Mi etc.
-                      Note that when the suffix is not provided, the value is interpreted as bytes.
-                    x-kubernetes-int-or-string: true
                   printOptions:
                     description: PrintOptions defines how the gRPC response is printed
                       as JSON.

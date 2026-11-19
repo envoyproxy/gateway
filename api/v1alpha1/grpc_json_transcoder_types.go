@@ -44,7 +44,15 @@ type GRPCJSONTranscoder struct {
 	// +optional
 	ConvertGRPCStatus *bool `json:"convertGRPCStatus,omitempty"`
 
-	// MaxRequestBodySize is the maximum size of a request body to transcode. A larger
+	// BodySize defines the maximum size of the request and response bodies to transcode.
+	//
+	// +optional
+	BodySize *GRPCJSONTranscoderBodySize `json:"bodySize,omitempty"`
+}
+
+// GRPCJSONTranscoderBodySize defines the maximum size of the bodies to transcode.
+type GRPCJSONTranscoderBodySize struct {
+	// MaxRequest is the maximum size of a request body to transcode. A larger
 	// body is rejected with HTTP 413.
 	// If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and
 	// 64Ki for HTTP/2 by default.
@@ -54,9 +62,9 @@ type GRPCJSONTranscoder struct {
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
-	MaxRequestBodySize *resource.Quantity `json:"maxRequestBodySize,omitempty"`
+	MaxRequest *resource.Quantity `json:"maxRequest,omitempty"`
 
-	// MaxResponseBodySize is the maximum size of a response body to transcode. A larger
+	// MaxResponse is the maximum size of a response body to transcode. A larger
 	// body is replaced with HTTP 500, or resets the stream of a streaming response.
 	// If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and
 	// 64Ki for HTTP/2 by default.
@@ -66,7 +74,7 @@ type GRPCJSONTranscoder struct {
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	// +optional
-	MaxResponseBodySize *resource.Quantity `json:"maxResponseBodySize,omitempty"`
+	MaxResponse *resource.Quantity `json:"maxResponse,omitempty"`
 }
 
 // ProtoDescriptor defines where to find the protobuf descriptor set.

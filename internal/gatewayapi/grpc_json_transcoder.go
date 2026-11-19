@@ -97,13 +97,15 @@ func useGRPCUpstream(ds *ir.DestinationSetting) status.Error {
 func (t *Translator) buildGRPCJSONTranscoder(
 	cfg *egv1a1.GRPCJSONTranscoder, name, namespace string,
 ) (*ir.GRPCJSONTranscoder, error) {
-	maxRequestBodyBytes, err := bodySizeBytes("maxRequestBodySize", cfg.MaxRequestBodySize)
-	if err != nil {
-		return nil, err
-	}
-	maxResponseBodyBytes, err := bodySizeBytes("maxResponseBodySize", cfg.MaxResponseBodySize)
-	if err != nil {
-		return nil, err
+	var maxRequestBodyBytes, maxResponseBodyBytes *uint32
+	if cfg.BodySize != nil {
+		var err error
+		if maxRequestBodyBytes, err = bodySizeBytes("bodySize.maxRequest", cfg.BodySize.MaxRequest); err != nil {
+			return nil, err
+		}
+		if maxResponseBodyBytes, err = bodySizeBytes("bodySize.maxResponse", cfg.BodySize.MaxResponse); err != nil {
+			return nil, err
+		}
 	}
 
 	descriptor, err := t.loadProtoDescriptor(cfg.ProtoDescriptor, namespace)

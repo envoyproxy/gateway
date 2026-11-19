@@ -62,4 +62,5 @@ httpFilters:
             group: ""
             kind: ConfigMap
             name: proto-descriptor
-        maxResponseBodySize: 5Gi
+        bodySize:
+          maxResponse: 5Gi

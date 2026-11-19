@@ -342,42 +342,44 @@ func TestBuildGRPCJSONTranscoderBodySizes(t *testing.T) {
 		{
 			name:    "request too large",
 			request: "4Gi",
-			wantErr: "maxRequestBodySize value 4Gi is out of range, must be between 1 and 4294967295",
+			wantErr: "bodySize.maxRequest value 4Gi is out of range, must be between 1 and 4294967295",
 		},
 		{
 			name:     "response too large",
 			request:  "1Mi",
 			response: "4Gi",
-			wantErr:  "maxResponseBodySize value 4Gi is out of range, must be between 1 and 4294967295",
+			wantErr:  "bodySize.maxResponse value 4Gi is out of range, must be between 1 and 4294967295",
 		},
 		{
 			name:    "zero request",
 			request: "0",
-			wantErr: "maxRequestBodySize value 0 is out of range",
+			wantErr: "bodySize.maxRequest value 0 is out of range",
 		},
 		{
 			name:     "zero response",
 			response: "0",
-			wantErr:  "maxResponseBodySize value 0 is out of range",
+			wantErr:  "bodySize.maxResponse value 0 is out of range",
 		},
 		{
 			name:     "negative response",
 			response: "-1",
-			wantErr:  "maxResponseBodySize value -1 is out of range",
+			wantErr:  "bodySize.maxResponse value -1 is out of range",
 		},
 		{
 			name:     "fractional response",
 			response: "1500m",
-			wantErr:  "invalid maxResponseBodySize value 1500m",
+			wantErr:  "invalid bodySize.maxResponse value 1500m",
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := tr.buildGRPCJSONTranscoder(&egv1a1.GRPCJSONTranscoder{
-				ProtoDescriptor:     protoDescriptorRef("descriptor"),
-				MaxRequestBodySize:  quantity(tc.request),
-				MaxResponseBodySize: quantity(tc.response),
+				ProtoDescriptor: protoDescriptorRef("descriptor"),
+				BodySize: &egv1a1.GRPCJSONTranscoderBodySize{
+					MaxRequest:  quantity(tc.request),
+					MaxResponse: quantity(tc.response),
+				},
 			}, "httproutefilter/default/transcode", "default")
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)

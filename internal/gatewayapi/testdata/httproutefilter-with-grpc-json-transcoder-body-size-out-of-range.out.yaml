@@ -68,7 +68,7 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Invalid filter HTTPRouteFilter: maxResponseBodySize value 5Gi is
+        message: 'Invalid filter HTTPRouteFilter: bodySize.maxResponse value 5Gi is
           out of range, must be between 1 and 4294967295.'
         reason: UnsupportedValue
         status: "False"

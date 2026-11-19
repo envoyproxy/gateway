@@ -74,5 +74,6 @@ httpFilters:
           alwaysPrintPrimitiveFields: true
           alwaysPrintEnumsAsInts: true
           streamNewlineDelimited: true
-        maxRequestBodySize: 1Mi
-        maxResponseBodySize: 64Mi
+        bodySize:
+          maxRequest: 1Mi
+          maxResponse: 64Mi

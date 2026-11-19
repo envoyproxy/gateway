@@ -572,8 +572,10 @@ func TestHTTPRouteFilterGRPCJSONTranscoder(t *testing.T) {
 					Kind: "ConfigMap",
 					Name: "descriptor",
 				})
-				hrf.Spec.GRPCJSONTranscoder.MaxRequestBodySize = new(resource.MustParse("1Mi"))
-				hrf.Spec.GRPCJSONTranscoder.MaxResponseBodySize = new(resource.MustParse("64Mi"))
+				hrf.Spec.GRPCJSONTranscoder.BodySize = &egv1a1.GRPCJSONTranscoderBodySize{
+					MaxRequest:  new(resource.MustParse("1Mi")),
+					MaxResponse: new(resource.MustParse("64Mi")),
+				}
 			},
 			wantErrors: []string{},
 		},
@@ -584,9 +586,11 @@ func TestHTTPRouteFilterGRPCJSONTranscoder(t *testing.T) {
 					Kind: "ConfigMap",
 					Name: "descriptor",
 				})
-				hrf.Spec.GRPCJSONTranscoder.MaxRequestBodySize = new(resource.MustParse("0"))
+				hrf.Spec.GRPCJSONTranscoder.BodySize = &egv1a1.GRPCJSONTranscoderBodySize{
+					MaxRequest: new(resource.MustParse("0")),
+				}
 			},
-			wantErrors: []string{"spec.grpcJSONTranscoder.maxRequestBodySize in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
+			wantErrors: []string{"spec.grpcJSONTranscoder.bodySize.maxRequest in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
 		},
 		{
 			desc: "negative response body size is rejected",
@@ -595,9 +599,11 @@ func TestHTTPRouteFilterGRPCJSONTranscoder(t *testing.T) {
 					Kind: "ConfigMap",
 					Name: "descriptor",
 				})
-				hrf.Spec.GRPCJSONTranscoder.MaxResponseBodySize = new(resource.MustParse("-1Mi"))
+				hrf.Spec.GRPCJSONTranscoder.BodySize = &egv1a1.GRPCJSONTranscoderBodySize{
+					MaxResponse: new(resource.MustParse("-1Mi")),
+				}
 			},
-			wantErrors: []string{"spec.grpcJSONTranscoder.maxResponseBodySize in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
+			wantErrors: []string{"spec.grpcJSONTranscoder.bodySize.maxResponse in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
 		},
 		{
 			desc: "newline delimited stream is accepted",
