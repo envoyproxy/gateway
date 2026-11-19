@@ -161,12 +161,23 @@ const rbacDefaultActionName = "default"
 // buildRBACAction returns an RBAC action named after the rule. Envoy reports this
 // name as the matched policy in access logs and dynamic metadata, so naming it
 // after the rule shows which rule allowed or denied the traffic.
-func buildRBACAction(name string, action egv1a1.AuthorizationAction) (*anypb.Any, error) {
+func buildRBACAction(name string, allow bool) (*anypb.Any, error) {
 	rbacAction := rbacconfigv3.RBAC_DENY
-	if action == egv1a1.AuthorizationActionAllow {
+	if allow {
 		rbacAction = rbacconfigv3.RBAC_ALLOW
 	}
 	return proto.ToAnyWithValidation(&rbacconfigv3.Action{Name: name, Action: rbacAction})
+}
+
+// A rule allows unless it explicitly denies, while the default denies unless it
+// explicitly allows. This matches how the translator has always treated an empty
+// action, so only the action names change.
+func ruleAllows(rule *ir.AuthorizationRule) bool {
+	return rule.Action != egv1a1.AuthorizationActionDeny
+}
+
+func defaultAllows(authorization *ir.Authorization) bool {
+	return authorization.DefaultAction == egv1a1.AuthorizationActionAllow
 }
 
 func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, error) {
@@ -208,7 +219,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			finalPredicate *matcherv3.Matcher_MatcherList_Predicate
 		)
 
-		ruleAction, err := buildRBACAction(rule.Name, rule.Action)
+		ruleAction, err := buildRBACAction(rule.Name, ruleAllows(rule))
 		if err != nil {
 			return nil, err
 		}
@@ -321,7 +332,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		})
 	}
 
-	defaultAction, err := buildRBACAction(rbacDefaultActionName, authorization.DefaultAction)
+	defaultAction, err := buildRBACAction(rbacDefaultActionName, defaultAllows(authorization))
 	if err != nil {
 		return nil, err
 	}
