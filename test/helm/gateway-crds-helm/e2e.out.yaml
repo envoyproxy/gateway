@@ -33536,7 +33536,13 @@ spec:
                 - extractFrom
                 type: object
               authorization:
-                description: Authorization defines the authorization configuration.
+                description: |-
+                  Authorization defines the authorization configuration for HTTP traffic:
+                  HTTP, HTTPS and GRPC listeners, HTTPRoute and GRPCRoute.
+
+                  Deprecated for TCP and UDP traffic: use TCPAuthorization and UDPAuthorization
+                  instead. Until they are set, Authorization still applies to TCP and UDP
+                  listeners and to TCPRoute and UDPRoute targets, as it did before.
                 properties:
                   defaultAction:
                     description: |-
@@ -42041,6 +42047,148 @@ spec:
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
                 type: array
+              tcpAuthorization:
+                description: |-
+                  TCPAuthorization defines the authorization configuration for TCP traffic:
+                  TCP and TLS listeners, and TCPRoute.
+                  When set, it replaces Authorization for TCP traffic.
+                properties:
+                  defaultAction:
+                    description: |-
+                      DefaultAction defines the default action to be taken if no rules match.
+                      If not specified, the default action is Deny.
+                    enum:
+                    - Allow
+                    - Deny
+                    type: string
+                  rules:
+                    description: |-
+                      Rules defines a list of authorization rules.
+                      These rules are evaluated in order, the first matching rule will be applied,
+                      and the rest will be skipped.
+                    items:
+                      description: TCPAuthorizationRule defines a single authorization
+                        rule for TCP traffic.
+                      properties:
+                        action:
+                          description: Action defines the action to be taken if the
+                            rule matches.
+                          enum:
+                          - Allow
+                          - Deny
+                          type: string
+                        name:
+                          description: |-
+                            Name is a user-friendly name for the rule.
+                            If not specified, Envoy Gateway will generate a unique name for the rule.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        principal:
+                          description: Principal specifies the client identity of
+                            a connection.
+                          properties:
+                            clientCIDRs:
+                              description: |-
+                                ClientCIDRs are the IP CIDR ranges of the client.
+                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+
+                                If multiple CIDR ranges are specified, one of the CIDR ranges must match
+                                the client IP for the rule to match.
+
+                                The client IP is the peer address of the TCP connection, or the address
+                                carried by the PROXY protocol when it is enabled on the listener with
+                                `ClientTrafficPolicy`.
+                              items:
+                                description: |-
+                                  CIDR defines a CIDR Address range.
+                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+                                maxLength: 64
+                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
+                                type: string
+                              minItems: 1
+                              type: array
+                          type: object
+                          x-kubernetes-validations:
+                          - message: clientCIDRs must be specified
+                            rule: has(self.clientCIDRs)
+                      required:
+                      - action
+                      - principal
+                      type: object
+                    type: array
+                type: object
+              udpAuthorization:
+                description: |-
+                  UDPAuthorization defines the authorization configuration for UDP traffic:
+                  UDP listeners and UDPRoute.
+                  When set, it replaces Authorization for UDP traffic.
+                properties:
+                  defaultAction:
+                    description: |-
+                      DefaultAction defines the default action to be taken if no rules match.
+                      If not specified, the default action is Deny.
+                    enum:
+                    - Allow
+                    - Deny
+                    type: string
+                  rules:
+                    description: |-
+                      Rules defines a list of authorization rules.
+                      These rules are evaluated in order, the first matching rule will be applied,
+                      and the rest will be skipped.
+                    items:
+                      description: UDPAuthorizationRule defines a single authorization
+                        rule for UDP traffic.
+                      properties:
+                        action:
+                          description: Action defines the action to be taken if the
+                            rule matches.
+                          enum:
+                          - Allow
+                          - Deny
+                          type: string
+                        name:
+                          description: |-
+                            Name is a user-friendly name for the rule.
+                            If not specified, Envoy Gateway will generate a unique name for the rule.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        principal:
+                          description: Principal specifies the client identity of
+                            a datagram.
+                          properties:
+                            clientCIDRs:
+                              description: |-
+                                ClientCIDRs are the IP CIDR ranges of the client.
+                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+
+                                If multiple CIDR ranges are specified, one of the CIDR ranges must match
+                                the client IP for the rule to match.
+
+                                The client IP is the source address of the datagram. The PROXY protocol
+                                is not available for UDP, so any load balancer or NAT in front of Envoy
+                                must preserve the source address for this to match the original client.
+                              items:
+                                description: |-
+                                  CIDR defines a CIDR Address range.
+                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+                                maxLength: 64
+                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
+                                type: string
+                              minItems: 1
+                              type: array
+                          type: object
+                          x-kubernetes-validations:
+                          - message: clientCIDRs must be specified
+                            rule: has(self.clientCIDRs)
+                      required:
+                      - action
+                      - principal
+                      type: object
+                    type: array
+                type: object
             type: object
             x-kubernetes-validations:
             - message: either targetRef or targetRefs must be used
@@ -42050,30 +42198,37 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute/UDPRoute
+            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'',
-                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'', ''UDPRoute'']
-                : true'
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''] : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute/UDPRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'',
-                ''UDPRoute'']) : true '
+                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''])
+                : true '
             - message: mergeType can only be used with xRoute targets
               rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
-                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'', ''UDPRoute''])
-                && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in
-                [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'', ''UDPRoute'']))
-                && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind
-                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'', ''UDPRoute''])))'
-            - message: sectionName is not supported for TCPRoute/TLSRoute targets
-              rule: 'has(self.targetRef) ? !(self.targetRef.kind in [''TCPRoute'',
-                ''TLSRoute''] && has(self.targetRef.sectionName)) : true'
-            - message: sectionName is not supported for TCPRoute/TLSRoute targets
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !(ref.kind in
-                [''TCPRoute'', ''TLSRoute''] && has(ref.sectionName))) : true'
+                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute'']) &&
+                (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'',
+                ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''])) && (!has(self.targetSelectors)
+                || self.targetSelectors.all(sel, sel.kind in [''HTTPRoute'', ''GRPCRoute'',
+                ''TCPRoute'', ''UDPRoute''])))'
+            - message: tcpAuthorization can only be used with Gateway, ListenerSet
+                or TCPRoute targets
+              rule: '!has(self.tcpAuthorization) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''Gateway'', ''ListenerSet'', ''TCPRoute'']) && (!has(self.targetRefs)
+                || self.targetRefs.all(ref, ref.kind in [''Gateway'', ''ListenerSet'',
+                ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
+                sel.kind in [''Gateway'', ''ListenerSet'', ''TCPRoute''])))'
+            - message: udpAuthorization can only be used with Gateway, ListenerSet
+                or UDPRoute targets
+              rule: '!has(self.udpAuthorization) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''Gateway'', ''ListenerSet'', ''UDPRoute'']) && (!has(self.targetRefs)
+                || self.targetRefs.all(ref, ref.kind in [''Gateway'', ''ListenerSet'',
+                ''UDPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
+                sel.kind in [''Gateway'', ''ListenerSet'', ''UDPRoute''])))'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined,
                 unless mergeType is set and the jwt providers are inherited from the
                 parent policy
