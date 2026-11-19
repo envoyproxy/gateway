@@ -24,7 +24,7 @@
                       name: allow-rule-1
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-rule-1
                   predicate:
                     singlePredicate:
                       input:
@@ -40,7 +40,7 @@
                       name: allow-rule-2
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-rule-2
                   predicate:
                     andMatcher:
                       predicate:
@@ -176,7 +176,7 @@
                       name: allow-rule-3
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-rule-3
                   predicate:
                     andMatcher:
                       predicate:
@@ -349,4 +349,4 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default

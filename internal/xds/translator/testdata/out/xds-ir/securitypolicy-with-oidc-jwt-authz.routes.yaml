@@ -90,7 +90,7 @@
                       name: allow
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow
                   predicate:
                     singlePredicate:
                       customMatch:
@@ -116,4 +116,4 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default

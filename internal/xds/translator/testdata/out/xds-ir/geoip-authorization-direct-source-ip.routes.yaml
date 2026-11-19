@@ -43,7 +43,7 @@
                       name: allow-us-seattle-proxy
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-us-seattle-proxy
                   predicate:
                     andMatcher:
                       predicate:
@@ -79,4 +79,4 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default

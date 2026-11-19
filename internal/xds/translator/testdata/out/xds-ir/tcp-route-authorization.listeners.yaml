@@ -16,7 +16,7 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: deny-office
               predicate:
                 singlePredicate:
                   customMatch:
@@ -36,7 +36,7 @@
                   name: allow-corp
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                    name: ALLOW
+                    name: allow-corp
               predicate:
                 singlePredicate:
                   customMatch:
@@ -56,7 +56,7 @@
               name: default
               typedConfig:
                 '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                name: ALLOW
+                name: default
         statPrefix: tcp-10080
     - name: envoy.filters.network.tcp_proxy
       typedConfig:

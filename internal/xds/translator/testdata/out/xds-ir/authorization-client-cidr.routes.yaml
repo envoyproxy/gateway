@@ -23,7 +23,7 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default
     - match:
         pathSeparatedPrefix: /foo
       name: httproute/default/httproute-1/rule/0/match/0/www_example_com
@@ -44,7 +44,7 @@
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         action: DENY
-                        name: DENY
+                        name: deny-location-1
                   predicate:
                     singlePredicate:
                       customMatch:
@@ -67,7 +67,7 @@
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         action: DENY
-                        name: DENY
+                        name: deny-location-2
                   predicate:
                     singlePredicate:
                       customMatch:
@@ -89,7 +89,7 @@
                   name: default
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                    name: ALLOW
+                    name: default
     - match:
         pathSeparatedPrefix: /bar
       name: httproute/default/httproute-2/rule/0/match/0/www_example_com
@@ -109,7 +109,7 @@
                       name: securitypolicy/envoy-gateway/policy-for-gateway/authorization/rule/0
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: securitypolicy/envoy-gateway/policy-for-gateway/authorization/rule/0
                   predicate:
                     singlePredicate:
                       customMatch:
@@ -132,4 +132,4 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default
