@@ -3715,3 +3715,165 @@ func TestSecurityPolicyOIDCCookieNames(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityPolicyL4Authorization(t *testing.T) {
+	ctx := context.Background()
+
+	targetRef := func(kind string) egv1a1.PolicyTargetReferences {
+		return egv1a1.PolicyTargetReferences{
+			TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+					Group: gwapiv1.Group("gateway.networking.k8s.io"),
+					Kind:  gwapiv1.Kind(kind),
+					Name:  gwapiv1.ObjectName("eg"),
+				},
+			},
+		}
+	}
+	targetRefs := func(kinds ...string) egv1a1.PolicyTargetReferences {
+		refs := egv1a1.PolicyTargetReferences{}
+		for _, kind := range kinds {
+			refs.TargetRefs = append(refs.TargetRefs, gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+					Group: gwapiv1.Group("gateway.networking.k8s.io"),
+					Kind:  gwapiv1.Kind(kind),
+					Name:  gwapiv1.ObjectName("eg"),
+				},
+			})
+		}
+		return refs
+	}
+	targetSelector := func(kind string) egv1a1.PolicyTargetReferences {
+		return egv1a1.PolicyTargetReferences{
+			TargetSelectors: []egv1a1.TargetSelector{{
+				Kind:        gwapiv1.Kind(kind),
+				MatchLabels: map[string]string{"app": "foo"},
+			}},
+		}
+	}
+	tcpAuthz := &egv1a1.TCPAuthorization{
+		DefaultAction: new(egv1a1.AuthorizationActionDeny),
+		Rules: []egv1a1.TCPAuthorizationRule{{
+			Action:    egv1a1.AuthorizationActionAllow,
+			Principal: egv1a1.TCPPrincipal{ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"}},
+		}},
+	}
+	udpAuthz := &egv1a1.UDPAuthorization{
+		DefaultAction: new(egv1a1.AuthorizationActionDeny),
+		Rules: []egv1a1.UDPAuthorizationRule{{
+			Action:    egv1a1.AuthorizationActionAllow,
+			Principal: egv1a1.UDPPrincipal{ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"}},
+		}},
+	}
+	tcpOnlyErr := "tcpAuthorization can only be used with Gateway, ListenerSet or TCPRoute targets"
+	udpOnlyErr := "udpAuthorization can only be used with Gateway, ListenerSet or UDPRoute targets"
+
+	cases := []struct {
+		desc       string
+		spec       egv1a1.SecurityPolicySpec
+		wantErrors []string
+	}{
+		{
+			desc: "tcp and udp authorization on Gateway",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("Gateway"), TCPAuthorization: tcpAuthz, UDPAuthorization: udpAuthz},
+		},
+		{
+			desc: "tcp and udp authorization on ListenerSet",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("ListenerSet"), TCPAuthorization: tcpAuthz, UDPAuthorization: udpAuthz},
+		},
+		{
+			desc: "tcp authorization on TCPRoute",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("TCPRoute"), TCPAuthorization: tcpAuthz},
+		},
+		{
+			desc: "udp authorization on UDPRoute",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("UDPRoute"), UDPAuthorization: udpAuthz},
+		},
+		{
+			desc: "empty tcp authorization",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("TCPRoute"), TCPAuthorization: &egv1a1.TCPAuthorization{}},
+		},
+		{
+			desc:       "tcp authorization on UDPRoute",
+			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("UDPRoute"), TCPAuthorization: tcpAuthz},
+			wantErrors: []string{tcpOnlyErr},
+		},
+		{
+			desc:       "tcp authorization on HTTPRoute",
+			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("HTTPRoute"), TCPAuthorization: tcpAuthz},
+			wantErrors: []string{tcpOnlyErr},
+		},
+		{
+			desc:       "tcp authorization with a mixed targetRefs list",
+			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRefs("TCPRoute", "GRPCRoute"), TCPAuthorization: tcpAuthz},
+			wantErrors: []string{tcpOnlyErr},
+		},
+		{
+			desc:       "tcp authorization on HTTPRoute targetSelector",
+			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetSelector("HTTPRoute"), TCPAuthorization: tcpAuthz},
+			wantErrors: []string{tcpOnlyErr},
+		},
+		{
+			desc:       "udp authorization on TCPRoute",
+			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("TCPRoute"), UDPAuthorization: udpAuthz},
+			wantErrors: []string{udpOnlyErr},
+		},
+		{
+			desc:       "udp authorization on GRPCRoute targetRefs",
+			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRefs("GRPCRoute"), UDPAuthorization: udpAuthz},
+			wantErrors: []string{udpOnlyErr},
+		},
+		{
+			desc:       "udp authorization on TCPRoute targetSelector",
+			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetSelector("TCPRoute"), UDPAuthorization: udpAuthz},
+			wantErrors: []string{udpOnlyErr},
+		},
+		{
+			desc: "tcp rule without client CIDRs",
+			spec: egv1a1.SecurityPolicySpec{
+				PolicyTargetReferences: targetRef("TCPRoute"),
+				TCPAuthorization: &egv1a1.TCPAuthorization{Rules: []egv1a1.TCPAuthorizationRule{{
+					Action: egv1a1.AuthorizationActionAllow,
+				}}},
+			},
+			wantErrors: []string{"clientCIDRs must be specified"},
+		},
+		{
+			desc: "udp rule without client CIDRs",
+			spec: egv1a1.SecurityPolicySpec{
+				PolicyTargetReferences: targetRef("UDPRoute"),
+				UDPAuthorization: &egv1a1.UDPAuthorization{Rules: []egv1a1.UDPAuthorizationRule{{
+					Action: egv1a1.AuthorizationActionAllow,
+				}}},
+			},
+			wantErrors: []string{"clientCIDRs must be specified"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sp := &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("sp-l4-authz-%v", time.Now().UnixNano()),
+					Namespace: metav1.NamespaceDefault,
+				},
+				Spec: tc.spec,
+			}
+
+			err := c.Create(ctx, sp)
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}
