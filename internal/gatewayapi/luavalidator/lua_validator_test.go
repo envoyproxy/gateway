@@ -344,6 +344,17 @@ func Test_io_path_allowlist(t *testing.T) {
 			code:                 `function envoy_on_response(h) io.output("/certs/tls.crt") end`,
 			expectedErrSubstring: "io.output restricted for param",
 		},
+		// The wrappers must not consult globals that user code can redefine.
+		{
+			name:                 "io.input denied with redefined type",
+			code:                 `function envoy_on_response(h) type = function() return "file" end io.input("/etc/passwd") end`,
+			expectedErrSubstring: "io.input restricted for param",
+		},
+		{
+			name:                 "io.output denied with redefined type",
+			code:                 `function envoy_on_response(h) type = function() return "file" end io.output("/certs/tls.crt") end`,
+			expectedErrSubstring: "io.output restricted for param",
+		},
 		{
 			name:                 "io.lines denied /etc/passwd",
 			code:                 `function envoy_on_response(h) for l in io.lines("/etc/passwd") do end end`,

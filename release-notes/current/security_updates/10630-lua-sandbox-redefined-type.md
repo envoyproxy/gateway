@@ -1,0 +1,1 @@
+Fixed `Strict` Lua validation skipping the `io.input` and `io.output` path allowlist when an EnvoyExtensionPolicy script redefined the global `type` function, which let the script read files from the Envoy Gateway controller (surfaced through the policy status) or write files outside the allowlist.
