@@ -3765,8 +3765,6 @@ func TestSecurityPolicyL4Authorization(t *testing.T) {
 			Principal: egv1a1.UDPPrincipal{ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"}},
 		}},
 	}
-	tcpOnlyErr := "tcpAuthorization cannot be used with HTTPRoute or GRPCRoute targets"
-	udpOnlyErr := "udpAuthorization cannot be used with HTTPRoute or GRPCRoute targets"
 
 	cases := []struct {
 		desc       string
@@ -3798,42 +3796,12 @@ func TestSecurityPolicyL4Authorization(t *testing.T) {
 			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRefs("TCPRoute", "UDPRoute"), TCPAuthorization: tcpAuthz, UDPAuthorization: udpAuthz},
 		},
 		{
-			desc: "tcp authorization on UDPRoute is ignored",
-			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("UDPRoute"), TCPAuthorization: tcpAuthz},
+			desc: "tcp authorization on mixed HTTPRoute and TCPRoute targetRefs",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRefs("HTTPRoute", "TCPRoute"), TCPAuthorization: tcpAuthz},
 		},
 		{
-			desc:       "tcp authorization on HTTPRoute",
-			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("HTTPRoute"), TCPAuthorization: tcpAuthz},
-			wantErrors: []string{tcpOnlyErr},
-		},
-		{
-			desc:       "tcp authorization with a mixed targetRefs list",
-			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRefs("TCPRoute", "GRPCRoute"), TCPAuthorization: tcpAuthz},
-			wantErrors: []string{tcpOnlyErr},
-		},
-		{
-			desc:       "tcp authorization on HTTPRoute targetSelector",
-			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetSelector("HTTPRoute"), TCPAuthorization: tcpAuthz},
-			wantErrors: []string{tcpOnlyErr},
-		},
-		{
-			desc: "udp authorization on TCPRoute is ignored",
-			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("TCPRoute"), UDPAuthorization: udpAuthz},
-		},
-		{
-			desc:       "udp authorization on HTTPRoute",
-			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("HTTPRoute"), UDPAuthorization: udpAuthz},
-			wantErrors: []string{udpOnlyErr},
-		},
-		{
-			desc:       "udp authorization on GRPCRoute targetRefs",
-			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRefs("GRPCRoute"), UDPAuthorization: udpAuthz},
-			wantErrors: []string{udpOnlyErr},
-		},
-		{
-			desc:       "udp authorization on GRPCRoute targetSelector",
-			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetSelector("GRPCRoute"), UDPAuthorization: udpAuthz},
-			wantErrors: []string{udpOnlyErr},
+			desc: "udp authorization on GRPCRoute targetSelector is ignored",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetSelector("GRPCRoute"), UDPAuthorization: udpAuthz},
 		},
 		{
 			desc: "tcp rule without client CIDRs",
