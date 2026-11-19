@@ -50,12 +50,10 @@ type SecurityPolicy struct {
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'TCPRoute', 'TLSRoute', 'UDPRoute'] : true", message="this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute/UDPRoute"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true ", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'TCPRoute', 'TLSRoute', 'UDPRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute/UDPRoute"
-// +kubebuilder:validation:XValidation:rule="!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'TLSRoute', 'UDPRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'TLSRoute', 'UDPRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'TLSRoute', 'UDPRoute'])))", message="mergeType can only be used with xRoute targets"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? !(self.targetRef.kind in ['TCPRoute', 'TLSRoute'] && has(self.targetRef.sectionName)) : true", message="sectionName is not supported for TCPRoute/TLSRoute targets"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, !(ref.kind in ['TCPRoute', 'TLSRoute'] && has(ref.sectionName))) : true", message="sectionName is not supported for TCPRoute/TLSRoute targets"
-// +kubebuilder:validation:XValidation:rule="!has(self.tcpAuthorization) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'ListenerSet', 'TCPRoute', 'TLSRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'TCPRoute', 'TLSRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'ListenerSet', 'TCPRoute', 'TLSRoute'])))", message="tcpAuthorization can only be used with Gateway, ListenerSet, TCPRoute or TLSRoute targets"
-// +kubebuilder:validation:XValidation:rule="!has(self.udpAuthorization) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'ListenerSet', 'UDPRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'UDPRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'ListenerSet', 'UDPRoute'])))", message="udpAuthorization can only be used with Gateway, ListenerSet or UDPRoute targets"
+// +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute"
+// +kubebuilder:validation:XValidation:rule="!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'UDPRoute'])))", message="mergeType can only be used with xRoute targets"
+// +kubebuilder:validation:XValidation:rule="!has(self.tcpAuthorization) || ((!has(self.targetRef) || !(self.targetRef.kind in ['HTTPRoute', 'GRPCRoute'])) && (!has(self.targetRefs) || !self.targetRefs.exists(ref, ref.kind in ['HTTPRoute', 'GRPCRoute'])) && (!has(self.targetSelectors) || !self.targetSelectors.exists(sel, sel.kind in ['HTTPRoute', 'GRPCRoute'])))", message="tcpAuthorization cannot be used with HTTPRoute or GRPCRoute targets"
+// +kubebuilder:validation:XValidation:rule="!has(self.udpAuthorization) || ((!has(self.targetRef) || !(self.targetRef.kind in ['HTTPRoute', 'GRPCRoute'])) && (!has(self.targetRefs) || !self.targetRefs.exists(ref, ref.kind in ['HTTPRoute', 'GRPCRoute'])) && (!has(self.targetSelectors) || !self.targetSelectors.exists(sel, sel.kind in ['HTTPRoute', 'GRPCRoute'])))", message="udpAuthorization cannot be used with HTTPRoute or GRPCRoute targets"
 // +kubebuilder:validation:XValidation:rule="(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules) && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt) : false)) ? has(self.jwt) : true", message="if authorization.rules.principal.jwt is used, jwt must be defined, unless mergeType is set and the jwt providers are inherited from the parent policy"
 type SecurityPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
@@ -121,7 +119,7 @@ type SecurityPolicySpec struct {
 	Authorization *Authorization `json:"authorization,omitempty"`
 
 	// TCPAuthorization defines the authorization configuration for TCP traffic:
-	// TCP and TLS listeners, TCPRoute and TLSRoute.
+	// TCP and TLS listeners, TCPRoute and TLSRoute. It is ignored for UDPRoute targets.
 	// When set, it replaces Authorization for TCP traffic.
 	//
 	// +optional
@@ -129,7 +127,7 @@ type SecurityPolicySpec struct {
 	TCPAuthorization *TCPAuthorization `json:"tcpAuthorization,omitempty"`
 
 	// UDPAuthorization defines the authorization configuration for UDP traffic:
-	// UDP listeners and UDPRoute.
+	// UDP listeners and UDPRoute. It is ignored for TCPRoute targets.
 	// When set, it replaces Authorization for UDP traffic.
 	//
 	// +optional
