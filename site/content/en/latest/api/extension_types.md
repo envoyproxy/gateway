@@ -6690,8 +6690,6 @@ _Appears in:_
 | `oidc` | _[OIDC](#oidc)_ |  false  |  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  |  | ExtAuth defines the configuration for External Authorization. |
 | `authorization` | _[Authorization](#authorization)_ |  false  |  | Authorization defines the authorization configuration for HTTP traffic:<br />HTTP, HTTPS and GRPC listeners, HTTPRoute and GRPCRoute.<br />Using Authorization for TCP and UDP traffic is deprecated and will be removed<br />in a future release: use TCPAuthorization and UDPAuthorization instead. Until<br />they are set, Authorization still applies to TCP and UDP listeners and to<br />TCPRoute and UDPRoute targets, as it did before. |
-| `tcpAuthorization` | _[TCPAuthorization](#tcpauthorization)_ |  false  |  | TCPAuthorization defines the authorization configuration for TCP traffic:<br />TCP and TLS listeners, and TCPRoute.<br />When set, it replaces Authorization for TCP traffic. |
-| `udpAuthorization` | _[UDPAuthorization](#udpauthorization)_ |  false  |  | UDPAuthorization defines the authorization configuration for UDP traffic:<br />UDP listeners and UDPRoute.<br />When set, it replaces Authorization for UDP traffic. |
 
 
 #### ServiceExternalTrafficPolicy

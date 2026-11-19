@@ -125,6 +125,7 @@ type SecurityPolicySpec struct {
 	// When set, it replaces Authorization for TCP traffic.
 	//
 	// +optional
+	// +notImplementedHide
 	TCPAuthorization *TCPAuthorization `json:"tcpAuthorization,omitempty"`
 
 	// UDPAuthorization defines the authorization configuration for UDP traffic:
@@ -132,6 +133,7 @@ type SecurityPolicySpec struct {
 	// When set, it replaces Authorization for UDP traffic.
 	//
 	// +optional
+	// +notImplementedHide
 	UDPAuthorization *UDPAuthorization `json:"udpAuthorization,omitempty"`
 }
 
