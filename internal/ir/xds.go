@@ -2557,6 +2557,9 @@ type BackendCluster struct {
 	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
 	// Metadata describes the backend resource (Service, Backend, etc.)
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// StatName is the cluster's alt_stat_name. It is named after the backend, not a route,
+	// since the cluster is shared by every route that references the backend.
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// Traffic holds the cluster-scoped settings from the accepted whole-gateway
 	// BackendTrafficPolicy, if any - gateway level is the only one guaranteed uniform across a
 	// merged cluster's routes.
