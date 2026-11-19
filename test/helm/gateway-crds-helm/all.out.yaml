@@ -57602,9 +57602,10 @@ spec:
                   Authorization defines the authorization configuration for HTTP traffic:
                   HTTP, HTTPS and GRPC listeners, HTTPRoute and GRPCRoute.
 
-                  Deprecated for TCP and UDP traffic: use TCPAuthorization and UDPAuthorization
-                  instead. Until they are set, Authorization still applies to TCP and UDP
-                  listeners and to TCPRoute and UDPRoute targets, as it did before.
+                  Using Authorization for TCP and UDP traffic is deprecated and will be removed
+                  in a future release: use TCPAuthorization and UDPAuthorization instead. Until
+                  they are set, Authorization still applies to TCP and UDP listeners and to
+                  TCPRoute and UDPRoute targets, as it did before.
                 properties:
                   defaultAction:
                     description: |-

@@ -40,9 +40,11 @@ type SecurityPolicy struct {
 // NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, TCPRoute,
 // TLSRoute, and UDPRoute.
 // When a SecurityPolicy targets a TCPRoute, TLSRoute, or UDPRoute, only TCPAuthorization or
-// UDPAuthorization applies. Other authentication/authorization features such as JWT,
-// API Key, Basic Auth, OIDC, External Authorization, or GeoIP based authorization are
-// not applicable to TCPRoute, TLSRoute, or UDPRoute targets.
+// UDPAuthorization applies. Using Authorization for TCPRoute, TLSRoute, or UDPRoute targets is
+// deprecated and will be removed in a future release; until then it still applies when
+// the matching TCPAuthorization or UDPAuthorization is not set. Other authentication/
+// authorization features such as JWT, API Key, Basic Auth, OIDC, External Authorization,
+// or GeoIP based authorization are not applicable to TCPRoute, TLSRoute, or UDPRoute targets.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
@@ -110,9 +112,10 @@ type SecurityPolicySpec struct {
 	// Authorization defines the authorization configuration for HTTP traffic:
 	// HTTP, HTTPS and GRPC listeners, HTTPRoute and GRPCRoute.
 	//
-	// Deprecated for TCP and UDP traffic: use TCPAuthorization and UDPAuthorization
-	// instead. Until they are set, Authorization still applies to TCP and UDP
-	// listeners and to TCPRoute, TLSRoute and UDPRoute targets, as it did before.
+	// Using Authorization for TCP and UDP traffic is deprecated and will be removed
+	// in a future release: use TCPAuthorization and UDPAuthorization instead. Until
+	// they are set, Authorization still applies to TCP and UDP listeners and to
+	// TCPRoute, TLSRoute and UDPRoute targets, as it did before.
 	//
 	// +optional
 	Authorization *Authorization `json:"authorization,omitempty"`
