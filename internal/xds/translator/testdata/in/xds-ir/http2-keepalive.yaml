@@ -8,8 +8,8 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   http2:
-    initialConnectionWindowSize: 65536
-    initialStreamWindowSize: 33554432
+    initialStreamWindowSize: 65536
+    initialConnectionWindowSize: 33554432
     maxConcurrentStreams: 200
     connectionKeepalive:
       interval: 60s

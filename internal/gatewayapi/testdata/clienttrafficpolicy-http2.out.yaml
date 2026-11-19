@@ -201,8 +201,8 @@ xdsIR:
       hostnames:
       - '*'
       http2:
-        initialConnectionWindowSize: 65536
-        initialStreamWindowSize: 33554432
+        initialConnectionWindowSize: 33554432
+        initialStreamWindowSize: 65536
         maxConcurrentStreams: 200
         resetStreamOnError: false
       metadata:
