@@ -260,7 +260,7 @@
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         action: DENY
-                        name: DENY
+                        name: disallow-forbidden-hosts
                   predicate:
                     singlePredicate:
                       input:
@@ -275,7 +275,7 @@
                   name: default
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                    name: ALLOW
+                    name: default
         envoy.filters.http.rbac.dfp_loopback_deny:
           '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
           rbac:

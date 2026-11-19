@@ -65,7 +65,7 @@
                       name: allow-us-seattle-proxy
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-us-seattle-proxy
                   predicate:
                     andMatcher:
                       predicate:
@@ -100,7 +100,7 @@
                       name: allow-eu-non-vpn-non-hosting
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-eu-non-vpn-non-hosting
                   predicate:
                     orMatcher:
                       predicate:
@@ -182,4 +182,4 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default
