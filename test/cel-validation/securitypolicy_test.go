@@ -3913,8 +3913,8 @@ func TestSecurityPolicyL4Authorization(t *testing.T) {
 			Principal: egv1a1.UDPPrincipal{ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"}},
 		}},
 	}
-	tcpOnlyErr := "tcpAuthorization can only be used with Gateway, ListenerSet or TCPRoute targets"
-	udpOnlyErr := "udpAuthorization can only be used with Gateway, ListenerSet or UDPRoute targets"
+	tcpOnlyErr := "tcpAuthorization cannot be used with HTTPRoute or GRPCRoute targets"
+	udpOnlyErr := "udpAuthorization cannot be used with HTTPRoute or GRPCRoute targets"
 
 	cases := []struct {
 		desc       string
@@ -3942,9 +3942,12 @@ func TestSecurityPolicyL4Authorization(t *testing.T) {
 			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("TCPRoute"), TCPAuthorization: &egv1a1.TCPAuthorization{}},
 		},
 		{
-			desc:       "tcp authorization on UDPRoute",
-			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("UDPRoute"), TCPAuthorization: tcpAuthz},
-			wantErrors: []string{tcpOnlyErr},
+			desc: "tcp and udp authorization on mixed TCPRoute and UDPRoute targetRefs",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRefs("TCPRoute", "UDPRoute"), TCPAuthorization: tcpAuthz, UDPAuthorization: udpAuthz},
+		},
+		{
+			desc: "tcp authorization on UDPRoute is ignored",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("UDPRoute"), TCPAuthorization: tcpAuthz},
 		},
 		{
 			desc:       "tcp authorization on HTTPRoute",
@@ -3962,8 +3965,12 @@ func TestSecurityPolicyL4Authorization(t *testing.T) {
 			wantErrors: []string{tcpOnlyErr},
 		},
 		{
-			desc:       "udp authorization on TCPRoute",
-			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("TCPRoute"), UDPAuthorization: udpAuthz},
+			desc: "udp authorization on TCPRoute is ignored",
+			spec: egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("TCPRoute"), UDPAuthorization: udpAuthz},
+		},
+		{
+			desc:       "udp authorization on HTTPRoute",
+			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetRef("HTTPRoute"), UDPAuthorization: udpAuthz},
 			wantErrors: []string{udpOnlyErr},
 		},
 		{
@@ -3972,8 +3979,8 @@ func TestSecurityPolicyL4Authorization(t *testing.T) {
 			wantErrors: []string{udpOnlyErr},
 		},
 		{
-			desc:       "udp authorization on TCPRoute targetSelector",
-			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetSelector("TCPRoute"), UDPAuthorization: udpAuthz},
+			desc:       "udp authorization on GRPCRoute targetSelector",
+			spec:       egv1a1.SecurityPolicySpec{PolicyTargetReferences: targetSelector("GRPCRoute"), UDPAuthorization: udpAuthz},
 			wantErrors: []string{udpOnlyErr},
 		},
 		{

@@ -66113,7 +66113,7 @@ spec:
               tcpAuthorization:
                 description: |-
                   TCPAuthorization defines the authorization configuration for TCP traffic:
-                  TCP and TLS listeners, and TCPRoute.
+                  TCP and TLS listeners, and TCPRoute. It is ignored for UDPRoute targets.
                   When set, it replaces Authorization for TCP traffic.
                 properties:
                   defaultAction:
@@ -66184,7 +66184,7 @@ spec:
               udpAuthorization:
                 description: |-
                   UDPAuthorization defines the authorization configuration for UDP traffic:
-                  UDP listeners and UDPRoute.
+                  UDP listeners and UDPRoute. It is ignored for TCPRoute targets.
                   When set, it replaces Authorization for UDP traffic.
                 properties:
                   defaultAction:
@@ -66278,20 +66278,18 @@ spec:
                 ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''])) && (!has(self.targetSelectors)
                 || self.targetSelectors.all(sel, sel.kind in [''HTTPRoute'', ''GRPCRoute'',
                 ''TCPRoute'', ''UDPRoute''])))'
-            - message: tcpAuthorization can only be used with Gateway, ListenerSet
-                or TCPRoute targets
-              rule: '!has(self.tcpAuthorization) || ((!has(self.targetRef) || self.targetRef.kind
-                in [''Gateway'', ''ListenerSet'', ''TCPRoute'']) && (!has(self.targetRefs)
-                || self.targetRefs.all(ref, ref.kind in [''Gateway'', ''ListenerSet'',
-                ''TCPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
-                sel.kind in [''Gateway'', ''ListenerSet'', ''TCPRoute''])))'
-            - message: udpAuthorization can only be used with Gateway, ListenerSet
-                or UDPRoute targets
-              rule: '!has(self.udpAuthorization) || ((!has(self.targetRef) || self.targetRef.kind
-                in [''Gateway'', ''ListenerSet'', ''UDPRoute'']) && (!has(self.targetRefs)
-                || self.targetRefs.all(ref, ref.kind in [''Gateway'', ''ListenerSet'',
-                ''UDPRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
-                sel.kind in [''Gateway'', ''ListenerSet'', ''UDPRoute''])))'
+            - message: tcpAuthorization cannot be used with HTTPRoute or GRPCRoute
+                targets
+              rule: '!has(self.tcpAuthorization) || ((!has(self.targetRef) || !(self.targetRef.kind
+                in [''HTTPRoute'', ''GRPCRoute''])) && (!has(self.targetRefs) || !self.targetRefs.exists(ref,
+                ref.kind in [''HTTPRoute'', ''GRPCRoute''])) && (!has(self.targetSelectors)
+                || !self.targetSelectors.exists(sel, sel.kind in [''HTTPRoute'', ''GRPCRoute''])))'
+            - message: udpAuthorization cannot be used with HTTPRoute or GRPCRoute
+                targets
+              rule: '!has(self.udpAuthorization) || ((!has(self.targetRef) || !(self.targetRef.kind
+                in [''HTTPRoute'', ''GRPCRoute''])) && (!has(self.targetRefs) || !self.targetRefs.exists(ref,
+                ref.kind in [''HTTPRoute'', ''GRPCRoute''])) && (!has(self.targetSelectors)
+                || !self.targetSelectors.exists(sel, sel.kind in [''HTTPRoute'', ''GRPCRoute''])))'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined,
                 unless mergeType is set and the jwt providers are inherited from the
                 parent policy
