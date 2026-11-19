@@ -6664,14 +6664,14 @@ Gateway.
 
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
-NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, TCPRoute
-and UDPRoute.
-When a SecurityPolicy targets a TCPRoute or a UDPRoute, only TCPAuthorization or
-UDPAuthorization applies. Using Authorization for TCPRoute or UDPRoute targets is
+NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, TCPRoute,
+TLSRoute, and UDPRoute.
+When a SecurityPolicy targets a TCPRoute, TLSRoute, or UDPRoute, only TCPAuthorization or
+UDPAuthorization applies. Using Authorization for TCPRoute, TLSRoute, or UDPRoute targets is
 deprecated and will be removed in a future release; until then it still applies when
 the matching TCPAuthorization or UDPAuthorization is not set. Other authentication/
 authorization features such as JWT, API Key, Basic Auth, OIDC, External Authorization,
-or GeoIP based authorization are not applicable to TCPRoute or UDPRoute targets.
+or GeoIP based authorization are not applicable to TCPRoute, TLSRoute, or UDPRoute targets.
 
 _Appears in:_
 - [SecurityPolicy](#securitypolicy)
@@ -6689,7 +6689,7 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  |  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  |  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  |  | ExtAuth defines the configuration for External Authorization. |
-| `authorization` | _[Authorization](#authorization)_ |  false  |  | Authorization defines the authorization configuration for HTTP traffic:<br />HTTP, HTTPS and GRPC listeners, HTTPRoute and GRPCRoute.<br />Using Authorization for TCP and UDP traffic is deprecated and will be removed<br />in a future release: use TCPAuthorization and UDPAuthorization instead. Until<br />they are set, Authorization still applies to TCP and UDP listeners and to<br />TCPRoute and UDPRoute targets, as it did before. |
+| `authorization` | _[Authorization](#authorization)_ |  false  |  | Authorization defines the authorization configuration for HTTP traffic:<br />HTTP, HTTPS and GRPC listeners, HTTPRoute and GRPCRoute.<br />Using Authorization for TCP and UDP traffic is deprecated and will be removed<br />in a future release: use TCPAuthorization and UDPAuthorization instead. Until<br />they are set, Authorization still applies to TCP and UDP listeners and to<br />TCPRoute, TLSRoute and UDPRoute targets, as it did before. |
 
 
 #### ServiceExternalTrafficPolicy
