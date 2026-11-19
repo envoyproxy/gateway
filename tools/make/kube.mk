@@ -311,6 +311,7 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/e2e/testdata/extension-server-crds.yaml
+	kubectl apply -f test/e2e/testdata/inferencepool-crd.yaml
 	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
 	kubectl apply -f test/config/gatewayclass.yaml
 

@@ -1,0 +1,1 @@
+Fixed `egctl x translate` failing every OIDC SecurityPolicy with `HMAC secret /envoy-oidc-hmac not found`, which also replaced the targeted routes with a 500 direct response. egctl now looks up the HMAC Secret in the namespace given by `--namespace` (default `envoy-gateway-system`).

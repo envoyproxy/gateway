@@ -1,0 +1,1 @@
+Deprecated the `github.com/envoyproxy/gateway/api/v1alpha1/validation` Go package. Its validation logic moved to an internal package, and the exported functions now forward to it. The package will be removed in a future release, so external code that imports it should stop relying on it.
