@@ -1293,7 +1293,7 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
-	httputils.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+	httputils.AwaitConvergence(t, suite.TimeoutConfig,
 		func(elapsed time.Duration) bool {
 			resp, err := httpClient.Do(req)
 			if err != nil {

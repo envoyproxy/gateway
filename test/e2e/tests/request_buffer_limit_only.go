@@ -81,7 +81,7 @@ func expectRequestBodyStatus(t *testing.T, suite *suite.ConformanceTestSuite, gw
 	url := fmt.Sprintf("http://%s%s", gwAddr, path)
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 
-	httputils.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+	httputils.AwaitConvergence(t, suite.TimeoutConfig,
 		func(elapsed time.Duration) bool {
 			resp, err := httpClient.Post(url, "application/octet-stream", strings.NewReader(body))
 			if err != nil {

@@ -12,8 +12,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/gateway-api-conformance-images/echo-basic/grpcechoserver"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/conformance/echo-basic/grpcechoserver"
 	"sigs.k8s.io/gateway-api/conformance/utils/grpc"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"

@@ -35,7 +35,7 @@ spec:
     spec:
       containers:
       - name: app-backend-v1
-        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
+        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.2.0
         env:
         - name: POD_NAME
           valueFrom:
@@ -89,7 +89,7 @@ spec:
     spec:
       containers:
       - name: app-backend-v2
-        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
+        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.2.0
         env:
         - name: POD_NAME
           valueFrom:
@@ -143,7 +143,7 @@ spec:
     spec:
       containers:
       - name: app-backend-v3
-        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.1.0
+        image: registry.k8s.io/gateway-api/conformance/echo-basic:v0.2.0
         env:
         - name: POD_NAME
           valueFrom:

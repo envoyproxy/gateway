@@ -79,8 +79,7 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					// check membership_healthy stats from Prometheus
 					v, err := promClient.QuerySum(ctx, passPromQL)
@@ -102,8 +101,7 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					// check membership_healthy stats from Prometheus
 					v, err := promClient.QuerySum(ctx, failPromQL)
@@ -199,8 +197,7 @@ var BackendHealthCheckActiveGRPCTest = suite.ConformanceTest{
 			promQL := fmt.Sprintf(`envoy_cluster_health_check_%s{envoy_cluster_name="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, stat, clusterName, gtwName)
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					v, err := promClient.QuerySum(ctx, promQL)
 					if err != nil {
@@ -249,8 +246,7 @@ func grpcHealthCheckThroughGatewayMustReturn(t *testing.T, suite *suite.Conforma
 
 	http.AwaitConvergence(
 		t,
-		suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-		suite.TimeoutConfig.MaxTimeToConsistency,
+		suite.TimeoutConfig,
 		func(_ time.Duration) bool {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
@@ -311,8 +307,7 @@ var BackendHealthCheckWithOverrideTest = suite.ConformanceTest{
 			// verify health check with override
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					v, err := promClient.QuerySum(ctx, withOverridePromQL)
 					if err != nil {
@@ -333,8 +328,7 @@ var BackendHealthCheckWithOverrideTest = suite.ConformanceTest{
 			// verify health check without override
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					v, err := promClient.QuerySum(ctx, withoutOverridePromQL)
 					if err != nil {
@@ -454,8 +448,7 @@ var BackendHealthCheckEventLogTest = suite.ConformanceTest{
 		t.Run("health check events appear in logs", func(t *testing.T) {
 			http.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
 					if err != nil {

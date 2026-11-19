@@ -403,12 +403,12 @@ Multiple GRPCRoutes can be attached to a single Gateway resource. Importantly,
 only one Route rule may match each request. For more information on how conflict
 resolution applies to merging, refer to the [API specification][grpcrouterule].
 
-[grpcroute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#grpcroute
-[grpcrouterule]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#grpcrouterule
-[hostname]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#hostname
+[grpcroute]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#grpcroute
+[grpcrouterule]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#grpcrouterule
+[hostname]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#hostname
 [rfc-3986]: https://tools.ietf.org/html/rfc3986
-[matches]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#grpcroutematch
-[filters]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#grpcroutefilter
-[backendRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#grpcbackendref
-[parentRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#parentreference
-[name]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#sectionname
+[matches]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#grpcroutematch
+[filters]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#grpcroutefilter
+[backendRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#grpcbackendref
+[parentRef]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#parentreference
+[name]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#sectionname

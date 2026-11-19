@@ -6,7 +6,7 @@ The `GatewayClass` resource is GA and has been part of the Standard Channel sinc
 `v0.5.0`. For more information on release channels, refer to our [versioning
 guide](https://gateway-api.sigs.k8s.io/docs/concepts/versioning/).
 
-[GatewayClass][gatewayclass] is cluster-scoped resource defined by the
+[GatewayClass][gatewayclass] is a cluster-scoped resource defined by the
 infrastructure provider. This resource represents a class of Gateways that can
 be instantiated.
 
@@ -141,5 +141,5 @@ example.net/gateway/v2.1 // Use version 2.1
 example.net/gateway      // Use the default version
 ```
 
-[gatewayclass]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.6/spec/#gatewayclass
+[gatewayclass]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.7/spec/#gatewayclass
 [ingress-class-api]: https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class

@@ -184,7 +184,7 @@ func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwA
 		Path:   expected.path,
 	}
 
-	httputils.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(_ time.Duration) bool {
+	httputils.AwaitConvergence(t, *timeoutConfig, func(_ time.Duration) bool {
 		req, err := http.NewRequest(http.MethodGet, reqURL.String(), nil)
 		if err != nil {
 			tlog.Logf(t, "failed to create request: %v", err)
