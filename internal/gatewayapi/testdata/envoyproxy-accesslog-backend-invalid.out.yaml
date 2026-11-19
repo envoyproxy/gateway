@@ -16,7 +16,7 @@ gateways:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Invalid access log backendRefs in the referenced EnvoyProxy: service
+      message: 'Invalid access log configuration in the referenced EnvoyProxy: service
         monitoring/service-not-found not found'
       reason: InvalidParameters
       status: "False"

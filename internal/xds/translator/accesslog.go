@@ -18,7 +18,9 @@ import (
 	reqwithoutqueryformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/req_without_query/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -227,6 +229,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			},
 			TransportApiVersion: cfgcore.ApiVersion_V3,
 		}
+		applyAccessLogBuffer(cc, als.Buffer)
 
 		switch als.Type {
 		case egv1a1.ALSEnvoyProxyAccessLogTypeHTTP:
@@ -287,20 +290,23 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		// NR is only added to listener logs originating from a global log configuration
 		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && otel.LogType == nil
 
-		al := &otelaccesslog.OpenTelemetryAccessLogConfig{
-			CommonConfig: &grpcaccesslog.CommonGrpcAccessLogConfig{
-				LogName: otelLogName,
-				GrpcService: &cfgcore.GrpcService{
-					TargetSpecifier: &cfgcore.GrpcService_EnvoyGrpc_{
-						EnvoyGrpc: &cfgcore.GrpcService_EnvoyGrpc{
-							ClusterName: otel.Destination.Name,
-							Authority:   otel.Authority,
-						},
+		cc := &grpcaccesslog.CommonGrpcAccessLogConfig{
+			LogName: otelLogName,
+			GrpcService: &cfgcore.GrpcService{
+				TargetSpecifier: &cfgcore.GrpcService_EnvoyGrpc_{
+					EnvoyGrpc: &cfgcore.GrpcService_EnvoyGrpc{
+						ClusterName: otel.Destination.Name,
+						Authority:   otel.Authority,
 					},
-					InitialMetadata: buildGrpcInitialMetadata(otel.Headers),
 				},
-				TransportApiVersion: cfgcore.ApiVersion_V3,
+				InitialMetadata: buildGrpcInitialMetadata(otel.Headers),
 			},
+			TransportApiVersion: cfgcore.ApiVersion_V3,
+		}
+		applyAccessLogBuffer(cc, otel.Buffer)
+
+		al := &otelaccesslog.OpenTelemetryAccessLogConfig{
+			CommonConfig:       cc,
 			ResourceAttributes: convertToKeyValueList(otel.ResourceAttributes, false),
 		}
 
@@ -350,6 +356,21 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	}
 
 	return accessLogs, nil
+}
+
+// applyAccessLogBuffer sets the buffering fields on a gRPC access log config, leaving
+// Envoy's defaults in place for anything the user did not set.
+func applyAccessLogBuffer(cc *grpcaccesslog.CommonGrpcAccessLogConfig, buffer *ir.AccessLogBuffer) {
+	if buffer == nil {
+		return
+	}
+
+	if buffer.FlushInterval != nil {
+		cc.BufferFlushInterval = durationpb.New(buffer.FlushInterval.Duration)
+	}
+	if buffer.SizeBytes != nil {
+		cc.BufferSizeBytes = wrapperspb.UInt32(*buffer.SizeBytes)
+	}
 }
 
 // accessLogTypeMatch checks if the access log type from the IR matches the desired access log type for the proxy (listener, route or Upstream).

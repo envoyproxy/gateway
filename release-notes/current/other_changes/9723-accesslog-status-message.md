@@ -1,0 +1,1 @@
+Reworded the Gateway status message for access log translation failures from "Invalid access log backendRefs in the referenced EnvoyProxy" to "Invalid access log configuration in the referenced EnvoyProxy", since the same message also reports invalid CEL match expressions and invalid buffer settings, neither of which involves backendRefs.
