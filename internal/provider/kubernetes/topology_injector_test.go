@@ -45,6 +45,17 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 		},
 	}
 
+	awsNode := defaultNode.DeepCopy()
+	awsNode.Labels = map[string]string{
+		corev1.LabelTopologyZone:   "us-east-1d",
+		"topology.k8s.aws/zone-id": "use1-az6",
+	}
+
+	awsOnlyNode := awsNode.DeepCopy()
+	delete(awsOnlyNode.Labels, corev1.LabelTopologyZone)
+	emptyAWSNode := awsNode.DeepCopy()
+	emptyAWSNode.Labels[awsZoneIDLabel] = ""
+
 	cases := []struct {
 		caseName          string
 		obj               client.Object
@@ -69,6 +80,48 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 				Value: map[string]interface{}{
 					"topology.kubernetes.io/zone": "\"0\"",
 				},
+			}},
+		},
+		{
+			caseName: "AWS zone ID",
+			obj: &corev1.Binding{
+				ObjectMeta: metav1.ObjectMeta{Name: defaultPod.Name, Namespace: defaultPod.Namespace},
+				Target:     corev1.ObjectReference{Name: awsNode.Name},
+			},
+			node: awsNode,
+			pod:  defaultPod,
+			expectedPatchResp: []jsonpatch.JsonPatchOperation{{
+				Operation: "add",
+				Path:      "/metadata/annotations",
+				Value:     map[string]interface{}{corev1.LabelTopologyZone: "\"use1-az6\""},
+			}},
+		},
+		{
+			caseName: "AWS zone ID without standard label",
+			obj: &corev1.Binding{
+				ObjectMeta: metav1.ObjectMeta{Name: defaultPod.Name, Namespace: defaultPod.Namespace},
+				Target:     corev1.ObjectReference{Name: awsNode.Name},
+			},
+			node: awsOnlyNode,
+			pod:  defaultPod,
+			expectedPatchResp: []jsonpatch.JsonPatchOperation{{
+				Operation: "add",
+				Path:      "/metadata/annotations",
+				Value:     map[string]interface{}{corev1.LabelTopologyZone: "\"use1-az6\""},
+			}},
+		},
+		{
+			caseName: "empty AWS zone ID",
+			obj: &corev1.Binding{
+				ObjectMeta: metav1.ObjectMeta{Name: defaultPod.Name, Namespace: defaultPod.Namespace},
+				Target:     corev1.ObjectReference{Name: awsNode.Name},
+			},
+			node: emptyAWSNode,
+			pod:  defaultPod,
+			expectedPatchResp: []jsonpatch.JsonPatchOperation{{
+				Operation: "add",
+				Path:      "/metadata/annotations",
+				Value:     map[string]interface{}{corev1.LabelTopologyZone: "\"us-east-1d\""},
 			}},
 		},
 		{
@@ -122,8 +175,9 @@ func TestProxyTopologyInjector_Handle(t *testing.T) {
 				Build()
 
 			mutator := &ProxyTopologyInjector{
-				Client:  fakeClient,
-				Decoder: decoder,
+				Client:   fakeClient,
+				Decoder:  decoder,
+				platform: &clusterPlatform{},
 			}
 
 			objBytes, err := json.Marshal(tc.obj)
