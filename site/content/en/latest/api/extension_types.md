@@ -7314,8 +7314,6 @@ _Appears in:_
 
 UDPActiveHealthChecker defines the settings of the UDP health check.
 
-Each payload must not exceed 65,507 bytes once decoded.
-
 _Appears in:_
 - [ActiveHealthCheck](#activehealthcheck)
 

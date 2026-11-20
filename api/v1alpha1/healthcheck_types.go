@@ -287,8 +287,6 @@ type TCPActiveHealthChecker struct {
 }
 
 // UDPActiveHealthChecker defines the settings of the UDP health check.
-//
-// Each payload must not exceed 65,507 bytes once decoded.
 type UDPActiveHealthChecker struct {
 	// Send defines the payload sent as one datagram on each probe.
 	Send ActiveHealthCheckPayload `json:"send" yaml:"send"`
