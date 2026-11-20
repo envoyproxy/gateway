@@ -50,6 +50,8 @@ func mustUnmarshal(t *testing.T, val []byte, out any) {
 }
 
 func TestTranslate(t *testing.T) {
+	useLocalOIDCDiscovery(t)
+
 	testCasesConfig := []struct {
 		name                            string
 		EnvoyPatchPolicyEnabled         bool
