@@ -122,7 +122,7 @@ _Appears in:_
 
 
 ActiveHealthCheck defines the active health check configuration.
-EG supports various types of active health checking including HTTP, TCP.
+EG supports various types of active health checking including HTTP, TCP, GRPC and UDP.
 
 _Appears in:_
 - [HealthCheck](#healthcheck)
@@ -134,7 +134,7 @@ _Appears in:_
 | `initialJitter` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | InitialJitter defines the maximum time Envoy will wait before the first health check.<br />Envoy will randomly select a value between 0 and the initial jitter value. |
 | `unhealthyThreshold` | _integer_ |  false  | 3 | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.<br />Without RetriableStatuses configured, any health check failure results in the host being immediately<br />considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried<br />up to this threshold before the host is marked unhealthy. |
 | `healthyThreshold` | _integer_ |  false  | 1 | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
-| `disableConnectionReuse` | _boolean_ |  false  |  | DisableConnectionReuse determines whether the active health check connection to a<br />backend host is closed after each health check probe. When set to true, Envoy opens a<br />new connection for each health check, which is useful for backends (such as<br />haproxy-style agent checks) that do not expect a reused connection.<br />Defaults to false, which reuses the connection across probes. |
+| `disableConnectionReuse` | _boolean_ |  false  |  | DisableConnectionReuse determines whether the active health check connection to a<br />backend host is closed after each health check probe. When set to true, Envoy opens a<br />new connection for each health check, which is useful for backends (such as<br />haproxy-style agent checks) that do not expect a reused connection.<br />Defaults to false, which reuses the connection across probes.<br />It cannot be set for the UDP health checker, which always uses a new socket per probe. |
 | `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  |  | Type defines the type of health checker. |
 | `http` | _[HTTPActiveHealthChecker](#httpactivehealthchecker)_ |  false  |  | HTTP defines the configuration of http health checker.<br />It's required while the health checker type is HTTP. |
 | `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  |  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
@@ -152,6 +152,7 @@ ActiveHealthCheckPayload defines the encoding of the payload bytes in the payloa
 _Appears in:_
 - [HTTPActiveHealthChecker](#httpactivehealthchecker)
 - [TCPActiveHealthChecker](#tcpactivehealthchecker)
+- [UDPActiveHealthChecker](#udpactivehealthchecker)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -189,6 +190,7 @@ _Appears in:_
 | `HTTP` | ActiveHealthCheckerTypeHTTP defines the HTTP type of health checking.<br /> | 
 | `TCP` | ActiveHealthCheckerTypeTCP defines the TCP type of health checking.<br /> | 
 | `GRPC` | ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.<br /> | 
+| `UDP` | ActiveHealthCheckerTypeUDP defines the UDP type of health checking.<br />It requires Envoy 1.40 or later.<br /> | 
 
 
 #### AdmissionControl
@@ -7303,6 +7305,28 @@ _Appears in:_
 | `internal` | The gRPC status code in the response headers is “internal”.<br /> | 
 | `resource-exhausted` | The gRPC status code in the response headers is “resource-exhausted”.<br /> | 
 | `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> | 
+
+
+#### UDPActiveHealthChecker
+
+
+
+UDPActiveHealthChecker defines the settings of the UDP health check.
+
+Each probe sends Send as a single datagram and passes when a reply matches
+Receive exactly. Replies that don't match are ignored. The probe fails when
+no matching reply arrives within the timeout, or on a socket error such as
+an ICMP port unreachable.
+
+Each payload must not exceed 65,507 bytes once decoded.
+
+_Appears in:_
+- [ActiveHealthCheck](#activehealthcheck)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `send` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  true  |  | Send defines the payload sent as one datagram on each probe. |
+| `receive` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  true  |  | Receive defines the reply that marks the probe as successful.<br />The reply must match this payload exactly. |
 
 
 #### UnixSocket
