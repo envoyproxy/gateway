@@ -173,12 +173,6 @@ type ActiveHealthCheck struct {
 
 	// UDP defines the configuration of the UDP health checker.
 	// It's required while the health checker type is UDP.
-	//
-	// The UDP health checker works with any backend that answers the probe over UDP,
-	// including the backends of HTTPRoute and TCPRoute. Use overrides.port when the
-	// backend answers on a different port than the one it serves traffic on.
-	// UDPRoute backends only use the UDP health checker, and passive health checks have
-	// no effect on them.
 	// +optional
 	UDP *UDPActiveHealthChecker `json:"udp,omitempty" yaml:"udp,omitempty"`
 
