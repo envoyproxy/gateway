@@ -172,6 +172,7 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	mergedTLSConfig.CACertificate = t.shareCACertificate(gwIR, gtwCtx, mergedTLSConfig.CACertificate)
+	mergedTLSConfig.ClientCertificates = t.shareClientCertificates(gwIR, gtwCtx, mergedTLSConfig.ClientCertificates)
 
 	return mergedTLSConfig, nil
 }
@@ -801,6 +802,37 @@ func (t *Translator) caEntryFor(gwIR *ir.Xds, gwIRKey string, bundle []byte) *ir
 		gwIR.CACertificates = append(gwIR.CACertificates, entry)
 	}
 	return entry
+}
+
+// shareClientCertificates moves the bytes of certs into gwIR.ClientCertificates, one entry per
+// Secret, and returns name-only references in their place. The EnvoyProxy client certificate
+// applies to every TLS backend, so without this each destination would carry its own copy.
+// SDS and extension certificates carry no bytes and are returned as they are.
+func (t *Translator) shareClientCertificates(gwIR *ir.Xds, gtwCtx *GatewayContext, certs []ir.TLSCertificate) []ir.TLSCertificate {
+	if gwIR == nil || gtwCtx == nil || len(certs) == 0 {
+		return certs
+	}
+	gwIRKey := t.getIRKey(gtwCtx.Gateway)
+	// Build a new slice: certs may belong to a config shared with other destinations.
+	shared := make([]ir.TLSCertificate, len(certs))
+	for i := range certs {
+		cert := certs[i]
+		if cert.SDS != nil || cert.ExtensionRef != nil || len(cert.Certificate) == 0 {
+			shared[i] = cert
+			continue
+		}
+		if t.ClientCertificateMap == nil {
+			t.ClientCertificateMap = make(map[ClientCertificateKey]*ir.TLSCertificate)
+		}
+		key := ClientCertificateKey{GatewayIRKey: gwIRKey, Name: cert.Name}
+		if _, ok := t.ClientCertificateMap[key]; !ok {
+			entry := cert
+			t.ClientCertificateMap[key] = &entry
+			gwIR.ClientCertificates = append(gwIR.ClientCertificates, &entry)
+		}
+		shared[i] = ir.TLSCertificate{Name: cert.Name}
+	}
+	return shared
 }
 
 func getAncestorRefs(policy *gwapiv1.BackendTLSPolicy) []*gwapiv1.ParentReference {

@@ -58,7 +58,7 @@ func patchExtensionBackendResources(tCtx *types.ResourceVersionTable, backends [
 		if err := createExtServiceXDSCluster(&backend.RouteDestination, backend.Traffic, tCtx); err != nil {
 			errs = errors.Join(errs, err)
 		}
-		if err := processClientCertificates(tCtx, backend.Settings); err != nil {
+		if err := processClientCertificates(tCtx, backend.Settings, nil); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
