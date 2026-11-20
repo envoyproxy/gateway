@@ -12,7 +12,6 @@ import (
 
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	protobuf "google.golang.org/protobuf/proto"
 	corev1 "k8s.io/api/core/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -68,29 +67,21 @@ func captureEndpointContext(table *types.ResourceVersionTable, args *xdsClusterA
 	table.EndpointContexts[args.name] = &saved
 }
 
-// endpointsMayBePatched reports whether anything after cluster construction can
-// change a cluster's endpoints: an EnvoyPatchPolicy, or an extension hook for
-// endpoints or the whole translation.
-func (t *Translator) endpointsMayBePatched(xdsIR *ir.Xds) bool {
-	if len(xdsIR.EnvoyPatchPolicies) > 0 {
-		return true
-	}
+// hasEndpointsHook reports whether an extension server registered the Endpoints
+// hook. A lookup error counts as registered, to stay on the safe side.
+func (t *Translator) hasEndpointsHook() bool {
 	if t.ExtensionManager == nil {
 		return false
 	}
-	for _, hook := range []egv1a1.XDSTranslatorHook{egv1a1.XDSEndpoints, egv1a1.XDSTranslation} {
-		if client, err := (*t.ExtensionManager).GetPostXDSHookClient(hook); client != nil || err != nil {
-			return true
-		}
-	}
-	return false
+	client, err := (*t.ExtensionManager).GetPostXDSHookClient(egv1a1.XDSEndpoints)
+	return client != nil || err != nil
 }
 
-// dropPatchedEndpointContexts removes the context of every cluster whose
-// assignment a patch targets or an extension hook changed, since the fast path
-// doesn't apply them. A patch is enough even if it changed nothing: one that
-// matches no endpoint now may match a new endpoint later.
-func dropPatchedEndpointContexts(table *types.ResourceVersionTable, policies []*ir.EnvoyPatchPolicy) {
+// dropPatchTargetedEndpointContexts removes the context of every cluster whose
+// assignment a patch targets, since the fast path doesn't apply patches. A patch
+// is enough even if it changed nothing: one that matches no endpoint now may
+// match a new endpoint later.
+func dropPatchTargetedEndpointContexts(table *types.ResourceVersionTable, policies []*ir.EnvoyPatchPolicy) {
 	if len(table.EndpointContexts) == 0 {
 		return
 	}
@@ -99,17 +90,6 @@ func dropPatchedEndpointContexts(table *types.ResourceVersionTable, policies []*
 			if patch.Type == resourcev3.EndpointType {
 				delete(table.EndpointContexts, patch.Name)
 			}
-		}
-	}
-	assignments := make(map[string]*endpointv3.ClusterLoadAssignment)
-	for _, value := range table.XdsResources[resourcev3.EndpointType] {
-		if assignment, ok := value.(*endpointv3.ClusterLoadAssignment); ok {
-			assignments[assignment.ClusterName] = assignment
-		}
-	}
-	for name, args := range table.EndpointContexts {
-		if !protobuf.Equal(buildXdsClusterLoadAssignment(name, args), assignments[name]) {
-			delete(table.EndpointContexts, name)
 		}
 	}
 }

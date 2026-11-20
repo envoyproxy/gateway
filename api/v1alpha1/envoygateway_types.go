@@ -187,8 +187,8 @@ const (
 	// EndpointFastPath enables publishing eligible Kubernetes endpoint changes without
 	// waiting for full translation. Full reconciliation remains enabled. Disabled by default;
 	// it is planned to be enabled by default in the next release.
-	// With an extension server, enable it only if the server does not use the Endpoints
-	// hook: fast updates rebuild endpoints without calling it, so its changes would be lost.
+	// It has no effect while an extension server registers the Endpoints hook, since
+	// fast updates would rebuild endpoints without calling it.
 	EndpointFastPath RuntimeFlag = "EndpointFastPath"
 	// TODO(robin): make EndpointFastPath work with ExtensionServer's Endpoints hook.
 
