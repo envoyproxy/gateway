@@ -7314,11 +7314,6 @@ _Appears in:_
 
 UDPActiveHealthChecker defines the settings of the UDP health check.
 
-Each probe sends Send as a single datagram and passes when a reply matches
-Receive exactly. Replies that don't match are ignored. The probe fails when
-no matching reply arrives within the timeout, or on a socket error such as
-an ICMP port unreachable.
-
 Each payload must not exceed 65,507 bytes once decoded.
 
 _Appears in:_
