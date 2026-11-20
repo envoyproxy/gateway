@@ -26,6 +26,7 @@ spec:
   template:
     metadata:
       annotations:
+        gateway.envoyproxy.io/ratelimit-config-hash: 6883d3270520bf4a5ab99b64ba4e0cf410dfd3fcb848f764de93702d69bd9b0c
         prometheus.io/path: /metrics
         prometheus.io/port: "19001"
         prometheus.io/scrape: "true"

@@ -1,0 +1,1 @@
+Fixed the default rate-limit response-time histogram to convert milliseconds to seconds and automatically roll rate-limit pods when the metric mapping changes. Historical observations retain the previous units.

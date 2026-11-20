@@ -63,6 +63,13 @@ These metrics are exported per RateLimit *domain* and (by default) up to two des
 - `ratelimit_service_rate_limit_shadow_mode`  
   Number of requests evaluated under **shadow mode** (dry-run / not enforced), when shadow mode is enabled in the rate limit service config.
 
+### Service latency
+
+`ratelimit_service_response_time_seconds` is a histogram of rate-limit service response times,
+labeled by `grpc_method`. The default mapping converts the service's millisecond timer values to seconds.
+After upgrading from a version without this conversion, use a query range containing only observations
+from restarted rate-limit service pods; historical observations retain the previous units.
+
 ### Labels
 
 Typical labels you’ll see:
