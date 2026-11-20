@@ -138,7 +138,7 @@ backends:
   spec:
     endpoints:
     - fqdn:
-        hostname: backend-no-endpoint-host.example.com
+        hostname: backend-no-endpoint-host.example.com.
         port: 443
   status:
     conditions:
@@ -419,7 +419,7 @@ xdsIR:
           settings:
           - addressType: FQDN
             endpoints:
-            - host: backend-no-endpoint-host.example.com
+            - host: backend-no-endpoint-host.example.com.
               port: 443
             metadata:
               kind: Backend

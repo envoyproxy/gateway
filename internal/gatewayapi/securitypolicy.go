@@ -3462,7 +3462,8 @@ func (t *Translator) backendRefAuthority(
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {
 				if ep.FQDN != nil {
-					return net.JoinHostPort(ep.FQDN.Hostname, strconv.Itoa(int(ep.FQDN.Port)))
+					hostname := strings.TrimSuffix(ep.FQDN.Hostname, ".")
+					return net.JoinHostPort(hostname, strconv.Itoa(int(ep.FQDN.Port)))
 				}
 			}
 		}
