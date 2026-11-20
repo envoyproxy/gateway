@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -563,6 +564,87 @@ func TestHTTPRouteFilterGRPCJSONTranscoder(t *testing.T) {
 				})
 			},
 			wantErrors: []string{"valueRef must refer to a core ConfigMap"},
+		},
+		{
+			desc: "body sizes are accepted",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.BodySize = &egv1a1.GRPCJSONTranscoderBodySize{
+					MaxRequest:  new(resource.MustParse("1Mi")),
+					MaxResponse: new(resource.MustParse("64Mi")),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "zero request body size is rejected",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.BodySize = &egv1a1.GRPCJSONTranscoderBodySize{
+					MaxRequest: new(resource.MustParse("0")),
+				}
+			},
+			wantErrors: []string{"spec.grpcJSONTranscoder.bodySize.maxRequest in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
+		},
+		{
+			desc: "negative response body size is rejected",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.BodySize = &egv1a1.GRPCJSONTranscoderBodySize{
+					MaxResponse: new(resource.MustParse("-1Mi")),
+				}
+			},
+			wantErrors: []string{"spec.grpcJSONTranscoder.bodySize.maxResponse in body should match '^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$'"},
+		},
+		{
+			desc: "newline delimited stream is accepted",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.PrintOptions = &egv1a1.JSONPrintOptions{
+					StreamNewlineDelimited: new(true),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "SSE stream with newline delimited disabled is accepted",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.PrintOptions = &egv1a1.JSONPrintOptions{
+					StreamNewlineDelimited:  new(false),
+					StreamSSEStyleDelimited: new(true),
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "newline delimited and SSE stream are rejected together",
+			mutate: func(hrf *egv1a1.HTTPRouteFilter) {
+				hrf.Spec.GRPCJSONTranscoder = transcoder(gwapiv1.LocalObjectReference{
+					Kind: "ConfigMap",
+					Name: "descriptor",
+				})
+				hrf.Spec.GRPCJSONTranscoder.PrintOptions = &egv1a1.JSONPrintOptions{
+					StreamNewlineDelimited:  new(true),
+					StreamSSEStyleDelimited: new(true),
+				}
+			},
+			wantErrors: []string{"streamNewlineDelimited and streamSSEStyleDelimited are mutually exclusive"},
 		},
 	}
 

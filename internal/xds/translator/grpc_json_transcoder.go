@@ -12,6 +12,7 @@ import (
 	grpcjsontranscoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -98,7 +99,17 @@ func buildGRPCJSONTranscoderConfig(transcoder *ir.GRPCJSONTranscoder) (*anypb.An
 			AddWhitespace:              ptr.Deref(o.AddWhitespace, false),
 			AlwaysPrintPrimitiveFields: ptr.Deref(o.AlwaysPrintPrimitiveFields, false),
 			PreserveProtoFieldNames:    ptr.Deref(o.PreserveProtoFieldNames, false),
+			AlwaysPrintEnumsAsInts:     ptr.Deref(o.AlwaysPrintEnumsAsInts, false),
+			StreamNewlineDelimited:     ptr.Deref(o.StreamNewlineDelimited, false),
+			StreamSseStyleDelimited:    ptr.Deref(o.StreamSSEStyleDelimited, false),
 		}
+	}
+
+	if transcoder.MaxRequestBodyBytes != nil {
+		cfg.MaxRequestBodySize = wrapperspb.UInt32(*transcoder.MaxRequestBodyBytes)
+	}
+	if transcoder.MaxResponseBodyBytes != nil {
+		cfg.MaxResponseBodySize = wrapperspb.UInt32(*transcoder.MaxResponseBodyBytes)
 	}
 
 	return proto.ToAnyWithValidation(cfg)

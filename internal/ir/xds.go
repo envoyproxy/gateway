@@ -4686,6 +4686,8 @@ type GRPCJSONTranscoder struct {
 	PrintOptions                 *egv1a1.JSONPrintOptions `json:"printOptions,omitempty" yaml:"printOptions,omitempty"`
 	IgnoreUnknownQueryParameters *bool                    `json:"ignoreUnknownQueryParameters,omitempty" yaml:"ignoreUnknownQueryParameters,omitempty"`
 	ConvertGRPCStatus            *bool                    `json:"convertGRPCStatus,omitempty" yaml:"convertGRPCStatus,omitempty"`
+	MaxRequestBodyBytes          *uint32                  `json:"maxRequestBodyBytes,omitempty" yaml:"maxRequestBodyBytes,omitempty"`
+	MaxResponseBodyBytes         *uint32                  `json:"maxResponseBodyBytes,omitempty" yaml:"maxResponseBodyBytes,omitempty"`
 }
 
 // LoadBalancerType defines the type of load balancer for IR.

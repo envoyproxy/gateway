@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,6 +22,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 	corev1 "k8s.io/api/core/v1"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -289,6 +291,105 @@ func TestBuildGRPCJSONTranscoder(t *testing.T) {
 	require.Equal(t, "httproutefilter/default/transcode", got.Name)
 	require.Equal(t, grpcEchoDescriptorBin(t), got.ProtoDescriptorBin)
 	require.Equal(t, []string{grpcEchoService}, got.Services)
+	require.Nil(t, got.MaxRequestBodyBytes)
+	require.Nil(t, got.MaxResponseBodyBytes)
+}
+
+func TestBuildGRPCJSONTranscoderBodySizes(t *testing.T) {
+	tr := &Translator{TranslatorContext: &TranslatorContext{}}
+	tr.SetConfigMaps([]*corev1.ConfigMap{
+		configMap("descriptor", map[string]string{"proto-descriptor": grpcEchoDescriptorB64}, nil),
+	})
+	quantity := func(s string) *apiresource.Quantity {
+		if s == "" {
+			return nil
+		}
+		return new(apiresource.MustParse(s))
+	}
+
+	cases := []struct {
+		name         string
+		request      string
+		response     string
+		wantRequest  *uint32
+		wantResponse *uint32
+		wantErr      string
+	}{
+		{
+			name:         "binary and decimal suffixes",
+			request:      "1Mi",
+			response:     "64M",
+			wantRequest:  new(uint32(1024 * 1024)),
+			wantResponse: new(uint32(64_000_000)),
+		},
+		{
+			name:         "max uint32",
+			request:      "4294967295",
+			response:     "4294967295",
+			wantRequest:  new(uint32(math.MaxUint32)),
+			wantResponse: new(uint32(math.MaxUint32)),
+		},
+		{
+			name:         "only response",
+			response:     "64Mi",
+			wantResponse: new(uint32(64 * 1024 * 1024)),
+		},
+		{
+			name:        "only request",
+			request:     "1Ki",
+			wantRequest: new(uint32(1024)),
+		},
+		{
+			name:    "request too large",
+			request: "4Gi",
+			wantErr: "bodySize.maxRequest value 4Gi is out of range, must be between 1 and 4294967295",
+		},
+		{
+			name:     "response too large",
+			request:  "1Mi",
+			response: "4Gi",
+			wantErr:  "bodySize.maxResponse value 4Gi is out of range, must be between 1 and 4294967295",
+		},
+		{
+			name:    "zero request",
+			request: "0",
+			wantErr: "bodySize.maxRequest value 0 is out of range",
+		},
+		{
+			name:     "zero response",
+			response: "0",
+			wantErr:  "bodySize.maxResponse value 0 is out of range",
+		},
+		{
+			name:     "negative response",
+			response: "-1",
+			wantErr:  "bodySize.maxResponse value -1 is out of range",
+		},
+		{
+			name:     "fractional response",
+			response: "1500m",
+			wantErr:  "invalid bodySize.maxResponse value 1500m",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tr.buildGRPCJSONTranscoder(&egv1a1.GRPCJSONTranscoder{
+				ProtoDescriptor: protoDescriptorRef("descriptor"),
+				BodySize: &egv1a1.GRPCJSONTranscoderBodySize{
+					MaxRequest:  quantity(tc.request),
+					MaxResponse: quantity(tc.response),
+				},
+			}, "httproutefilter/default/transcode", "default")
+			if tc.wantErr != "" {
+				require.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.wantRequest, got.MaxRequestBodyBytes)
+			require.Equal(t, tc.wantResponse, got.MaxResponseBodyBytes)
+		})
+	}
 }
 
 func TestValidateHTTPRules(t *testing.T) {

@@ -3017,6 +3017,22 @@ _Appears in:_
 | `printOptions` | _[JSONPrintOptions](#jsonprintoptions)_ |  false  |  | PrintOptions defines how the gRPC response is printed as JSON. |
 | `ignoreUnknownQueryParameters` | _boolean_ |  false  |  | IgnoreUnknownQueryParameters ignores the query parameters that can't be mapped to<br />a field of the gRPC request.<br />If false, a request with such a parameter is not transcoded and is sent to the<br />backend as is. |
 | `convertGRPCStatus` | _boolean_ |  false  |  | ConvertGRPCStatus converts the gRPC status of an error response to the HTTP<br />status code and a JSON body. |
+| `bodySize` | _[GRPCJSONTranscoderBodySize](#grpcjsontranscoderbodysize)_ |  false  |  | BodySize defines the maximum size of the request and response bodies to transcode. |
+
+
+#### GRPCJSONTranscoderBodySize
+
+
+
+GRPCJSONTranscoderBodySize defines the maximum size of the bodies to transcode.
+
+_Appears in:_
+- [GRPCJSONTranscoder](#grpcjsontranscoder)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `maxRequest` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MaxRequest is the maximum size of a request body to transcode. A larger<br />body is rejected with HTTP 413.<br />If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and<br />64Ki for HTTP/2 by default.<br />For example, 1Mi, 64Mi etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes. |
+| `maxResponse` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MaxResponse is the maximum size of a response body to transcode. A larger<br />body is replaced with HTTP 500, or resets the stream of a streaming response.<br />If not set, the buffer limit of the stream is used, which is 32Ki for HTTP/1.1 and<br />64Ki for HTTP/2 by default.<br />For example, 1Mi, 64Mi etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes. |
 
 
 #### GRPCSettings
@@ -4075,6 +4091,9 @@ _Appears in:_
 | `addWhitespace` | _boolean_ |  false  |  | AddWhitespace adds spaces, line breaks and indentation to the JSON output. |
 | `alwaysPrintPrimitiveFields` | _boolean_ |  false  |  | AlwaysPrintPrimitiveFields prints the primitive fields even when they have<br />default values. |
 | `preserveProtoFieldNames` | _boolean_ |  false  |  | PreserveProtoFieldNames uses the field names in the proto file instead of<br />lowerCamelCase names. |
+| `alwaysPrintEnumsAsInts` | _boolean_ |  false  |  | AlwaysPrintEnumsAsInts prints enums as integers instead of names. |
+| `streamNewlineDelimited` | _boolean_ |  false  |  | StreamNewlineDelimited prints a streaming response as newline-delimited JSON<br />messages instead of a JSON array.<br />Mutually exclusive with StreamSSEStyleDelimited. |
+| `streamSSEStyleDelimited` | _boolean_ |  false  |  | StreamSSEStyleDelimited prints a streaming response as Server-Sent Events, with<br />each message framed as `data: <message>`.<br />Mutually exclusive with StreamNewlineDelimited. |
 
 
 #### JWT
