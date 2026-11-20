@@ -252,7 +252,9 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	t.ExtensionStats = ExtensionHookStats{}
 
 	tCtx := new(types.ResourceVersionTable)
-	if t.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath) {
+	// The fast path doesn't run the Endpoints hook, and the hook names no target,
+	// so keep no contexts while it is registered.
+	if t.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath) && !t.hasEndpointsHook() {
 		tCtx.EndpointContexts = make(types.EndpointContexts)
 	}
 	tCtx.EnableClusterIndex()
@@ -395,12 +397,9 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	}
 	phases.End()
 
-	// For the endpoint fast path: now that patches and the Translation hook have
-	// run, drop the clusters they target or changed so fast updates won't overwrite them.
-	// Without patches or hooks nothing can have changed, so skip the check.
-	if t.endpointsMayBePatched(xdsIR) {
-		dropPatchedEndpointContexts(tCtx, xdsIR.EnvoyPatchPolicies)
-	}
+	// For the endpoint fast path: drop the clusters that patches target, so fast
+	// updates won't overwrite them.
+	dropPatchTargetedEndpointContexts(tCtx, xdsIR.EnvoyPatchPolicies)
 	return tCtx, errs
 }
 
