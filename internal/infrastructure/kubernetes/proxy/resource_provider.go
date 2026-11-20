@@ -78,6 +78,10 @@ type ResourceRender struct {
 
 	ShutdownManager *egv1a1.ShutdownManager
 
+	// KubernetesVersion is the discovered API server git version.
+	// Empty selects the legacy shutdown-manager container layout.
+	KubernetesVersion string
+
 	TopologyInjectorDisabled bool
 
 	// EnvoyProxyPatchDisabled disables applying the Kubernetes resource `patch`
@@ -102,6 +106,10 @@ type KubernetesInfraProvider interface {
 	GetEnvoyGateway() *egv1a1.EnvoyGateway
 	GetOwnerReferenceUID(ctx context.Context, infra *ir.Infra) (map[string]types.UID, error)
 	GetResourceNamespace(ir *ir.Infra) string
+	// GetKubernetesVersion returns the discovered API server git version.
+	// An empty string means the version is unavailable and shutdown-manager stays
+	// a regular container.
+	GetKubernetesVersion(ctx context.Context) string
 }
 
 func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, infra *ir.Infra) (*ResourceRender, error) {
@@ -119,6 +127,7 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 		DNSDomain:                kubeInfra.GetDNSDomain(),
 		infra:                    infra.GetProxyInfra(),
 		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		KubernetesVersion:        kubeInfra.GetKubernetesVersion(ctx),
 		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
 		EnvoyProxyPatchDisabled:  !kubeInfra.GetEnvoyGateway().RuntimeFlags.IsEnabled(egv1a1.EnvoyProxyPatch),
 		GatewayNamespaceMode:     kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
@@ -515,7 +524,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, sidecarInit, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode, r.KubernetesVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -562,7 +571,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				Spec: corev1.PodSpec{
 					AutomountServiceAccountToken:  new(false),
 					Containers:                    containers,
-					InitContainers:                deploymentConfig.InitContainers,
+					InitContainers:                mergeInitContainers(deploymentConfig.InitContainers, sidecarInit),
 					ServiceAccountName:            r.serviceAccountName(),
 					TerminationGracePeriodSeconds: expectedTerminationGracePeriodSeconds(proxyConfig.Spec.Shutdown),
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -623,7 +632,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, sidecarInit, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode, r.KubernetesVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -657,7 +666,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 					Labels:      r.getPodLabels(daemonSetConfig.Pod),
 					Annotations: podAnnotations,
 				},
-				Spec: r.getPodSpec(containers, nil, daemonSetConfig.Pod, proxyConfig),
+				Spec: r.getPodSpec(containers, mergeInitContainers(nil, sidecarInit), daemonSetConfig.Pod, proxyConfig),
 			},
 		},
 	}
@@ -765,6 +774,19 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 	}
 
 	return hpa, nil
+}
+
+// mergeInitContainers appends extra init containers after user-configured ones.
+// The shutdown-manager native sidecar is extra, so regular init containers still
+// run to completion before it starts. A nil extra leaves the user slice untouched.
+func mergeInitContainers(user, extra []corev1.Container) []corev1.Container {
+	if len(extra) == 0 {
+		return user
+	}
+	merged := make([]corev1.Container, 0, len(user)+len(extra))
+	merged = append(merged, user...)
+	merged = append(merged, extra...)
+	return merged
 }
 
 func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
