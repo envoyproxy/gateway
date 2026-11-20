@@ -201,7 +201,6 @@ const (
 	// ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.
 	ActiveHealthCheckerTypeGRPC ActiveHealthCheckerType = "GRPC"
 	// ActiveHealthCheckerTypeUDP defines the UDP type of health checking.
-	// It requires Envoy 1.40 or later.
 	ActiveHealthCheckerTypeUDP ActiveHealthCheckerType = "UDP"
 )
 
