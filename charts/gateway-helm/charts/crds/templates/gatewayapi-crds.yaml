@@ -1,0 +1,18 @@
+{{- /*
+Render the Gateway API CRDs (experimental channel) from this chart's crds/ directory
+as templates of the release when .Values.gatewayAPI.managed is true. See
+envoy-gateway-crds.yaml for how managed CRDs are installed and kept.
+*/ -}}
+{{- if .Values.gatewayAPI.managed }}
+{{- /* Drop the license header, comment and blank lines up to the first document separator, so it does not render as a document. */ -}}
+{{- $crds := regexReplaceAll "\\A(?:#[^\n]*\n|\n)*---\n" (.Files.Get "crds/gatewayapi-crds.yaml") "" }}
+{{- if .Values.keep }}
+{{- /* The bundle has one top-level metadata.annotations key per CRD, at two spaces. */ -}}
+{{- if ne (len (regexFindAll "(?m)^  annotations:$" $crds -1)) (len (regexFindAll "(?m)^kind: CustomResourceDefinition$" $crds -1)) }}
+{{- fail "crds/gatewayapi-crds.yaml: expected one top-level metadata.annotations key per CRD to add helm.sh/resource-policy: keep" }}
+{{- end }}
+{{- $crds = regexReplaceAll "(?m)^  annotations:$" $crds "  annotations:\n    helm.sh/resource-policy: keep" }}
+{{- end }}
+---
+{{ $crds }}
+{{- end }}
