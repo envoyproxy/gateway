@@ -983,12 +983,6 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 		}
 	}
 
-	basicAuth := p.Spec.BasicAuth
-	if basicAuth != nil {
-		if err := validateBasicAuth(basicAuth); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -1062,10 +1056,21 @@ func validateAPIKeyAuth(apiKeyAuth *egv1a1.APIKeyAuth) error {
 }
 
 // validateBasicAuth validates the BasicAuth configuration.
-// Currently, we only validate that the secret exists, but we don't validate
-// the content of the secret. This function will be called when the security policy
-// is being processed, but before the secret is actually read.
-func validateBasicAuth(_ *egv1a1.BasicAuth) error {
+func validateBasicAuth(basicAuth *egv1a1.BasicAuth) error {
+	if basicAuth.Realm != nil {
+		if *basicAuth.Realm == "" {
+			return fmt.Errorf("basicAuth.realm must not be empty")
+		}
+		if strings.TrimSpace(*basicAuth.Realm) == "" {
+			return fmt.Errorf("basicAuth.realm must not be whitespace only")
+		}
+		for _, r := range *basicAuth.Realm {
+			// Reject C0 (≤0x1F), DEL (0x7F), and C1 (0x80–0x9F) control chars.
+			if r <= 0x1f || r == 0x7f || (r >= 0x80 && r <= 0x9f) {
+				return fmt.Errorf("basicAuth.realm must not contain control characters")
+			}
+		}
+	}
 	// The actual validation of the htpasswd format will happen when the secret is read
 	// in the buildBasicAuth function.
 	return nil
@@ -3174,6 +3179,13 @@ func (t *Translator) buildBasicAuth(
 		kind:      resource.KindSecurityPolicy,
 		namespace: ownerPolicy.Namespace,
 	}
+
+	// Validate realm here so it is checked for all target kinds (Route, Gateway,
+	// ListenerSet). validateSecurityPolicy is only called on the route path.
+	if err := validateBasicAuth(basicAuth); err != nil {
+		return nil, err
+	}
+
 	if usersSecret, err = t.validateSecretRef(true, from, basicAuth.Users, resources); err != nil {
 		return nil, err
 	}
@@ -3198,6 +3210,7 @@ func (t *Translator) buildBasicAuth(
 		Name:                  irConfigName(ownerPolicy),
 		Users:                 usersSecretBytes,
 		ForwardUsernameHeader: basicAuth.ForwardUsernameHeader,
+		Realm:                 basicAuth.Realm,
 	}, nil
 }
 

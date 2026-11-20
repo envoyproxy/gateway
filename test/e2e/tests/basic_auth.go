@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, BasicAuthTest)
+	ConformanceTests = append(ConformanceTests, BasicAuthTest, BasicAuthRealmTest)
 }
 
 var BasicAuthTest = suite.ConformanceTest{
@@ -246,6 +246,72 @@ var BasicAuthTest = suite.ConformanceTest{
 				},
 				Response: http.Response{
 					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+	},
+}
+
+var BasicAuthRealmTest = suite.ConformanceTest{
+	ShortName:   "BasicAuthRealm",
+	Description: "BasicAuth SecurityPolicy with a custom realm returns the realm in WWW-Authenticate on 401",
+	Manifests:   []string{"testdata/basic-auth.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		t.Run("realm returned on first route", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "http-with-basic-auth-realm-1", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-realm-1", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/basic-auth-realm-1",
+				},
+				Response: http.Response{
+					StatusCodes: []int{401},
+					Headers: map[string]string{
+						"www-authenticate": `Basic realm="myapp"`,
+					},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("realm returned on second route", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "http-with-basic-auth-realm-2", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "basic-auth-realm-2", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/basic-auth-realm-2",
+				},
+				Response: http.Response{
+					StatusCodes: []int{401},
+					Headers: map[string]string{
+						"www-authenticate": `Basic realm="myapp"`,
+					},
 				},
 				Namespace: ns,
 			}
