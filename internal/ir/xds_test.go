@@ -1402,6 +1402,139 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "cluster per setting shared ip endpoint with different tls",
+			input: RouteDestination{
+				Name: "shared endpoint",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{SNI: new("a.example.com")},
+					},
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{SNI: new("b.example.com")},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "cluster per setting shared ip endpoint with and without tls",
+			input: RouteDestination{
+				Name: "shared endpoint",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{SNI: new("a.example.com")},
+					},
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443}},
+						AddressType: new(IP),
+						TLS:         nil,
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "single cluster shared ip endpoint with same tls",
+			input: RouteDestination{
+				Name: "shared endpoint",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{SNI: new("a.example.com")},
+					},
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{SNI: new("a.example.com")},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "cluster per setting shared ip endpoint with different hostnames and same tls",
+			input: RouteDestination{
+				Name: "shared endpoint",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443, Hostname: new("a.example.com")}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{AutoSNIFromEndpointHostname: true},
+					},
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443, Hostname: new("b.example.com")}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{AutoSNIFromEndpointHostname: true},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "single cluster shared ip endpoint with same hostname and same tls",
+			input: RouteDestination{
+				Name: "shared endpoint",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443, Hostname: new("a.example.com")}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{AutoSNIFromEndpointHostname: true},
+					},
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443, Hostname: new("a.example.com")}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{AutoSNIFromEndpointHostname: true},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "single cluster different ip endpoints with different tls",
+			input: RouteDestination{
+				Name: "shared endpoint",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.2", Port: 8443}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{SNI: new("a.example.com")},
+					},
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "10.0.1.3", Port: 8443}},
+						AddressType: new(IP),
+						TLS:         &TLSUpstreamConfig{SNI: new("b.example.com")},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "single cluster shared fqdn endpoint with different tls",
+			input: RouteDestination{
+				Name: "shared endpoint",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "example.com", Port: 8443}},
+						AddressType: new(FQDN),
+						TLS:         &TLSUpstreamConfig{SNI: new("a.example.com")},
+					},
+					{
+						Endpoints:   []*DestinationEndpoint{{Host: "example.com", Port: 8443}},
+						AddressType: new(FQDN),
+						TLS:         &TLSUpstreamConfig{SNI: new("b.example.com")},
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for _, test := range tests {
