@@ -767,6 +767,7 @@ func (t *Translator) processMergedBackendClusters(tCtx *types.ResourceVersionTab
 		ea := &ExtraArgs{
 			metrics:           xdsIR.Metrics,
 			ipFamily:          determineIPFamily([]*ir.DestinationSetting{bc.Setting}),
+			statName:          bc.StatName,
 			extensionMgr:      t.ExtensionManager,
 			logger:            t.Logger,
 			traffic:           bc.Traffic,

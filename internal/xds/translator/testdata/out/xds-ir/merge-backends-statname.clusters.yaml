@@ -1,4 +1,5 @@
-- circuitBreakers:
+- altStatName: default/shared-backend
+  circuitBreakers:
     thresholds:
     - maxRetries: 1024
   commonLbConfig: {}

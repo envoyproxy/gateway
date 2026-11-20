@@ -654,6 +654,15 @@ func irBackendClusterName(key *BackendClusterKey) string {
 	return base + "/" + strings.ToLower(string(key.Protocol))
 }
 
+// irBackendClusterStatName names a BackendCluster's stats after its backend, in the same
+// <namespace>/<name> format that %BACKEND_REFS% uses, so stat names stay the same when
+// merging is turned on. The kind is left out: a Service and a Backend with the
+// same name in one namespace is rare and isn't worth longer stat names. A new operator can
+// add it if needed.
+func irBackendClusterStatName(key *BackendClusterKey) string {
+	return fmt.Sprintf("%s/%s", key.Namespace, key.Name)
+}
+
 func irExtensionResourceName(key *ExtensionResourceKey) string {
 	if key.Group == "" {
 		return fmt.Sprintf("%s/%s/%s", strings.ToLower(key.Kind), key.Namespace, key.Name)
