@@ -3478,7 +3478,6 @@ func validateUDPHealthCheckPayloads(hc *ir.HealthCheck) error {
 //   - GRPCRoute: http1 is meaningless (gRPC always uses HTTP/2).
 //   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 has no effect.
 //   - UDPRoute: only the UDP active health checker applies, and passive checks have no effect.
-//   - Every other route kind: the UDP active health checker has no effect.
 func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeKind string) error {
 	var msgs []string
 	switch routeKind {
@@ -3494,12 +3493,8 @@ func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeK
 
 	if hc := p.Spec.HealthCheck; hc != nil {
 		isUDP := routeKind == resource.KindUDPRoute
-		if hc.Active != nil && (hc.Active.Type == egv1a1.ActiveHealthCheckerTypeUDP) != isUDP {
-			if isUDP {
-				msgs = append(msgs, fmt.Sprintf("only the UDP active health checker works with a UDPRoute, so the %s health checker is ignored", hc.Active.Type))
-			} else {
-				msgs = append(msgs, fmt.Sprintf("the UDP active health checker only works with a UDPRoute, so it is ignored for a %s", routeKind))
-			}
+		if isUDP && hc.Active != nil && hc.Active.Type != egv1a1.ActiveHealthCheckerTypeUDP {
+			msgs = append(msgs, fmt.Sprintf("only the UDP active health checker works with a UDPRoute, so the %s health checker is ignored", hc.Active.Type))
 		}
 		// udp_proxy only reports outlier detection results for tunneled sessions, which EG doesn't configure.
 		if isUDP && hc.Passive != nil {

@@ -1,5 +1,5 @@
-# The UDP route's cluster gets the UDP health checker, probing the override port. The TCP route
-# carries a UDP health checker too, which doesn't fit a TCP cluster, so its cluster gets none.
+# Both clusters get the UDP health checker: the UDP route's probes the override port, and the
+# TCP route's probes the port the backend serves on.
 udp:
 - name: "udp-route"
   address: "::"

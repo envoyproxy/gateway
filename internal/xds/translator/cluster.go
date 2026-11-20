@@ -526,8 +526,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil &&
-		// The UDP checker only fits a UDP cluster and the others never do, so a mismatched one is skipped.
-		(args.healthCheck.Active.UDP != nil) == isUDPCluster(args.settings) {
+		// A UDP cluster only takes the UDP checker. Any cluster can take the UDP checker, since a
+		// backend may answer UDP probes even when its traffic goes over TCP.
+		(args.healthCheck.Active.UDP != nil || !isUDPCluster(args.settings)) {
 		var err error
 		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol
 		upstreamNegotiated := requiresAutoHTTPConfig && !requiresHTTP2Options &&

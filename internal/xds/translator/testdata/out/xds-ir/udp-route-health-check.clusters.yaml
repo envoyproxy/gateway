@@ -9,6 +9,19 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: tcp-route-dest
+  healthChecks:
+  - customHealthCheck:
+      name: envoy.health_checkers.udp
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.health_checkers.udp.v3.UdpHealthCheck
+        receive:
+          text: 706f6e67
+        send:
+          text: "70696e67"
+    healthyThreshold: 1
+    interval: 5s
+    timeout: 1s
+    unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:

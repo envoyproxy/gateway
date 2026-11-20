@@ -121,7 +121,7 @@ backendTrafficPolicies:
             text: pong
       passive:
         consecutiveLocalOriginFailures: 5
-# A UDP health checker has no effect on a TCPRoute.
+# A UDP health checker also works with a TCPRoute backend.
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:

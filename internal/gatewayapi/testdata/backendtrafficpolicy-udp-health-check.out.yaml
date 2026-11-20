@@ -130,17 +130,16 @@ backendTrafficPolicies:
         sectionName: tcp
       conditions:
       - lastTransitionTime: null
-        message: the UDP active health checker only works with a UDPRoute, so it is
-          ignored for a TCPRoute; spec.targetRef is deprecated and will be removed
-          in v1.11, use spec.targetRefs instead
-        reason: Warnings
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
