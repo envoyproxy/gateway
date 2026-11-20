@@ -87,6 +87,7 @@ var (
 	ErrHCHTTPExpectedStatusesInvalid            = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
 	ErrHealthCheckOverridesPortInvalid          = errors.New("field HealthCheckOverrides.Port must be between 1 and 65535")
 	ErrHealthCheckPayloadInvalid                = errors.New("one of Text, Binary fields must be set in payload")
+	ErrUDPHealthCheckerPayloadMissing           = errors.New("both send and receive payloads must be set for the UDP health checker")
 	ErrHTTPStatusInvalid                        = errors.New("HTTPStatus should be in [200,600)")
 	ErrOutlierDetectionBaseEjectionTimeInvalid  = errors.New("field OutlierDetection.BaseEjectionTime must be specified")
 	ErrOutlierDetectionIntervalInvalid          = errors.New("field OutlierDetection.Interval must be specified")
@@ -3183,6 +3184,8 @@ type UDPRoute struct {
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// DNS is used to configure how DNS resolution is handled by the Envoy Proxy cluster
 	DNS *DNS `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// HealthCheck defines the health check settings for the backend endpoints.
+	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// Authorization defines the schema for the authorization.
 	Authorization *Authorization `json:"authorization,omitempty" yaml:"authorization,omitempty"`
 }
@@ -3218,6 +3221,12 @@ func (u UDPRoute) Validate() error {
 
 	if u.Destination != nil {
 		if err := u.Destination.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	if u.HealthCheck != nil {
+		if err := u.HealthCheck.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -3894,6 +3903,8 @@ type ActiveHealthCheck struct {
 	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 	// GRPC defines if the GRPC healthcheck service should be used
 	GRPC *GRPCHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
+	// UDP defines the configuration of the UDP health checker.
+	UDP *UDPHealthChecker `json:"udp,omitempty" yaml:"udp,omitempty"`
 	// Overrides defines the configuration of the overriding health check settings for all endpoints
 	// in the backend cluster.
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
@@ -3952,6 +3963,9 @@ func (h *HealthCheck) Validate() error {
 		if h.Active.GRPC != nil {
 			matchCount++
 		}
+		if h.Active.UDP != nil {
+			matchCount++
+		}
 		if matchCount > 1 {
 			errs = errors.Join(errs, ErrHealthCheckerInvalid)
 		}
@@ -3963,6 +3977,11 @@ func (h *HealthCheck) Validate() error {
 		}
 		if h.Active.TCP != nil {
 			if err := h.Active.TCP.Validate(); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+		if h.Active.UDP != nil {
+			if err := h.Active.UDP.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -4109,6 +4128,21 @@ func (c *TCPHealthChecker) Validate() error {
 	return errs
 }
 
+// UDPHealthChecker defines the settings of the UDP health checker.
+// +k8s:deepcopy-gen=true
+type UDPHealthChecker struct {
+	Send    *HealthCheckPayload `json:"send,omitempty" yaml:"send,omitempty"`
+	Receive *HealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
+}
+
+// Validate the fields within the UDPHealthChecker structure.
+func (c *UDPHealthChecker) Validate() error {
+	if c.Send == nil || c.Receive == nil {
+		return ErrUDPHealthCheckerPayloadMissing
+	}
+	return errors.Join(c.Send.Validate(), c.Receive.Validate())
+}
+
 // HealthCheckOverrides allows overriding default health check behavior for specific use cases.
 type HealthCheckOverrides struct {
 	Port uint32 `json:"port,omitempty" yaml:"port,omitempty"`
@@ -4129,6 +4163,20 @@ type HealthCheckPayload struct {
 	Text *string `json:"text,omitempty" yaml:"text,omitempty"`
 	// Binary payload base64 encoded
 	Binary []byte `json:"binary,omitempty" yaml:"binary,omitempty"`
+}
+
+// Size returns the number of bytes the payload decodes to.
+func (p *HealthCheckPayload) Size() int {
+	if p == nil {
+		return 0
+	}
+	if len(p.Binary) > 0 {
+		return len(p.Binary)
+	}
+	if p.Text != nil {
+		return len(*p.Text)
+	}
+	return 0
 }
 
 // Validate the fields in the HealthCheckPayload.

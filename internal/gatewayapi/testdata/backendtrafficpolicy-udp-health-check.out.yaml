@@ -1,0 +1,505 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: udp-checker-on-udproute
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: 1
+        interval: 3s
+        overrides:
+          port: 9053
+        timeout: 500ms
+        type: UDP
+        udp:
+          receive:
+            binary: cG9uZw==
+            type: Binary
+          send:
+            text: ping
+            type: Text
+        unhealthyThreshold: 3
+      panicThreshold: 30
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udp-app-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: udp-1
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
+          instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: tcp-checker-on-udproute
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: null
+        interval: null
+        tcp:
+          receive:
+            text: pong
+            type: Text
+          send:
+            text: ping
+            type: Text
+        timeout: null
+        type: TCP
+        unhealthyThreshold: null
+      passive:
+        consecutiveLocalOriginFailures: 5
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udp-app-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: udp-2
+      conditions:
+      - lastTransitionTime: null
+        message: only the UDP active health checker works with a UDPRoute, so the
+          TCP health checker is ignored; passive health checks have no effect when
+          targeting a UDPRoute; spec.targetRef is deprecated and will be removed in
+          v1.11, use spec.targetRefs instead
+        reason: Warnings
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: udp-checker-on-tcproute
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: null
+        interval: null
+        timeout: null
+        type: UDP
+        udp:
+          receive:
+            text: pong
+            type: Text
+          send:
+            text: ping
+            type: Text
+        unhealthyThreshold: null
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcp-app-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: tcp
+      conditions:
+      - lastTransitionTime: null
+        message: the UDP active health checker only works with a UDPRoute, so it is
+          ignored for a TCPRoute; spec.targetRef is deprecated and will be removed
+          in v1.11, use spec.targetRefs instead
+        reason: Warnings
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: UDPRoute
+      name: udp-1
+      port: 8161
+      protocol: UDP
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: UDPRoute
+      name: udp-2
+      port: 8162
+      protocol: UDP
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: TCPRoute
+      name: tcp
+      port: 8163
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: udp-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: udp-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+infraIR:
+  default/gateway-1:
+    proxy:
+      listeners:
+      - name: default/gateway-1/udp-1
+        ports:
+        - containerPort: 8161
+          name: udp-8161
+          protocol: UDP
+          servicePort: 8161
+      - name: default/gateway-1/udp-2
+        ports:
+        - containerPort: 8162
+          name: udp-8162
+          protocol: UDP
+          servicePort: 8162
+      - name: default/gateway-1/tcp
+        ports:
+        - containerPort: 8163
+          name: tcp-8163
+          protocol: TCP
+          servicePort: 8163
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: default/gateway-1
+      namespace: envoy-gateway-system
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: TCPRoute
+  metadata:
+    name: tcp-app-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        sectionName: tcp
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    name: udp-app-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      sectionName: udp-1
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8161
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: UDP Port 8161 not found on Service default/service-1
+        reason: PortNotFound
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        sectionName: udp-1
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    name: udp-app-2
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      sectionName: udp-2
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8162
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        sectionName: udp-2
+xdsIR:
+  default/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-default-gateway-1-bfd08ef4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: default/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-default-gateway-1-bfd08ef4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/gateway-1
+          protocol: TCP
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 8163
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: tcp
+      name: default/gateway-1/tcp
+      port: 8163
+      routes:
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcp-app-1
+            namespace: default
+          name: tcproute/default/tcp-app-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8163
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8163"
+            name: tcproute/default/tcp-app-1/rule/-1/backend/0
+            protocol: TCP
+            weight: 1
+        healthCheck:
+          active:
+            healthyThreshold: null
+            interval: null
+            timeout: null
+            udp:
+              receive:
+                text: pong
+              send:
+                text: ping
+            unhealthyThreshold: null
+        metadata:
+          kind: TCPRoute
+          name: tcp-app-1
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: udp-checker-on-tcproute
+            namespace: default
+        name: tcproute/default/tcp-app-1
+    udp:
+    - address: 0.0.0.0
+      externalPort: 8161
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: udp-1
+      name: default/gateway-1/udp-1
+      port: 8161
+      route:
+        destination:
+          metadata:
+            kind: UDPRoute
+            name: udp-app-1
+            namespace: default
+          name: udproute/default/udp-app-1/rule/-1
+        healthCheck:
+          active:
+            healthyThreshold: 1
+            interval: 3s
+            overrides:
+              port: 9053
+            timeout: 500ms
+            udp:
+              receive:
+                binary: cG9uZw==
+              send:
+                text: ping
+            unhealthyThreshold: 3
+          panicThreshold: 30
+        name: udproute/default/udp-app-1
+    - address: 0.0.0.0
+      externalPort: 8162
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: udp-2
+      name: default/gateway-1/udp-2
+      port: 8162
+      route:
+        destination:
+          metadata:
+            kind: UDPRoute
+            name: udp-app-2
+            namespace: default
+          name: udproute/default/udp-app-2/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8162
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8162"
+            name: udproute/default/udp-app-2/rule/-1/backend/0
+            protocol: UDP
+            weight: 1
+        name: udproute/default/udp-app-2

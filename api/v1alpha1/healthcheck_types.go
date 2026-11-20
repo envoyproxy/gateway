@@ -173,8 +173,13 @@ type ActiveHealthCheck struct {
 
 	// UDP defines the configuration of the UDP health checker.
 	// It's required while the health checker type is UDP.
+	//
+	// The UDP health checker only applies to UDPRoute backends, and UDPRoute backends
+	// only use the UDP health checker. On a policy that covers both, each backend uses
+	// the active health check only when it fits, so a Gateway with TCP and UDP listeners
+	// needs a separate policy per route kind to health check both. Passive health checks
+	// have no effect on UDPRoute backends.
 	// +optional
-	// +notImplementedHide
 	UDP *UDPActiveHealthChecker `json:"udp,omitempty" yaml:"udp,omitempty"`
 
 	// Overrides defines the configuration of the overriding health check settings for all endpoints

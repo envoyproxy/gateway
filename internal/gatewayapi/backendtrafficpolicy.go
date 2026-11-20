@@ -1883,6 +1883,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				// only set attributes which weren't already set by a more
 				// specific policy
 				setIfNil(&r.LoadBalancer, tf.LoadBalancer)
+				setIfNil(&r.HealthCheck, udpHealthCheck(tf.HealthCheck))
 				setIfNil(&r.DNS, tf.DNS)
 			}
 		}
@@ -2002,6 +2003,12 @@ func (t *Translator) buildClusterTrafficFeatures(policy *egv1a1.BackendTrafficPo
 	}
 	pp = buildProxyProtocol(&policy.Spec.BackendSettings)
 	hc = buildHealthCheck(&policy.Spec.BackendSettings)
+	if err = validateUDPHealthCheckPayloads(hc); err != nil {
+		// Envoy rejects the whole cluster over an oversized payload, so drop only the active check.
+		hc.Active = nil
+		err = perr.WithMessage(err, "HealthCheck")
+		errs = errors.Join(errs, err)
+	}
 	if cb, err = buildCircuitBreaker(&policy.Spec.BackendSettings); err != nil {
 		err = perr.WithMessage(err, "CircuitBreaker")
 		errs = errors.Join(errs, err)
@@ -2257,6 +2264,7 @@ func (t *Translator) translateBackendTrafficPolicyForListeners(
 		// only set attributes which weren't already set by a more
 		// specific policy
 		setIfNil(&route.LoadBalancer, tf.LoadBalancer)
+		setIfNil(&route.HealthCheck, udpHealthCheck(tf.HealthCheck))
 		setIfNil(&route.DNS, tf.DNS)
 	}
 
@@ -2435,10 +2443,9 @@ func applyRouteHTTP3(r *ir.HTTPRoute, warnings http3Warnings) {
 //
 // Without MergeBackends a TCP/UDP backend's cluster is built from ir.TCPRoute / ir.UDPRoute, which
 // carry a deliberately narrower feature set than an HTTP route's - ir.UDPRoute, for instance, only
-// has LoadBalancer and DNS, so a health check can never reach the cluster udp_proxy routes to.
-// Deduplicating clusters must not change that, so the subsets below mirror exactly what the TCP
-// and UDP loops in translateBackendTrafficPolicyForListeners set on their routes; keep them in
-// sync with those loops.
+// has LoadBalancer, HealthCheck and DNS. Deduplicating clusters must not change that, so the
+// subsets below mirror exactly what the TCP and UDP loops in
+// translateBackendTrafficPolicyForListeners set on their routes; keep them in sync with those loops.
 func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, cf *ir.ClusterTrafficFeatures, useClientProtocol *bool) (http3Warnings []string) {
 	if bc == nil || cf == nil {
 		return nil
@@ -2452,6 +2459,7 @@ func applyGatewayPolicyToMergedCluster(bc *ir.BackendCluster, cf *ir.ClusterTraf
 	case ir.UDP:
 		bc.Traffic = &ir.ClusterTrafficFeatures{
 			LoadBalancer: cf.LoadBalancer.DeepCopy(),
+			HealthCheck:  udpHealthCheck(cf.HealthCheck),
 			DNS:          cf.DNS.DeepCopy(),
 		}
 	case ir.TCP:
@@ -3425,21 +3433,82 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	return &statName
 }
 
+// udpHealthCheck returns the part of hc that a UDP cluster can use: the active check only when
+// it's the UDP checker, and no passive check, since udp_proxy only reports outlier results for
+// tunneled sessions. The panic threshold still applies because udp_proxy picks hosts through
+// the cluster's load balancer.
+func udpHealthCheck(hc *ir.HealthCheck) *ir.HealthCheck {
+	if hc == nil {
+		return nil
+	}
+	out := &ir.HealthCheck{PanicThreshold: hc.PanicThreshold}
+	if hc.Active != nil && hc.Active.UDP != nil {
+		out.Active = hc.Active.DeepCopy()
+	}
+	if out.Active == nil && out.PanicThreshold == nil {
+		return nil
+	}
+	return out
+}
+
+// maxUDPHealthCheckPayloadSize is the largest payload Envoy's UDP health checker accepts:
+// a 65,535-byte IPv4 packet minus the 20-byte IP header and the 8-byte UDP header.
+const maxUDPHealthCheckPayloadSize = 65507
+
+func validateUDPHealthCheckPayloads(hc *ir.HealthCheck) error {
+	if hc == nil || hc.Active == nil || hc.Active.UDP == nil {
+		return nil
+	}
+	var errs error
+	for _, p := range []struct {
+		name    string
+		payload *ir.HealthCheckPayload
+	}{{"send", hc.Active.UDP.Send}, {"receive", hc.Active.UDP.Receive}} {
+		if size := p.payload.Size(); size > maxUDPHealthCheckPayloadSize {
+			errs = errors.Join(errs, fmt.Errorf("UDP health check %s payload is %d bytes, more than the %d-byte limit",
+				p.name, size, maxUDPHealthCheckPayloadSize))
+		}
+	}
+	return errs
+}
+
 // validateBackendTrafficPolicyForRoute returns an error when the policy carries
-// http1 settings that are silently ignored for the given route kind:
+// settings that are silently ignored for the given route kind:
 //
 //   - GRPCRoute: http1 is meaningless (gRPC always uses HTTP/2).
 //   - TCPRoute, TLSRoute, UDPRoute: go through the TCP/UDP path; http1 has no effect.
+//   - UDPRoute: only the UDP active health checker applies, and passive checks have no effect.
+//   - Every other route kind: the UDP active health checker has no effect.
 func validateBackendTrafficPolicyForRoute(p *egv1a1.BackendTrafficPolicy, routeKind string) error {
+	var msgs []string
 	switch routeKind {
 	case resource.KindGRPCRoute:
 		if p.Spec.HTTP1 != nil {
-			return fmt.Errorf("HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
+			msgs = append(msgs, "HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always uses HTTP/2)")
 		}
 	case resource.KindTCPRoute, resource.KindTLSRoute, resource.KindUDPRoute:
 		if p.Spec.HTTP1 != nil {
-			return fmt.Errorf("HTTP/1 settings have no effect when targeting a %s", routeKind)
+			msgs = append(msgs, fmt.Sprintf("HTTP/1 settings have no effect when targeting a %s", routeKind))
 		}
 	}
-	return nil
+
+	if hc := p.Spec.HealthCheck; hc != nil {
+		isUDP := routeKind == resource.KindUDPRoute
+		if hc.Active != nil && (hc.Active.Type == egv1a1.ActiveHealthCheckerTypeUDP) != isUDP {
+			if isUDP {
+				msgs = append(msgs, fmt.Sprintf("only the UDP active health checker works with a UDPRoute, so the %s health checker is ignored", hc.Active.Type))
+			} else {
+				msgs = append(msgs, fmt.Sprintf("the UDP active health checker only works with a UDPRoute, so it is ignored for a %s", routeKind))
+			}
+		}
+		// udp_proxy only reports outlier detection results for tunneled sessions, which EG doesn't configure.
+		if isUDP && hc.Passive != nil {
+			msgs = append(msgs, "passive health checks have no effect when targeting a UDPRoute")
+		}
+	}
+
+	if len(msgs) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(msgs, "; "))
 }

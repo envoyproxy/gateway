@@ -1,0 +1,144 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: udp-1
+      protocol: UDP
+      port: 8161
+      allowedRoutes:
+        kinds:
+        - kind: UDPRoute
+          group: gateway.networking.k8s.io
+    - name: udp-2
+      protocol: UDP
+      port: 8162
+      allowedRoutes:
+        kinds:
+        - kind: UDPRoute
+          group: gateway.networking.k8s.io
+    - name: tcp
+      protocol: TCP
+      port: 8163
+      allowedRoutes:
+        kinds:
+        - kind: TCPRoute
+          group: gateway.networking.k8s.io
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: udp-app-1
+  spec:
+    parentRefs:
+    - name: gateway-1
+      sectionName: udp-1
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8161
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: udp-app-2
+  spec:
+    parentRefs:
+    - name: gateway-1
+      sectionName: udp-2
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8162
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcp-app-1
+  spec:
+    parentRefs:
+    - name: gateway-1
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+backendTrafficPolicies:
+# A UDP health checker on a UDPRoute is applied as is.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: udp-checker-on-udproute
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udp-app-1
+    healthCheck:
+      panicThreshold: 30
+      active:
+        type: UDP
+        timeout: 500ms
+        interval: 3s
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        udp:
+          send:
+            type: Text
+            text: ping
+          receive:
+            type: Binary
+            binary: cG9uZw==
+        overrides:
+          port: 9053
+# A TCP health checker and passive health checks have no effect on a UDPRoute.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: tcp-checker-on-udproute
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udp-app-2
+    healthCheck:
+      active:
+        type: TCP
+        tcp:
+          send:
+            type: Text
+            text: ping
+          receive:
+            type: Text
+            text: pong
+      passive:
+        consecutiveLocalOriginFailures: 5
+# A UDP health checker has no effect on a TCPRoute.
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: udp-checker-on-tcproute
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcp-app-1
+    healthCheck:
+      active:
+        type: UDP
+        udp:
+          send:
+            type: Text
+            text: ping
+          receive:
+            type: Text
+            text: pong

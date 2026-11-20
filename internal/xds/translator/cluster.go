@@ -23,6 +23,7 @@ import (
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	hcfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/health_check/event_sinks/file/v3"
+	udphcv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/health_checkers/udp/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	cluster_providedv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/cluster_provided/v3"
@@ -524,7 +525,9 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.LoadBalancingPolicy = backendUtilizationPolicy
 	}
 
-	if args.healthCheck != nil && args.healthCheck.Active != nil {
+	if args.healthCheck != nil && args.healthCheck.Active != nil &&
+		// The UDP checker only fits a UDP cluster and the others never do, so a mismatched one is skipped.
+		(args.healthCheck.Active.UDP != nil) == isUDPCluster(args.settings) {
 		var err error
 		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol
 		upstreamNegotiated := requiresAutoHTTPConfig && !requiresHTTP2Options &&
@@ -732,6 +735,20 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string
 		hc.HealthChecker = &corev3.HealthCheck_TcpHealthCheck_{
 			TcpHealthCheck: tcpChecker,
 		}
+	case healthcheck.UDP != nil:
+		udpAny, err := proto.ToAnyWithValidation(&udphcv3.UdpHealthCheck{
+			Send:    buildHealthCheckPayload(healthcheck.UDP.Send),
+			Receive: buildHealthCheckPayload(healthcheck.UDP.Receive),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal UDP health check: %w", err)
+		}
+		hc.HealthChecker = &corev3.HealthCheck_CustomHealthCheck_{
+			CustomHealthCheck: &corev3.HealthCheck_CustomHealthCheck{
+				Name:       "envoy.health_checkers.udp",
+				ConfigType: &corev3.HealthCheck_CustomHealthCheck_TypedConfig{TypedConfig: udpAny},
+			},
+		}
 	case healthcheck.GRPC != nil:
 		// Envoy always sends gRPC health check requests over HTTP/2.
 		hc.TlsOptions = buildHealthCheckTLSOptions(settings, xdstype.CodecClientType_HTTP2, false)
@@ -929,6 +946,16 @@ func buildHTTPStatusRange(irStatuses []ir.HTTPStatus) []*xdstype.Int64Range {
 		ranges = append(ranges, &xdstype.Int64Range{Start: start, End: end})
 	}
 	return ranges
+}
+
+// isUDPCluster reports whether the cluster's endpoints are reached over UDP.
+func isUDPCluster(settings []*ir.DestinationSetting) bool {
+	for _, ds := range settings {
+		if ds != nil && ds.Protocol == ir.UDP {
+			return true
+		}
+	}
+	return false
 }
 
 func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_Payload {
@@ -1721,15 +1748,17 @@ func (route *UDPRouteTranslator) asClusterArgs(name string,
 	metadata *ir.ResourceMetadata,
 ) *xdsClusterArgs {
 	return &xdsClusterArgs{
-		name:         name,
-		settings:     settings,
-		loadBalancer: route.LoadBalancer,
-		endpointType: buildEndpointType(settings),
-		metrics:      extra.metrics,
-		dns:          route.DNS,
-		ipFamily:     extra.ipFamily,
-		metadata:     metadata,
-		isRoute:      true,
+		name:           name,
+		settings:       settings,
+		loadBalancer:   route.LoadBalancer,
+		healthCheck:    route.HealthCheck,
+		endpointType:   buildEndpointType(settings),
+		metrics:        extra.metrics,
+		dns:            route.DNS,
+		ipFamily:       extra.ipFamily,
+		metadata:       metadata,
+		healthCheckLog: extra.healthCheckLog,
+		isRoute:        true,
 	}
 }
 

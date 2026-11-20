@@ -9,6 +9,7 @@ import (
 	"math"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -4297,6 +4298,42 @@ func TestValidateBackendTrafficPolicyForRoute(t *testing.T) {
 				}
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateUDPHealthCheckPayloads(t *testing.T) {
+	udpCheck := func(send, receive *ir.HealthCheckPayload) *ir.HealthCheck {
+		return &ir.HealthCheck{Active: &ir.ActiveHealthCheck{UDP: &ir.UDPHealthChecker{Send: send, Receive: receive}}}
+	}
+	atLimit := &ir.HealthCheckPayload{Binary: make([]byte, maxUDPHealthCheckPayloadSize)}
+	overLimit := &ir.HealthCheckPayload{Binary: make([]byte, maxUDPHealthCheckPayloadSize+1)}
+	// Text is measured in bytes: 21,836 three-byte characters are 65,508 bytes.
+	overLimitText := &ir.HealthCheckPayload{Text: new(string)}
+	*overLimitText.Text = strings.Repeat("€", 21836)
+
+	cases := []struct {
+		name    string
+		hc      *ir.HealthCheck
+		wantErr []string
+	}{
+		{name: "no health check", hc: nil},
+		{name: "non-UDP checker", hc: &ir.HealthCheck{Active: &ir.ActiveHealthCheck{TCP: &ir.TCPHealthChecker{}}}},
+		{name: "payloads at the limit", hc: udpCheck(atLimit, atLimit)},
+		{name: "send over the limit", hc: udpCheck(overLimit, atLimit), wantErr: []string{"send payload is 65508 bytes"}},
+		{name: "both over the limit", hc: udpCheck(overLimit, overLimitText), wantErr: []string{"send payload", "receive payload is 65508 bytes"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateUDPHealthCheckPayloads(tc.hc)
+			if len(tc.wantErr) == 0 {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			for _, want := range tc.wantErr {
+				require.ErrorContains(t, err, want)
 			}
 		})
 	}
