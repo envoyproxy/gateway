@@ -2374,6 +2374,37 @@ func TestHTTP3Incompatibilities(t *testing.T) {
 	}
 }
 
+func TestCircuitBreakerUDPOnly(t *testing.T) {
+	tests := []struct {
+		name string
+		in   *CircuitBreaker
+		want *CircuitBreaker
+	}{
+		{name: "nil", in: nil, want: nil},
+		{name: "no maxConnections", in: &CircuitBreaker{MaxPendingRequests: new(uint32(1))}, want: nil},
+		{
+			name: "keeps only maxConnections",
+			in: &CircuitBreaker{
+				MaxConnections:      new(uint32(100)),
+				MaxPendingRequests:  new(uint32(1)),
+				MaxParallelRequests: new(uint32(2)),
+				PerEndpoint:         &PerEndpointCircuitBreakers{MaxConnections: new(uint32(3))},
+			},
+			want: &CircuitBreaker{MaxConnections: new(uint32(100))},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.in.UDPOnly()
+			require.Equal(t, tc.want, got)
+			if got != nil {
+				// The result must not alias the policy's value.
+				require.NotSame(t, tc.in.MaxConnections, got.MaxConnections)
+			}
+		})
+	}
+}
+
 func TestRouteDestination_HasPriorityFailover(t *testing.T) {
 	endpoints := []*DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}}
 	tests := []struct {

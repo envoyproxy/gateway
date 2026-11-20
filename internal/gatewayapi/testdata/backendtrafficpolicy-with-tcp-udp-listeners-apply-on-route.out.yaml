@@ -434,6 +434,8 @@ xdsIR:
       name: default/tcp-gateway/foo
       port: 8162
       route:
+        circuitBreaker:
+          maxConnections: 2048
         destination:
           metadata:
             kind: UDPRoute
