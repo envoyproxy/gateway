@@ -1,0 +1,1 @@
+Fixed a BackendTrafficPolicy with `requestBuffer` set but `limit` unset (for example `requestBuffer: {}`) being accepted and then failing xDS translation, which left the previous Envoy configuration in place. The API server now rejects it with the message "limit must be set".
