@@ -22,6 +22,9 @@ upgrade-based traffic such as gRPC streaming and WebSocket. Using `BufferAndLimi
 because the request may never be forwarded upstream. Use full request buffering only on non-streaming HTTP request flows, or use
 `LimitOnly` instead, which is compatible with streaming and protocol upgrades.
 
+To cap the request body size without buffering the request at all, use `requestBodyLimit` instead; see
+[Request Body Size Limit](../request-body-limit).
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
