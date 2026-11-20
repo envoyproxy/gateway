@@ -236,7 +236,11 @@ silently losing that isolation would be worse than a visible error. Instead:
 
   `spec.rateLimit` reuses the `EnvoyGateway.rateLimit` type, whose `failClosed` is a plain boolean
   defaulting to `false`, so an omitted field and an explicit `false` are the same value and behave the
-  same way here, as they do for a running RLS.
+  same way here, as they do for a running RLS. Today that field has neither `omitempty` nor an
+  `+optional` marker, so the generated EnvoyProxy CRD would make it required inside `rateLimit` and
+  reject an `EnvoyProxy` that omits it. As part of this API change, `RateLimit.FailClosed` gains
+  `+optional` and `omitempty`. It stays a `bool`, so the meaning of an omitted value is unchanged and
+  existing `EnvoyGateway` configurations remain valid.
 
   Other routes and listeners of the Gateway, and other Gateways, are not affected.
 
@@ -342,11 +346,20 @@ even when several RLS use the same Redis database. Whether targets share a bucke
 RLS their Gateways use, never on the Redis backends behind them.
 
 The prefix cannot collide with existing keys. The RLS builds each key from the prefix, the domain, `_`
-and the descriptors. Domains consist only of Kubernetes names, listener section names and `/`, so a
-shared RLS key contains only lowercase letters, digits, `-`, `.` and `/` before its first `_`. A
-dedicated RLS key always contains `:` before that point, so it never matches a shared RLS key. Two
-dedicated RLS keys differ in the text before their first `:`, which is their Gateway's namespace and
-name.
+and the descriptors. Domains consist only of Kubernetes names, listener section names and `/`, so
+without a prefix a shared RLS key contains only lowercase letters, digits, `-`, `.` and `/` before its
+first `_`. A dedicated RLS key always contains `:` before that point, so it never matches a shared RLS
+key. Two dedicated RLS keys differ in the text before their first `:`, which is their Gateway's
+namespace and name.
+
+Admins can already set `CACHE_KEY_PREFIX` on the shared RLS through
+`EnvoyGateway.provider.kubernetes.rateLimitDeployment` (container env or patch). A shared prefix that
+contains `:`, such as `team-a/gw-a:`, could equal a dedicated prefix and merge buckets. The argument
+above still holds for any shared prefix without `:`, because the shared key then has no `:` before its
+first `_`. Envoy Gateway therefore checks the effective shared `CACHE_KEY_PREFIX` after rendering the
+shared RLS Deployment: while `enableDedicatedRateLimit` is true, a shared prefix containing `:` is an
+inconsistent control-plane configuration and fails startup, like the other inconsistent switch
+settings. A shared prefix without `:` is allowed and keeps working as today.
 
 The prefix is derived from the Gateway, not from the RLS settings. It stays the same when the RLS is
 updated, including when its Redis backend changes.
@@ -454,17 +467,27 @@ existing shared RLS identity and include the scope kind, leaving room for a Gate
 HPA target and Service and PDB selectors refer only to that scope's Deployment and pods; no selector
 spans dedicated scopes or the shared RLS.
 
-Dedicated RLS pods carry the following scope labels, in addition to the existing
-`app.kubernetes.io/name` and `app.kubernetes.io/component: ratelimit` labels:
+Dedicated RLS pods carry the following labels:
 
-| Label                                            | Value                       |
-| ------------------------------------------------ | --------------------------- |
-| `gateway.envoyproxy.io/ratelimit-scope`          | `gateway`                   |
-| `gateway.envoyproxy.io/owning-gateway-namespace` | The Gateway's namespace     |
-| `gateway.envoyproxy.io/owning-gateway-name`      | The Gateway's name          |
+| Label                                            | Value                                             |
+| ------------------------------------------------ | ------------------------------------------------- |
+| `app.kubernetes.io/name`                         | The generated RLS name, never `envoy-ratelimit`   |
+| `app.kubernetes.io/component`                    | `ratelimit`                                       |
+| `app.kubernetes.io/managed-by`                   | `envoy-gateway`                                   |
+| `gateway.envoyproxy.io/ratelimit-scope`          | `gateway`                                         |
+| `gateway.envoyproxy.io/owning-gateway-namespace` | The Gateway's namespace                           |
+| `gateway.envoyproxy.io/owning-gateway-name`      | The Gateway's name                                |
+
+The shared RLS Service, Deployment and PDB select `app.kubernetes.io/name: envoy-ratelimit`,
+`app.kubernetes.io/component: ratelimit` and `app.kubernetes.io/managed-by: envoy-gateway`. Adding the
+scope labels alone would not exclude dedicated pods from that selector, so dedicated pods use a
+different `app.kubernetes.io/name` value instead. The shared selectors therefore never match a
+dedicated pod, and they stay unchanged, which matters because a Deployment's selector is immutable.
+Each dedicated RLS selects all six labels above, so its selectors match neither the shared RLS nor any
+other dedicated RLS.
 
 The owning-gateway labels are the same ones Envoy Gateway already sets on proxy resources. The shared
-RLS does not carry these labels. A future GatewayClass scope would use a different
+RLS does not carry them or the `ratelimit-scope` label. A future GatewayClass scope would use a different
 `ratelimit-scope` value. The labels are part of the supported interface, so admins can select dedicated
 RLS pods in NetworkPolicies and admission policies; see
 [Example: restricting dedicated RLS egress](#example-restricting-dedicated-rls-egress).
@@ -506,10 +529,22 @@ rotation triggers a normal rolling update and new pods pick up the new credentia
 
 **Missing or revoked credentials.** If a referenced Secret is deleted or its `ReferenceGrant` is revoked,
 Envoy Gateway deletes its copy, updates the hash and the Gateway reports a condition naming the problem.
-The new pods cannot start without the Secret, so the rolling update stalls and running pods keep
-serving with the credentials they already loaded until they are replaced. Once the references are valid again, the rollout completes.
+The new pods cannot start without the Secret. What happens to the running pods depends on the
+Deployment strategy:
 
-Deleting the source Secret is therefore **not** a way to cut off Redis access, and Envoy Gateway does not
+* With the built-in `RollingUpdate` strategy, or any rolling strategy that keeps at least one replica
+  available, the rollout stalls and the old pods keep serving with the credentials they already loaded.
+* With `Recreate`, or a rolling strategy whose `maxUnavailable` allows every replica to go (for example
+  `100%`), the old pods are terminated before the replacements fail to start. The RLS then has no ready
+  pods and rate limit checks follow `failClosed`.
+
+In both cases, an old pod that stops for any other reason (eviction, node drain, crash) is not
+replaced until the references are valid again. Once they are, the rollout completes. Envoy Gateway
+does not hold back the pod template change or reject strategies to preserve old pods; strategies other
+than the default can only be set when workload overrides are enabled.
+
+Deleting the source Secret is therefore **not** a reliable way to cut off Redis access, nor one to keep
+the RLS running: the outcome depends on the strategy and on pod churn. Envoy Gateway does not
 provide an RLS stop switch in the first iteration. Removing the `rateLimit` block isn't one either: the
 Gateway moves to the shared RLS, if configured, and the dedicated RLS is removed only after that change
 converges. To stop a dedicated RLS from using credentials that must no longer be used, revoke them at Redis
@@ -521,7 +556,8 @@ rules. Envoy Gateway continues translating the Gateway's listeners and routes, i
 and rate limit filter, and never falls back to another RLS because credentials are unavailable.
 This also applies on first creation with a missing Secret: the Service and Deployment are provisioned,
 but pods requiring the missing credential copy cannot start. Checks that cannot be served follow
-`failClosed`. After deletion or revocation, existing pods may continue serving as described above.
+`failClosed`. After deletion or revocation, existing pods may continue serving, depending on the
+Deployment strategy, as described above.
 These rules are derived from current resources on restart and do not depend on retaining an old snapshot.
 
 ### Validation and status
@@ -674,8 +710,9 @@ These are the author's recommendations and are open for review.
 * Scope comes from the Gateway's own `EnvoyProxy`; no explicit `scope` field is added.
 * A `shared: true` bucket covers only the policy's targets on the same RLS. Domains are unchanged;
   each dedicated RLS sets `CACHE_KEY_PREFIX` to `<gatewayNamespace>/<gatewayName>:` so its Redis keys
-  stay separate, and the shared RLS keeps no prefix. Targets spanning more than one RLS produce a
-  `SharedRateLimitCrossScope` warning, not a rejection.
+  stay separate, and the shared RLS keeps no prefix. A shared prefix set by the admin must not contain
+  `:` while dedicated RLS is enabled, otherwise startup fails. Targets spanning more than one RLS
+  produce a `SharedRateLimitCrossScope` warning, not a rejection.
 * `rateLimit` is not allowed in the control-plane default `EnvoyGateway.envoyProxy`.
 * Dedicated RLS workload settings come only from the Gateway's unmerged `EnvoyProxy`, with built-in
   defaults for omitted settings; class and control-plane workload settings are not inherited.
@@ -698,11 +735,15 @@ These are the author's recommendations and are open for review.
 * Dedicated RLS deployments run in the controller namespace in the first iteration. Running them in the
   Gateway namespace, and the authentication that needs, is deferred.
 * Dedicated RLS pods carry documented, controller-owned scope labels so admins can select them in
-  NetworkPolicies and admission policies. The proposal includes an example egress policy; Envoy
+  NetworkPolicies and admission policies. Their `app.kubernetes.io/name` is the generated RLS name, so
+  the unchanged shared RLS selectors never match them. The proposal includes an example egress policy; Envoy
   Gateway does not generate NetworkPolicies in the first iteration.
 * Envoy Gateway copies the referenced Redis Secret keys into the controller namespace and keeps the copy
   in sync; a config hash on the pod template rolls the RLS on rotation. Revoked credentials stall that
-  rollout, so running pods are not actively stopped; credentials are revoked at Redis.
+  rollout under the default strategy, so running pods are not actively stopped; with `Recreate` or a
+  strategy allowing all replicas to be unavailable they are. Credentials are revoked at Redis.
+* `RateLimit.FailClosed` becomes `+optional` with `omitempty`, so `failClosed` can be omitted in
+  `EnvoyProxy.spec.rateLimit`.
 * Credential resolution failures report `RateLimitReady=False` without rejecting the Gateway, changing
   RLS selection, or skipping infrastructure, rule or proxy reconciliation, including on first creation.
 * Dedicated `RateLimitReady=True` requires the current workload rollout, ready Service endpoints and
@@ -726,14 +767,18 @@ Implementation must cover the following cases with meaningful automated tests:
 * **Coexistence:** shared and dedicated RLS operate together; dedicated-only operation works without a
   shared RLS; multiple Gateways referencing one `EnvoyProxy` receive distinct services and snapshots.
 * **Counter isolation:** two dedicated RLS and the shared RLS using the same Redis database keep
-  separate counters, including for `shared: true` rules; cross-scope policy warnings appear and clear
-  correctly.
+  separate counters, including for `shared: true` rules and a shared RLS with an admin-set prefix
+  without `:`; a shared prefix containing `:` fails startup while dedicated RLS is enabled; cross-scope
+  policy warnings appear and clear correctly.
 * **Counter reuse:** switching back to a previously used shared or dedicated keyspace preserves matching
   unexpired counters rather than promising a reset.
 * **Credentials:** initial missing references, rotation, deletion and ReferenceGrant revocation update
-  copies, rollouts and status as specified, without fallback or removal of rate limit filters.
+  copies, rollouts and status as specified, without fallback or removal of rate limit filters; deletion
+  keeps old pods under the default strategy and stops them under `Recreate`.
 * **Reconciliation:** controller restart reconstructs scope selection and readiness; Gateway deletion
-  removes only its resources; updates preserve scope-specific selectors and HPA targets.
+  removes only its resources; updates preserve scope-specific selectors and HPA targets; the shared RLS
+  Service and PDB never select dedicated pods.
+* **API:** an `EnvoyProxy` whose `rateLimit` omits `failClosed` is accepted and behaves as `false`.
 * **Protected settings:** workload settings and patches cannot override names, selectors, ownership,
   configuration identity, configuration source or cache key prefix, including through duplicate env
   entries, `valueFrom`, or `command` and `args` changes.
