@@ -18,3 +18,23 @@
               cluster: udp-route-dest
       statPrefix: service
   name: udp-route
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10081
+      protocol: UDP
+  listenerFilters:
+  - name: envoy.filters.udp_listener.udp_proxy
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+      hashPolicies:
+      - sourceIp: true
+      matcher:
+        onNoMatch:
+          action:
+            name: route
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+              cluster: udp-route-mixed-zonal-dest
+      statPrefix: service
+  name: udp-route-mixed-zonal

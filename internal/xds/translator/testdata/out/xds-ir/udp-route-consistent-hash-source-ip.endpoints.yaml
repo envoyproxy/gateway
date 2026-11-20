@@ -16,3 +16,33 @@
     loadBalancingWeight: 1
     locality:
       region: udp-route-dest/backend/0
+- clusterName: udp-route-mixed-zonal-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.1
+            portValue: 50000
+      loadBalancingWeight: 1
+    locality:
+      zone: us-east-1a
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.2.2.2
+            portValue: 50000
+      loadBalancingWeight: 1
+    locality:
+      zone: us-east-1b
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.3.3.3
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 70
+    locality:
+      region: udp-route-mixed-zonal-dest/backend/1

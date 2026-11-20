@@ -500,8 +500,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		if args.loadBalancer.ConsistentHash.TableSize != nil {
 			consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
 		}
-		// Enable locality weighted load balancing for Maglev when weighted zones are configured
-		if len(args.loadBalancer.WeightedZones) > 0 {
+		// Enable locality weighted load balancing for Maglev when weighted zones or multiple
+		// backendRefs need it, as long as every locality carries a weight to honor
+		lb := args.loadBalancer
+		if (len(lb.WeightedZones) > 0 || len(args.settings) > 1) &&
+			allLocalitiesWeighted(args.settings, lb.PreferLocal, lb.WeightedZones) {
 			consistentHash.LocalityWeightedLbConfig = &commonv3.LocalityLbConfig_LocalityWeightedLbConfig{}
 		}
 		typedConsistentHash, err := proto.ToAnyWithValidation(consistentHash)
@@ -1030,6 +1033,23 @@ func buildCircuitBreakerRetryBudget(rb *ir.RetryBudget) *clusterv3.CircuitBreake
 		trb.MinRetryConcurrency = wrapperspb.UInt32(rb.MinRetryConcurrency)
 	}
 	return trb
+}
+
+// allLocalitiesWeighted reports whether buildXdsClusterLoadAssignment sets a load balancing
+// weight on every locality it builds; zonal localities for preferLocal carry none.
+func allLocalitiesWeighted(destSettings []*ir.DestinationSetting, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) bool {
+	if len(weightedZones) > 0 {
+		return true
+	}
+	if preferLocal != nil {
+		return false
+	}
+	for _, ds := range destSettings {
+		if ds.PreferLocal != nil {
+			return false
+		}
+	}
+	return true
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {

@@ -15,6 +15,7 @@ import (
 	commondnsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/common/dns/v3"
 	dnsclusterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
+	maglevv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/maglev/v3"
 	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
 	wrr_localityv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/wrr_locality/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
@@ -405,6 +406,99 @@ func TestBuildXdsRouteClusterWithoutClusterLevelHashPolicy(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Nil(t, result.cluster.TypedExtensionProtocolOptions)
+}
+
+func TestBuildXdsClusterConsistentHashLocalityWeighting(t *testing.T) {
+	sourceIP := true
+	plain := func(host string, weight uint32) *ir.DestinationSetting {
+		return &ir.DestinationSetting{
+			Endpoints: []*ir.DestinationEndpoint{{Host: host, Port: 8080}},
+			Weight:    new(weight),
+		}
+	}
+	zonal := func(host string, preferLocal *ir.PreferLocalZone) *ir.DestinationSetting {
+		return &ir.DestinationSetting{
+			Endpoints:   []*ir.DestinationEndpoint{{Host: host, Port: 8080, Zone: new("us-east-1a")}},
+			Weight:      new(uint32(5)),
+			PreferLocal: preferLocal,
+		}
+	}
+	// PreferLocal as derived from a Service's trafficDistribution and topology-mode annotation.
+	trafficDistribution := &ir.PreferLocalZone{
+		MinEndpointsThreshold: new(uint64(1)),
+		Force:                 &ir.ForceLocalZone{MinEndpointsInZoneThreshold: new(uint32(1))},
+	}
+	topologyMode := &ir.PreferLocalZone{
+		MinEndpointsThreshold: new(uint64(3)),
+		Force:                 &ir.ForceLocalZone{MinEndpointsInZoneThreshold: new(uint32(3))},
+	}
+
+	tests := []struct {
+		name          string
+		settings      []*ir.DestinationSetting
+		preferLocal   *ir.PreferLocalZone
+		weightedZones []ir.WeightedZoneConfig
+		expected      bool
+	}{
+		{
+			name:     "single backend",
+			settings: []*ir.DestinationSetting{plain("1.1.1.1", 1)},
+			expected: false,
+		},
+		{
+			name:     "weighted backends",
+			settings: []*ir.DestinationSetting{plain("1.1.1.1", 5), plain("2.2.2.2", 95)},
+			expected: true,
+		},
+		{
+			name:     "traffic distribution backend",
+			settings: []*ir.DestinationSetting{zonal("1.1.1.1", trafficDistribution), plain("2.2.2.2", 95)},
+			expected: false,
+		},
+		{
+			name:     "topology mode backend",
+			settings: []*ir.DestinationSetting{zonal("1.1.1.1", topologyMode), plain("2.2.2.2", 95)},
+			expected: false,
+		},
+		{
+			name:        "load balancer prefer local",
+			settings:    []*ir.DestinationSetting{plain("1.1.1.1", 5), plain("2.2.2.2", 95)},
+			preferLocal: &ir.PreferLocalZone{},
+			expected:    false,
+		},
+		{
+			name:          "weighted zones",
+			settings:      []*ir.DestinationSetting{plain("1.1.1.1", 1)},
+			weightedZones: []ir.WeightedZoneConfig{{Zone: "us-east-1a", Weight: 80}, {Zone: "us-east-1b", Weight: 20}},
+			expected:      true,
+		},
+		{
+			name:          "weighted zones with topology mode backend",
+			settings:      []*ir.DestinationSetting{zonal("1.1.1.1", topologyMode)},
+			weightedZones: []ir.WeightedZoneConfig{{Zone: "us-east-1a", Weight: 80}, {Zone: "us-east-1b", Weight: 20}},
+			expected:      true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := buildXdsCluster(&xdsClusterArgs{
+				name:         "test-cluster-consistent-hash-locality",
+				endpointType: EndpointTypeStatic,
+				settings:     tc.settings,
+				loadBalancer: &ir.LoadBalancer{
+					ConsistentHash: &ir.ConsistentHash{SourceIP: &sourceIP},
+					PreferLocal:    tc.preferLocal,
+					WeightedZones:  tc.weightedZones,
+				},
+			})
+			require.NoError(t, err)
+			require.Len(t, result.cluster.LoadBalancingPolicy.Policies, 1)
+
+			maglev := &maglevv3.Maglev{}
+			require.NoError(t, result.cluster.LoadBalancingPolicy.Policies[0].TypedExtensionConfig.TypedConfig.UnmarshalTo(maglev))
+			require.Equal(t, tc.expected, maglev.LocalityWeightedLbConfig != nil)
+		})
+	}
 }
 
 func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
