@@ -51,7 +51,7 @@ needs to be isolated.
 * User-managed (bring-your-own) RLS in the first iteration. Envoy Gateway still deploys and configures
   the RLS. A user-managed RLS may be proposed separately as a follow-up.
 * Rate limit backends other than Redis.
-* Dedicated RLS on the host (standalone) provider in the first iteration.
+* Dedicated RLS on the host (standalone) provider or with remote infrastructure in the first iteration.
 * Changing how rate limit rules or domains are generated.
 * Per-Gateway `timeout`, `failClosed` or other proxy-side settings while keeping the shared RLS. That
   needs a separate shared-mode design.
@@ -86,6 +86,14 @@ A new optional `spec.rateLimit` field holds the same settings as `EnvoyGateway.r
 | `failClosed`      | Deny traffic when the RLS can't be reached. Defaults to false.                  |
 | `telemetry`       | Metrics and tracing for the dedicated RLS.                                      |
 | `serviceSettings` | Connection settings from proxies to the RLS (circuit breakers, etc.).           |
+
+Reusing the `RateLimit` type also reuses its API documentation, which today describes only the shared
+RLS. In particular, `RateLimitRedisSettings.urlRef` and `RedisURLSource.secretKeyRef` say the Secret
+must be in the namespace of the Envoy Gateway rate limit deployment, which is wrong for `EnvoyProxy`
+(see [Redis credentials](#redis-credentials)). As part of this API change, these descriptions are made
+to cover both uses: in `EnvoyGateway.rateLimit` the Secret is in the controller namespace, and in
+`EnvoyProxy.spec.rateLimit` it is in the `EnvoyProxy`'s namespace. The same review applies to every
+other description in the reused types, including the TLS `certificateRef`.
 
 Deployment settings for the dedicated RLS (`rateLimitDeployment`, `rateLimitHpa`, `rateLimitPDB`) sit under
 `spec.provider.kubernetes`, next to the existing proxy deployment settings.
@@ -590,10 +598,20 @@ settings and patches, rejecting changes to generated resource names or namespace
 scope labels and selectors, the HPA target, or the credential hash annotation on the pod template (see
 [Redis credentials](#redis-credentials)). Without that annotation, a credential rotation would update
 only the copied Secret, and running pods would keep the old values with no rolling update. Custom pod
-labels and annotations cannot overwrite these labels or the annotation. The RLS
-container must keep the generated runtime settings with their literal values, with no duplicate
-definitions or `valueFrom` substitutions, and any change to its `command` or `args` is rejected. These
-checks also apply to administrator-authored configuration.
+labels and annotations cannot overwrite these labels or the annotation.
+
+The generated Redis connection wiring is protected as well, so the RLS always uses the backend and
+credentials from `rateLimit.backend`, and the credential behavior in [Redis credentials](#redis-credentials)
+and `RateLimitReady` describe what the pods actually use. This covers the `REDIS_URL`,
+`REDIS_SOCKET_TYPE`, `REDIS_TLS`, `REDIS_TLS_CLIENT_CERT` and `REDIS_TLS_CLIENT_KEY` settings, and the
+generated volumes and mounts that carry the copied credentials and TLS certificates. Today a container
+env entry with the same name replaces a generated one. For dedicated RLS, such an entry, or a patch
+that removes or replaces these volumes or mounts or adds another volume at their paths, is rejected.
+The Redis backend is changed only through `rateLimit.backend`.
+
+The RLS container must keep the generated runtime and Redis settings with their literal values, with no
+duplicate definitions or `valueFrom` substitutions, and any change to its `command` or `args` is
+rejected. These checks also apply to administrator-authored configuration.
 
 These checks guard against misconfiguration, such as one scope's settings accidentally redirecting
 reconciliation or traffic to another scope's resources. They are not a security boundary against a
@@ -737,10 +755,17 @@ convergence uses reason `Ready`. A Gateway that no longer uses global rate limit
 removed, as does a Gateway that switches to the shared RLS. Shared RLS status and credential validation
 retain their existing control-plane behavior.
 
-### Host provider
+### Host provider and remote infrastructure
 
-Not supported in the first iteration. Setting `rateLimit` on an `EnvoyProxy` used with the host provider
-makes the Gateway `Accepted=False` with a message saying so.
+Not supported in the first iteration. Setting `rateLimit` on an `EnvoyProxy` makes the Gateway
+`Accepted=False`, with a message saying so, when either of these is used:
+
+* The host provider.
+* Remote infrastructure (`EnvoyGateway.provider.custom.infrastructure.type: Remote`). The remote
+  infrastructure contract has no way to request a per-Gateway RLS: `CreateOrUpdateRateLimitInfraRequest`
+  carries no scope, backend, settings or address. A remote manager also cannot report the Deployment
+  and Service state that `RateLimitReady` requires. Supporting it needs an extension of that contract
+  and of the readiness model.
 
 ### Tooling
 
@@ -839,7 +864,7 @@ These are the author's recommendations and are open for review.
   defaults for omitted settings; class and control-plane workload settings are not inherited.
 * Dedicated RLS resource names, ownership, scope labels and selectors, HPA targets and the credential
   hash annotation are controller-owned, as are the runtime settings selecting configuration and Redis
-  key prefixes.
+  key prefixes, and the Redis connection settings, credential volumes and mounts.
   Workload settings and patches that change these fields are rejected after rendering.
 * Dedicated RLS is disabled by default and enabled with `extensionApis.enableDedicatedRateLimit`.
   Workload customization requires the additional, disabled-by-default
@@ -856,7 +881,8 @@ These are the author's recommendations and are open for review.
   enabled, workload customization must be administrator-authored or constrained by an admission
   allowlist covering all workload settings. Built-in workloads do not require the customization switch.
 * Dedicated RLS deployments run in the controller namespace in the first iteration. Running them in the
-  Gateway namespace, and the authentication that needs, is deferred.
+  Gateway namespace, and the authentication that needs, is deferred. The host provider and remote
+  infrastructure are not supported; `rateLimit` makes such Gateways `Accepted=False`.
 * Dedicated RLS pods carry documented, controller-owned scope labels so admins can select them in
   NetworkPolicies and admission policies. The proposal includes example NetworkPolicies; Envoy Gateway
   does not generate NetworkPolicies in the first iteration.
@@ -910,11 +936,16 @@ Implementation must cover the following cases with meaningful automated tests:
 * **Reconciliation:** controller restart reconstructs scope selection and readiness; Gateway deletion
   removes only its resources; updates preserve scope-specific selectors and HPA targets; the shared RLS
   Service and PDB never select dedicated pods.
-* **API:** an `EnvoyProxy` whose `rateLimit` omits `failClosed` is accepted and behaves as `false`.
+* **API:** an `EnvoyProxy` whose `rateLimit` omits `failClosed` is accepted and behaves as `false`;
+  generated API docs for `urlRef` and `certificateRef` describe both the `EnvoyGateway` and the
+  `EnvoyProxy` namespace rules.
+* **Unsupported infrastructure:** with the host provider or remote infrastructure, `rateLimit` sets the
+  Gateway `Accepted=False` and no RLS infrastructure request is sent.
 * **Protected settings:** workload settings and patches cannot override names, selectors, ownership,
-  configuration identity, configuration source, cache key prefix or the credential hash annotation,
-  including through duplicate env entries, `valueFrom`, or `command` and `args` changes; a credential
-  rotation still rolls the pods when a patch tries to remove the annotation.
+  configuration identity, configuration source, cache key prefix, Redis connection settings, credential
+  volumes and mounts or the credential hash annotation, including through duplicate env entries,
+  `valueFrom`, or `command` and `args` changes; a credential rotation still rolls the pods when a patch
+  tries to remove the annotation; a `REDIS_URL` env override is rejected rather than used.
 * **Transitions and failures:** shared/dedicated transitions, an unavailable RLS and delayed proxy
   updates show the documented failure behavior, including the enforcement gap despite
   `failClosed: true`.
