@@ -526,8 +526,10 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil &&
-		// A UDP cluster only takes the UDP checker. Any cluster can take the UDP checker, since a
-		// backend may answer UDP probes even when its traffic goes over TCP.
+		// Any cluster can take the UDP checker, since a backend may answer UDP probes even when its
+		// traffic goes over TCP. A UDP cluster only takes the UDP checker for now: UDPRoute never got
+		// health checks before, so letting other checkers through would make existing policies start
+		// probing UDP backends, and marking them unhealthy if they don't serve that health check.
 		(args.healthCheck.Active.UDP != nil || !isUDPCluster(args.settings)) {
 		var err error
 		upstreamHTTP2 := requiresHTTP2Options && !forceHTTP1UpstreamProtocol

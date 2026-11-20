@@ -3433,10 +3433,10 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	return &statName
 }
 
-// udpHealthCheck returns the part of hc that a UDP cluster can use: the active check only when
-// it's the UDP checker, and no passive check, since udp_proxy only reports outlier results for
-// tunneled sessions. The panic threshold still applies because udp_proxy picks hosts through
-// the cluster's load balancer.
+// udpHealthCheck returns the part of hc that a UDP cluster can use. Only the UDP active checker
+// is kept, so existing policies with other checkers, which never reached UDPRoute before, don't
+// start probing UDP backends. Passive checks are dropped since udp_proxy only reports outlier
+// results for tunneled sessions. The panic threshold applies, as udp_proxy uses the cluster's LB.
 func udpHealthCheck(hc *ir.HealthCheck) *ir.HealthCheck {
 	if hc == nil {
 		return nil
