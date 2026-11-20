@@ -81,6 +81,8 @@ func buildHCMBasicAuthFilter(basicAuth *ir.BasicAuth) (*hcmv3.HttpFilter, error)
 	)
 
 	basicAuthProto = &basicauthv3.BasicAuth{
+		AllowMissing:        basicAuth.AllowMissing,
+		EmitDynamicMetadata: basicAuth.AllowMissing,
 		Users: &corev3.DataSource{
 			Specifier: &corev3.DataSource_InlineBytes{
 				InlineBytes: basicAuth.Users,

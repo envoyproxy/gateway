@@ -170,6 +170,41 @@ spec:
                 - credentialRefs
                 - extractFrom
                 type: object
+              authentication:
+                description: Authentication defines how the configured authentication
+                  methods combine.
+                properties:
+                  anyOf:
+                    description: |-
+                      AnyOf lists authentication methods of which any one is enough to
+                      authenticate a request. Every configured method not listed stays required.
+                      Without AnyOf, every configured method applies on its own terms, so JWT and
+                      BasicAuth are both required unless jwt.optional or jwt.failOpen relaxes JWT.
+
+                      Each listed method lets a request without its credentials through, and a
+                      request without credentials for any listed method is rejected. A request
+                      presenting invalid credentials for a listed method is rejected.
+                      jwt.optional has no effect when JWT is listed. Authorization rules with a
+                      jwt principal never match a request authenticated by BasicAuth.
+
+                      AnyOf currently requires both JWT and BasicAuth. It does not support
+                      oidc.forwardAccessToken, oidc.passThroughAuthHeader, oidc.forwardIDToken on
+                      the Authorization header or on a header a JWT provider reads,
+                      extAuth.recomputeRoute, jwt.failOpen, JWT route recomputation or
+                      basicAuth.forwardUsernameHeader. A JWT header extractor on the
+                      Authorization header must use the valuePrefix "Bearer ".
+                    items:
+                      description: AuthenticationMethod names an authentication method
+                        of a SecurityPolicy.
+                      enum:
+                      - JWT
+                      - BasicAuth
+                      type: string
+                    maxItems: 2
+                    minItems: 2
+                    type: array
+                    x-kubernetes-list-type: set
+                type: object
               authorization:
                 description: Authorization defines the authorization configuration.
                 properties:
@@ -8708,6 +8743,37 @@ spec:
               rule: '(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules)
                 && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt)
                 : false)) ? has(self.jwt) : true'
+            - message: every method in authentication.anyOf must be configured, unless
+                mergeType is set and it is inherited from the parent policy
+              rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
+                !has(self.mergeType)) ? ((!(''JWT'' in self.authentication.anyOf)
+                || has(self.jwt)) && (!(''BasicAuth'' in self.authentication.anyOf)
+                || has(self.basicAuth))) : true'
+            - message: authentication.anyOf does not support oidc.forwardAccessToken
+                or oidc.passThroughAuthHeader
+              rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
+                has(self.oidc)) ? ((!has(self.oidc.forwardAccessToken) || !self.oidc.forwardAccessToken)
+                && (!has(self.oidc.passThroughAuthHeader) || !self.oidc.passThroughAuthHeader))
+                : true'
+            - message: authentication.anyOf does not support oidc.forwardIDToken on
+                the Authorization header
+              rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
+                has(self.oidc) && has(self.oidc.forwardIDToken)) ? self.oidc.forwardIDToken.header.lowerAscii()
+                != ''authorization'' : true'
+            - message: authentication.anyOf does not support extAuth.recomputeRoute
+              rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
+                has(self.extAuth)) ? (!has(self.extAuth.recomputeRoute) || !self.extAuth.recomputeRoute)
+                : true'
+            - message: authentication.anyOf with JWT does not support jwt.failOpen
+                or recomputeRoute on JWT providers
+              rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
+                ''JWT'' in self.authentication.anyOf && has(self.jwt)) ? ((!has(self.jwt.failOpen)
+                || !self.jwt.failOpen) && self.jwt.providers.all(p, !has(p.recomputeRoute)
+                || !p.recomputeRoute)) : true'
+            - message: authentication.anyOf with BasicAuth does not support basicAuth.forwardUsernameHeader
+              rule: '(has(self.authentication) && has(self.authentication.anyOf) &&
+                ''BasicAuth'' in self.authentication.anyOf && has(self.basicAuth))
+                ? !has(self.basicAuth.forwardUsernameHeader) : true'
           status:
             description: Status defines the current status of SecurityPolicy.
             properties:

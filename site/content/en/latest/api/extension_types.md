@@ -248,6 +248,35 @@ _Appears in:_
 | `gateway.envoyproxy.io/wss` | AppProtocolTypeWSS defines the WebSocket over HTTPS protocol.<br /> | 
 
 
+#### Authentication
+
+
+
+Authentication defines how the configured authentication methods combine.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `anyOf` | _[AuthenticationMethod](#authenticationmethod) array_ |  false  |  | AnyOf lists authentication methods of which any one is enough to<br />authenticate a request. Every configured method not listed stays required.<br />Without AnyOf, every configured method applies on its own terms, so JWT and<br />BasicAuth are both required unless jwt.optional or jwt.failOpen relaxes JWT.<br />Each listed method lets a request without its credentials through, and a<br />request without credentials for any listed method is rejected. A request<br />presenting invalid credentials for a listed method is rejected.<br />jwt.optional has no effect when JWT is listed. Authorization rules with a<br />jwt principal never match a request authenticated by BasicAuth.<br />AnyOf currently requires both JWT and BasicAuth. It does not support<br />oidc.forwardAccessToken, oidc.passThroughAuthHeader, oidc.forwardIDToken on<br />the Authorization header or on a header a JWT provider reads,<br />extAuth.recomputeRoute, jwt.failOpen, JWT route recomputation or<br />basicAuth.forwardUsernameHeader. A JWT header extractor on the<br />Authorization header must use the valuePrefix "Bearer ". |
+
+
+#### AuthenticationMethod
+
+_Underlying type:_ _string_
+
+AuthenticationMethod names an authentication method of a SecurityPolicy.
+
+_Appears in:_
+- [Authentication](#authentication)
+
+| Value | Description |
+| ----- | ----------- |
+| `JWT` | AuthenticationMethodJWT is the jwt authentication method.<br /> | 
+| `BasicAuth` | AuthenticationMethodBasicAuth is the basicAuth authentication method.<br /> | 
+
+
 #### Authorization
 
 
@@ -6675,6 +6704,7 @@ _Appears in:_
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into the closest parent SecurityPolicy in the route's attachment hierarchy (for<br />example, one targeting a Gateway, Gateway listener, ListenerSet, or ListenerSet<br />listener).<br />Currently, this field can only be set when targeting xRoute resources.<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
+| `authentication` | _[Authentication](#authentication)_ |  false  |  | Authentication defines how the configured authentication methods combine. |
 | `apiKeyAuth` | _[APIKeyAuth](#apikeyauth)_ |  false  |  | APIKeyAuth defines the configuration for the API Key Authentication. |
 | `cors` | _[CORS](#cors)_ |  false  |  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `csrf` | _[CSRF](#csrf)_ |  false  |  | CSRF defines the configuration for Cross-Site Request Forgery (CSRF) protection.<br />When enabled, the CSRF filter checks that the Origin header matches the destination<br />or one of the additional allowed origins on mutating requests (POST, PUT, DELETE, PATCH). |
