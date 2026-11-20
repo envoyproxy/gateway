@@ -11,8 +11,12 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
+	"io"
 	"net"
+	nethttp "net/http"
+	"syscall"
 	"testing"
 	"time"
 
@@ -146,7 +150,104 @@ var ClientMTLSTest = suite.ConformanceTest{
 			// Check that tickets are not assigned as per EG defaults
 			dialAndCheckSessionTicketAssignment(t, gwAddr, baseTLSConfig, 0)
 		})
+
+		t.Run("Client TLS ALPN without HTTP/1.1 Enforced", func(t *testing.T) {
+			depNS := "envoy-gateway-system"
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-client-tls-settings", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "client-mtls-gateway", Namespace: ns}
+			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
+
+			// The alpn-h2-only listener only allows h2 through ALPN.
+			gwAddr := net.JoinHostPort(gwHost, "8443")
+
+			const serverName = "tls-settings.example.com"
+
+			serverCertificate, _, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: "client-tls-settings-certificate", Namespace: ns})
+			require.NoError(t, err)
+
+			certPool := x509.NewCertPool()
+			require.True(t, certPool.AppendCertsFromPEM(serverCertificate))
+
+			// nolint: gosec
+			baseTLSConfig := &tls.Config{
+				ServerName: serverName,
+				RootCAs:    certPool,
+			}
+
+			// HTTP/2 requests are served.
+			http.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					return requestOverHTTP2(t, gwAddr, serverName, baseTLSConfig)
+				})
+
+			// A client that doesn't offer h2 is refused, instead of being served over HTTP/1.1.
+			http.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					return isClosedByGateway(dialWithALPN(t, gwAddr, baseTLSConfig, []string{"http/1.1"}))
+				})
+			require.True(t, isClosedByGateway(dialWithALPN(t, gwAddr, baseTLSConfig, nil)))
+
+			// A client that offers both h2 and http/1.1 gets h2.
+			dialAndExpectALPN(t, gwAddr, baseTLSConfig, "h2")
+		})
 	},
+}
+
+// requestOverHTTP2 reports whether a request to the client-tls-settings route is served over HTTP/2.
+func requestOverHTTP2(t *testing.T, gwAddr, host string, baseTLSConfig *tls.Config) bool {
+	client := &nethttp.Client{
+		Transport: &nethttp.Transport{
+			TLSClientConfig:   baseTLSConfig.Clone(),
+			ForceAttemptHTTP2: true,
+		},
+		Timeout: 10 * time.Second,
+	}
+	defer client.CloseIdleConnections()
+
+	req, err := nethttp.NewRequest(nethttp.MethodGet, "https://"+gwAddr+"/client-tls-settings", nil)
+	if err != nil {
+		t.Logf("failed to create request: %v", err)
+		return false
+	}
+	req.Host = host
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Logf("HTTP/2 request failed: %v", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != nethttp.StatusOK || resp.ProtoMajor != 2 {
+		t.Logf("unexpected response: status %d, protocol %s", resp.StatusCode, resp.Proto)
+		return false
+	}
+	return true
+}
+
+// dialWithALPN opens a TLS connection that offers the given ALPN protocols, and returns the
+// handshake error, if any.
+func dialWithALPN(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, alpnProtocols []string) error {
+	tlsConfig := baseTLSConfig.Clone()
+	tlsConfig.NextProtos = alpnProtocols
+
+	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 10 * time.Second}, "tcp", gwAddr, tlsConfig)
+	if err != nil {
+		t.Logf("TLS handshake offering ALPN %v failed: %v", alpnProtocols, err)
+		return err
+	}
+	t.Logf("TLS handshake offering ALPN %v negotiated %q", alpnProtocols, conn.ConnectionState().NegotiatedProtocol)
+	_ = conn.Close()
+	return nil
+}
+
+// isClosedByGateway reports whether a TLS handshake failed because the gateway closed the
+// connection, as Envoy does when no filter chain matches, rather than for another reason
+// such as a refused connection or a timeout.
+func isClosedByGateway(err error) bool {
+	return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
 }
 
 var ClientMTLSClusterTrustBundleTest = suite.ConformanceTest{
