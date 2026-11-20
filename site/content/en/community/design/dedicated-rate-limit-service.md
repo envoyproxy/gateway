@@ -217,27 +217,47 @@ extensionApis:
   enableDedicatedRateLimitWorkloadOverrides: false   # defaults to false
 ```
 
-While it is disabled, a Gateway whose `EnvoyProxy` sets `rateLimit` is `Accepted=False` with reason
-`InvalidParameters`, and the message names the setting to enable. Envoy Gateway does not fall back to
-the shared RLS: the user asked for an isolated RLS, and silently losing that isolation would be worse
-than a visible error. RLS workload fields on an `EnvoyProxy` without `rateLimit` have no effect either
-way. Disabling the setting after dedicated RLS is in use goes through the same path: the affected
-Gateways are rejected and their dedicated RLS is removed.
+A disabled switch never rejects the Gateway. Settings that a switch does not allow are ignored, the
+Gateway stays `Accepted=True` and keeps serving all of its traffic, and the ignored settings are
+reported as a warning on the `EnvoyProxy` status, naming the setting to enable. This follows the
+existing handling of `patch` fields while `EnvoyProxyPatch` is disabled. Rejecting the Gateway instead
+would remove all of its listeners, so a control-plane switch change could take many tenants' Gateways
+offline at once.
+
+While `enableDedicatedRateLimit` is disabled, `rateLimit` on a Gateway's `EnvoyProxy` is ignored as
+above, but the Gateway does not fall back to the shared RLS: the user asked for an isolated RLS, and
+silently losing that isolation would be worse than a visible error. Instead:
+
+* The Gateway reports `RateLimitReady=False` with reason `DedicatedRateLimitDisabled`.
+* Global rate limit policies targeting the Gateway report an error for that Gateway, and the routes
+  they apply to follow the ignored block's `failClosed`:
+  * `failClosed: true`: those routes return HTTP 500, as when no RLS is available today.
+  * `failClosed: false` or not set: those routes keep serving without global rate limiting.
+
+  `spec.rateLimit` reuses the `EnvoyGateway.rateLimit` type, whose `failClosed` is a plain boolean
+  defaulting to `false`, so an omitted field and an explicit `false` are the same value and behave the
+  same way here, as they do for a running RLS.
+
+  Other routes and listeners of the Gateway, and other Gateways, are not affected.
+
+Disabling the setting after dedicated RLS is in use has the same effect: the dedicated RLS is removed
+and the routes with global rate limits on those Gateways follow `failClosed` as above, until the owner
+removes `rateLimit` (moving the Gateway to the shared RLS, if configured) or the admin enables the
+setting again. RLS workload fields on an `EnvoyProxy` without `rateLimit` have no effect either way.
 
 The two settings are control-plane-wide opt-ins. `enableDedicatedRateLimit` allows Gateway owners to
 configure a dedicated RLS using built-in workload defaults. It does not permit RLS workload customization.
-When `enableDedicatedRateLimitWorkloadOverrides` is false, a Gateway-level `EnvoyProxy` that sets
-`rateLimit` together with any of `rateLimitDeployment`, `rateLimitHpa` or `rateLimitPDB` is rejected with
-Gateway `Accepted=False`, reason `InvalidParameters`, and a message naming the customization setting.
-Workload fields are not silently ignored. Fields on a GatewayClass or without `rateLimit` retain the
-scope behavior described below.
+When `enableDedicatedRateLimitWorkloadOverrides` is false, `rateLimitDeployment`, `rateLimitHpa` and
+`rateLimitPDB` on a Gateway-level `EnvoyProxy` are ignored with a warning naming the setting, and the
+dedicated RLS runs with built-in workload defaults. Rate limiting keeps working. Fields on a
+GatewayClass or without `rateLimit` retain the scope behavior described below.
 
 Admins may additionally enable `enableDedicatedRateLimitWorkloadOverrides` to accept those workload
 fields. This requires `enableDedicatedRateLimit: true`; an inconsistent control-plane configuration is
 rejected at startup. The RBAC or admission restrictions above apply whenever customization is enabled.
-Disabling customization rejects Gateways still specifying workload fields through the same invalid
-parameters path; users should remove those fields before disabling it. Controller-owned isolation
-settings remain protected even when both switches and `EnvoyProxyPatch` are enabled.
+Disabling customization rolls existing dedicated RLS back to built-in workload defaults and reports the
+ignored fields as warnings; Gateways are not rejected. Controller-owned isolation settings remain
+protected even when both switches and `EnvoyProxyPatch` are enabled.
 
 `rateLimit` is not accepted in the control-plane default `EnvoyGateway.envoyProxy`. Control-plane-wide
 rate limiting stays configured in one place, `EnvoyGateway.rateLimit`.
@@ -428,7 +448,7 @@ its Redis backend, therefore updates that RLS in place rather than creating a ne
 [Changing the configuration](#changing-the-configuration).
 
 For dedicated RLS, explicit `rateLimitDeployment.name`, `rateLimitHpa.name` and `rateLimitPDB.name` are
-not supported and are rejected as invalid parameters. Envoy Gateway generates the names of the Deployment,
+not supported; they are ignored and reported as a warning on the `EnvoyProxy`. Envoy Gateway generates the names of the Deployment,
 Service, HPA, PDB and copied credential Secrets from the scope identity. Generated identities reserve the
 existing shared RLS identity and include the scope kind, leaving room for a GatewayClass scope later. The
 HPA target and Service and PDB selectors refer only to that scope's Deployment and pods; no selector
@@ -507,12 +527,11 @@ These rules are derived from current resources on restart and do not depend on r
 ### Validation and status
 
 A `rateLimit` block without `backend` is rejected by schema validation when the `EnvoyProxy` is applied.
-Other invalid settings, such as an unsupported `serviceSettings` field, `rateLimit` while
-`extensionApis.enableDedicatedRateLimit` is disabled, and RLS workload fields together with `rateLimit`
-while `extensionApis.enableDedicatedRateLimitWorkloadOverrides` is disabled (see
-[Enabling dedicated RLS](#enabling-dedicated-rls)), are reported the same way as other invalid
-`EnvoyProxy` settings: the affected Gateways are `Accepted=False` with reason `InvalidParameters`. The
-`serviceSettings` restrictions are the same as for the shared RLS.
+Other invalid settings, such as an unsupported `serviceSettings` field, are reported the same way as
+other invalid `EnvoyProxy` settings. The `serviceSettings` restrictions are the same as for the shared
+RLS. Settings not allowed by a disabled `extensionApis` switch are not invalid parameters: they are
+ignored with an `EnvoyProxy` warning and never set the Gateway `Accepted=False` (see
+[Enabling dedicated RLS](#enabling-dedicated-rls)).
 
 Missing Secrets, missing or invalid credential keys, and denied or revoked Secret references are
 operational credential failures, not fatal `EnvoyProxy` validation errors. They do not set Gateway
@@ -543,14 +562,15 @@ limitations described below.
 
 `RateLimitReady=False` uses the following reasons, in priority order when multiple failures apply:
 
-| Reason               | Meaning                                                                         |
-| -------------------- | ------------------------------------------------------------------------------- |
-| `InvalidCredentials` | A required credential or its authorization cannot be resolved.                  |
-| `ProvisioningFailed` | Creation or update of a required Kubernetes resource failed.                    |
-| `RolloutFailed`      | The Deployment reports that the desired rollout exceeded its progress deadline. |
-| `Provisioning`       | Required resources have not yet been observed.                                  |
-| `RollingOut`         | The current Deployment rollout has not completed.                               |
-| `NoReadyEndpoints`   | The Service has no ready endpoint from the current rollout.                     |
+| Reason                       | Meaning                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `DedicatedRateLimitDisabled` | `rateLimit` is set but `extensionApis.enableDedicatedRateLimit` is disabled.    |
+| `InvalidCredentials`         | A required credential or its authorization cannot be resolved.                  |
+| `ProvisioningFailed`         | Creation or update of a required Kubernetes resource failed.                    |
+| `RolloutFailed`              | The Deployment reports that the desired rollout exceeded its progress deadline. |
+| `Provisioning`               | Required resources have not yet been observed.                                  |
+| `RollingOut`                 | The current Deployment rollout has not completed.                               |
+| `NoReadyEndpoints`           | The Service has no ready endpoint from the current rollout.                     |
 
 An unknown observation state uses `RateLimitReady=Unknown` with reason `PendingObservation`. Successful
 convergence uses reason `Ready`. A Gateway that no longer uses global rate limiting has this condition
@@ -663,9 +683,14 @@ These are the author's recommendations and are open for review.
   controller-owned, as are the runtime settings selecting configuration and Redis key prefixes.
   Workload settings and patches that change these fields are rejected after rendering.
 * Dedicated RLS is disabled by default and enabled with `extensionApis.enableDedicatedRateLimit`.
-  While disabled, a Gateway whose `EnvoyProxy` sets `rateLimit` is `Accepted=False` with reason
-  `InvalidParameters` and does not fall back to the shared RLS. Workload customization requires the
-  additional, disabled-by-default `extensionApis.enableDedicatedRateLimitWorkloadOverrides` switch.
+  Workload customization requires the additional, disabled-by-default
+  `extensionApis.enableDedicatedRateLimitWorkloadOverrides` switch.
+* A disabled switch never rejects a Gateway. Disallowed settings are ignored with an `EnvoyProxy`
+  warning and the Gateway keeps serving. Without `enableDedicatedRateLimit`, the Gateway does not fall
+  back to the shared RLS: it reports `RateLimitReady=False`, and only routes with global rate limits
+  are affected. They follow the ignored block's `failClosed`: `true` returns 500, as when no RLS is
+  available today, and `false` or unset serves them without global rate limiting. Without workload
+  overrides, the dedicated RLS uses built-in workload defaults.
 * Dedicated RLS workload settings use the existing Kubernetes types. `patch` is gated by
   `EnvoyProxyPatch`, but disabling patches alone is insufficient protection. Even with dedicated RLS
   enabled, workload customization must be administrator-authored or constrained by an admission
@@ -694,6 +719,10 @@ Implementation must cover the following cases with meaningful automated tests:
 * **Opt-ins and scope:** both switches default off; built-in workloads work with only dedicated RLS
   enabled; workload overrides require both switches; inconsistent control-plane switches fail startup;
   class fields are ignored and never inherited.
+* **Disabled switches:** Gateways stay accepted and serving with an `EnvoyProxy` warning; with dedicated
+  RLS disabled, only routes with global rate limits are affected, following `failClosed` (true
+  returns 500, false or unset serves unlimited), and nothing falls back to the shared RLS; with workload overrides disabled, the RLS runs with built-in defaults; toggling either switch
+  on a running Gateway affects nothing beyond that.
 * **Coexistence:** shared and dedicated RLS operate together; dedicated-only operation works without a
   shared RLS; multiple Gateways referencing one `EnvoyProxy` receive distinct services and snapshots.
 * **Counter isolation:** two dedicated RLS and the shared RLS using the same Redis database keep
