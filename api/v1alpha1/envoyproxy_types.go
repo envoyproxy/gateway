@@ -118,6 +118,12 @@ type EnvoyProxySpec struct {
 	// +optional
 	Shutdown *ShutdownConfig `json:"shutdown,omitempty"`
 
+	// OverloadManager defines configuration for the Envoy overload manager, which sheds
+	// load before the proxy runs out of resources.
+	//
+	// +optional
+	OverloadManager *OverloadManager `json:"overloadManager,omitempty"`
+
 	// FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.
 	// The FilterPosition in the list will be applied in the order they are defined.
 	// If unspecified, the default filter order is applied.
@@ -628,6 +634,18 @@ type EnvoyProxyProvider struct {
 	//
 	// +optional
 	Host *EnvoyProxyHostProvider `json:"host,omitempty"`
+}
+
+// OverloadManager defines configuration for the Envoy overload manager.
+type OverloadManager struct {
+	// MaxConnections is the maximum number of active downstream connections, shared by
+	// all listeners of an Envoy proxy. Once the limit is reached, Envoy rejects new
+	// connections until existing ones close.
+	// If unspecified, defaults to 50000.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MaxConnections *int64 `json:"maxConnections,omitempty"`
 }
 
 // ShutdownConfig defines configuration for graceful envoy shutdown process.

@@ -350,6 +350,16 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "with-max-active-downstream-connections",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{},
+				},
+				SdsConfig:                      sds,
+				MaxActiveDownstreamConnections: new(int64(100000)),
+			},
+		},
+		{
 			name: "ipv6",
 			opts: &RenderBootstrapConfigOptions{
 				IPFamily: new(egv1a1.IPv6),

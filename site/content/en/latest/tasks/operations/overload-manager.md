@@ -4,13 +4,26 @@ title: "Overload Manager"
 
 Envoy Gateway configures the Envoy [overload manager][] in the bootstrap of every managed Envoy proxy. The overload manager protects the proxy from running out of memory or file descriptors by shedding load before the process fails.
 
-This page describes the defaults Envoy Gateway applies today. They are implementation defaults and may change in future releases. There is no dedicated `EnvoyProxy` field to configure them yet, see [#3604](https://github.com/envoyproxy/gateway/issues/3604).
+This page describes the defaults Envoy Gateway applies today. They are implementation defaults and may change in future releases. The downstream connection limit can be set with `spec.overloadManager` in the `EnvoyProxy` resource.
 
-These defaults are part of the default bootstrap. If you customize the bootstrap with `spec.bootstrap` in the `EnvoyProxy` resource, a `Replace` or `JSONPatch` bootstrap can change or remove the overload manager configuration. In that case, your bootstrap defines which limits apply.
+These defaults are part of the default bootstrap. If you customize the bootstrap with `spec.bootstrap` in the `EnvoyProxy` resource, a `Replace` or `JSONPatch` bootstrap can change or remove the overload manager configuration. The bootstrap customization is applied after `spec.overloadManager`, so in that case your bootstrap defines which limits apply.
 
 ## Downstream connection limit
 
 With the default bootstrap, Envoy Gateway configures the `envoy.resource_monitors.global_downstream_max_connections` resource monitor with a limit of 50000 active downstream connections, shared by all listeners of an Envoy proxy. Once the limit is reached, Envoy rejects new connections until existing ones close.
+
+To change the limit, set `maxConnections` in the `EnvoyProxy` resource. The value must be at least 1. Each connection uses memory and a file descriptor in the Envoy container, so check the container's memory and file descriptor limits before raising it. Changing the limit changes the bootstrap, which rolls out new Envoy pods.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  overloadManager:
+    maxConnections: 100000
+```
 
 ## Heap memory limits
 

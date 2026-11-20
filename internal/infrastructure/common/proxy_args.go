@@ -53,6 +53,10 @@ func BuildProxyArgs(
 		if bootstrapConfigOptions.IPFamily == nil {
 			bootstrapConfigOptions.IPFamily = getIPFamily(infra)
 		}
+
+		if infra.Config != nil && infra.Config.Spec.OverloadManager != nil {
+			bootstrapConfigOptions.MaxActiveDownstreamConnections = infra.Config.Spec.OverloadManager.MaxConnections
+		}
 	}
 
 	bootstrapConfigOptions.GatewayNamespaceMode = gatewayNamespaceMode

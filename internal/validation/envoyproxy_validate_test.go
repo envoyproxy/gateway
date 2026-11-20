@@ -1047,6 +1047,32 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "overloadManager maxConnections at minimum",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					OverloadManager: &egv1a1.OverloadManager{MaxConnections: new(int64(1))},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "overloadManager maxConnections below minimum",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					OverloadManager: &egv1a1.OverloadManager{MaxConnections: new(int64(0))},
+				},
+			},
+			expected: false,
+		},
+		{
 			name: "mergeGateways alone is valid",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{

@@ -2538,6 +2538,7 @@ _Appears in:_
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.<br />Mutually exclusive with MergeBackends. |
 | `mergeBackends` | _[MergeBackendsConfig](#mergebackendsconfig)_ |  false  |  | MergeBackends configures cluster deduplication: routes that reference the same backend<br />share a single Envoy cluster instead of Envoy Gateway generating one cluster per route<br />rule. This reduces xDS size, active health-check traffic, and stats cardinality, and<br />improves upstream connection pooling.<br />Only a route's own backendRefs (HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute) are<br />considered. A backend used any other way, such as a RequestMirror filter or an external<br />service of a SecurityPolicy or EnvoyExtensionPolicy, is never merged. A BackendTrafficPolicy<br />that targets a backend only reports status for Gateways where the backend is used as a route<br />backendRef.<br />Disabled when unset; specifying this field at all (even without further configuration)<br />enables it. Mutually exclusive with MergeGateways. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
+| `overloadManager` | _[OverloadManager](#overloadmanager)_ |  false  |  | OverloadManager defines configuration for the Envoy overload manager, which sheds<br />load before the proxy runs out of resources. |
 | `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.bandwidth_limit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_json_transcoder<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.alternate_protocols_cache<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
@@ -5165,6 +5166,20 @@ _Appears in:_
 | `reportingPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | ReportingPeriod is how often Envoy requests load reports from the server.<br />Must be greater than 0. Defaults to 10s. |
 | `port` | _integer_ |  false  |  | Port overrides the port used for the OutOfBand reporting connection, e.g. to<br />reach a separate reporting sidecar. Defaults to the endpoint's port. |
 | `authority` | _string_ |  false  |  | Authority overrides the :authority header on the OutOfBand gRPC stream.<br />If unset, Envoy uses the endpoint hostname, then the dialed address, then<br />the cluster name. |
+
+
+#### OverloadManager
+
+
+
+OverloadManager defines configuration for the Envoy overload manager.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `maxConnections` | _integer_ |  false  |  | MaxConnections is the maximum number of active downstream connections, shared by<br />all listeners of an Envoy proxy. Once the limit is reached, Envoy rejects new<br />connections until existing ones close.<br />If unspecified, defaults to 50000. |
 
 
 #### PassiveHealthCheck
