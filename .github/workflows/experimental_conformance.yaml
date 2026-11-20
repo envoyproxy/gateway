@@ -7,12 +7,14 @@ on:
     paths:
       - "charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml"
       - "test/conformance/experimental_conformance_test.go"
-      - "internal/gatewayapi/conformance/suite.go"
+      - "test/conformance/suite.go"
+      - "internal/gatewayapi/status/supported_features.go"
   pull_request:
     paths:
       - "charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml"
       - "test/conformance/experimental_conformance_test.go"
-      - "internal/gatewayapi/conformance/suite.go"
+      - "test/conformance/suite.go"
+      - "internal/gatewayapi/status/supported_features.go"
   # Add workflow_dispatch to trigger this workflow manually by maintainers.
   workflow_dispatch:
 
