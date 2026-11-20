@@ -5,11 +5,15 @@ title: "Dedicated Rate Limit Service"
 ## Overview
 
 This design lets one Envoy Gateway control plane run **dedicated rate limit services (RLS)**, each with its
-own Redis connection, for individual Gateways or GatewayClasses. Today a single RLS and Redis are shared by
-every Gateway the control plane manages.
+own Redis connection, for individual Gateways. Today a single RLS and Redis are shared by every Gateway
+the control plane manages.
 
 Envoy Gateway provisions the RLS; users provision Redis. Several RLS instances may reference the same
 Redis, so dedicated Redis capacity and failure isolation depend on the supplied backends.
+
+This proposal covers only the Gateway scope. A dedicated RLS shared by a GatewayClass is out of scope:
+`rateLimit` on a GatewayClass's `EnvoyProxy` is ignored, and may be supported in the future (see
+[Future work](#future-work-gatewayclass-scope)).
 
 Tracking issue: [#10520](https://github.com/envoyproxy/gateway/issues/10520)
 
@@ -33,13 +37,17 @@ needs to be isolated.
 
 ## Goals
 
-* Let a Gateway or a GatewayClass use its own RLS, optionally backed by its own Redis.
-* Let `timeout`, `failClosed`, telemetry and connection settings to the RLS differ between them.
-* Keep the shared RLS working exactly as today; dedicated services are opt-in.
+* Let a Gateway use its own RLS, optionally backed by its own Redis.
+* Let `timeout`, `failClosed`, telemetry and connection settings to the RLS differ between Gateways.
+* Keep the shared RLS working exactly as today; dedicated services are opt-in, both for the admin
+  (a control-plane setting) and per Gateway.
 * Allow global rate limiting with a dedicated RLS even when no shared RLS is configured.
 
 ## Non-Goals
 
+* A dedicated RLS per GatewayClass, or one shared by any other set of Gateways, in the first iteration.
+  Each dedicated RLS serves exactly one Gateway.
+* Dedicated RLS for merged Gateways (`mergeGateways`) in the first iteration.
 * User-managed (bring-your-own) RLS in the first iteration. Envoy Gateway still deploys and configures
   the RLS. A user-managed RLS may be proposed separately as a follow-up.
 * Rate limit backends other than Redis.
@@ -50,21 +58,22 @@ needs to be isolated.
 ## Assumptions
 
 A dedicated RLS is infrastructure: a platform or Gateway owner sets it up once, together with its Redis,
-and it normally stays unchanged for the life of the Gateway or GatewayClass. Changing its scope, Redis
-backend or credentials is expected to be rare and planned.
+and it normally stays unchanged for the life of the Gateway. Switching a Gateway between the shared and a
+dedicated RLS, or changing its Redis backend or credentials, is expected to be rare and planned.
 
 This design therefore optimizes for a simple, correct steady state rather than for seamless changes.
 Changes are reconciled the way other Kubernetes resources are: Envoy Gateway converges to the new desired
-state, and rate limiting may be briefly degraded, or briefly not enforced, while it does (see
+state, and rate limiting may be degraded, or not enforced, until the change converges (see
 [Changing the configuration](#changing-the-configuration)). If this assumption turns out to be wrong,
 smoother changes (for example, migrating between services before removing the old one) can be added
 later without changing the API.
 
 ## API
 
-The setting lives on `EnvoyProxy`, the existing API for per-Gateway and per-GatewayClass infrastructure.
-`EnvoyProxy` already attaches to a GatewayClass (`spec.parametersRef`) or a Gateway
-(`spec.infrastructure.parametersRef`), so no new attachment mechanism is needed.
+The setting lives on `EnvoyProxy`, the existing API for per-Gateway infrastructure. A Gateway already
+references an `EnvoyProxy` in its own namespace through `spec.infrastructure.parametersRef`, so no new
+attachment mechanism is needed. Only this Gateway-level attachment enables a dedicated RLS; see
+[GatewayClass EnvoyProxy](#gatewayclass-envoyproxy).
 
 A new optional `spec.rateLimit` field holds the same settings as `EnvoyGateway.rateLimit`:
 
@@ -90,23 +99,156 @@ only when the `EnvoyProxyPatch` runtime flag is enabled, the same as for the pro
 > carry this risk outside Gateway namespace mode. Dedicated RLS introduces it even in Gateway namespace
 > mode, because the RLS still runs in the controller namespace.
 >
-> Before enabling tenant-authored dedicated RLS configuration, admins must either restrict creation and
-> updates of the supplying `EnvoyProxy` to trusted platform administrators through RBAC, or enforce an
-> admission policy that allows only approved workload settings. The policy must cover deployment, HPA
-> and PDB settings, including patches, and allowlist safe fields and values rather than rely on a partial
-> denylist. Controller-namespace Secret references, custom images, environment variables, volumes and
-> mounts, security settings and ServiceAccount overrides all need to be covered. The same restrictions
-> must apply to every `EnvoyProxy` attachment that can supply these settings.
+> Before enabling tenant-authored dedicated RLS workload customization, admins must either restrict
+> creation and updates of the supplying `EnvoyProxy` to trusted platform administrators through RBAC, or
+> enforce an admission policy that allows only approved workload settings. The policy must cover
+> deployment, HPA and PDB settings, including patches, and allowlist safe fields and values rather than
+> rely on a partial denylist. Controller-namespace Secret references, custom images, additional and init
+> containers, environment variables, volumes and mounts, security settings and ServiceAccount overrides
+> all need to be covered. The same restrictions must apply to every `EnvoyProxy` a Gateway can reference.
 >
 > Disabling `EnvoyProxyPatch` is an additional restriction, not sufficient protection: ordinary
 > `KubernetesDeploymentSpec` fields can also select images and reference controller-namespace Secrets.
-> Tenant-authored configuration is supported only with the admission restrictions above; otherwise
-> dedicated RLS configuration must remain administrator-authored.
+> Tenant-authored workload customization is supported only with the admission restrictions above;
+> otherwise workload customization must remain administrator-authored. Dedicated RLS with built-in
+> workload settings can be enabled independently, as described below.
+>
+> Built-in workload settings remove the workload risks above, but not every risk. With only
+> `enableDedicatedRateLimit` enabled, Gateway owners still choose addresses that a pod in the controller
+> namespace connects to: the Redis URL and the OTLP endpoint in `telemetry.tracing.provider.url`. This
+> can bypass NetworkPolicies that restrict tenant namespaces and reach internal services from the
+> controller namespace. Each Gateway owner can also add an RLS Deployment to the controller namespace,
+> consuming its resources; a ResourceQuota there could then prevent Envoy Gateway's own pods from
+> scheduling. Admins should restrict egress from dedicated RLS pods with NetworkPolicy and plan capacity
+> and quota for the controller namespace before enabling dedicated RLS for tenants.
+
+### Example: restricting dedicated RLS egress
+
+The following NetworkPolicy, applied by an admin in the controller namespace, limits every dedicated
+RLS pod (selected by the labels defined in [Service identity](#service-identity)) to DNS, the Envoy
+Gateway configuration server, an approved Redis namespace and an approved OTLP collector. It also
+allows only Envoy proxy pods to call the RLS. Envoy Gateway does not create this policy.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dedicated-ratelimit
+  namespace: envoy-gateway-system          # the controller namespace
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: ratelimit
+      gateway.envoyproxy.io/ratelimit-scope: gateway
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:                                  # Envoy proxies, in any namespace
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/component: proxy
+          app.kubernetes.io/managed-by: envoy-gateway
+    ports:
+    - port: 8081                           # RLS gRPC
+  egress:
+  - to:                                    # cluster DNS
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+  - to:                                    # rate limit configuration server
+    - podSelector:
+        matchLabels:
+          control-plane: envoy-gateway
+    ports:
+    - port: 18001
+  - to:                                    # approved Redis instances
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: redis-system
+    ports:
+    - port: 6379
+  - to:                                    # approved OTLP collector, if tracing is used
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: observability
+      podSelector:
+        matchLabels:
+          app: otel-collector
+    ports:
+    - port: 4317
+```
+
+Notes for adapting it:
+
+* NetworkPolicy matches pods, namespaces and IP ranges, not hostnames. A Redis outside the cluster
+  needs an `ipBlock`, or a CNI-specific policy that supports FQDN rules.
+* This single policy lets every dedicated RLS reach every approved Redis. NetworkPolicy rules are
+  additive: a pod may make any connection allowed by at least one policy that selects it, so adding
+  narrower policies cannot take this access away. To limit each RLS to its own tenant's Redis, first
+  remove the Redis rule from the common policy, keeping its default deny, DNS, configuration server,
+  OTLP and ingress rules. Then add one policy per Gateway that selects on
+  `gateway.envoyproxy.io/owning-gateway-namespace` and `gateway.envoyproxy.io/owning-gateway-name` and
+  allows only that tenant's Redis.
+* The DNS, controller and proxy labels and the ports shown match a default Helm installation; check them
+  against the cluster. NetworkPolicy has no effect unless the CNI enforces it.
+* The shared RLS is not selected, because it does not carry the `ratelimit-scope: gateway` label.
+
+### Enabling dedicated RLS
+
+Because of this risk, dedicated RLS is disabled by default. Admins opt in through a new field in the
+`EnvoyGateway` configuration, next to the other switches for risky features such as
+`enableEnvoyPatchPolicy`, `enableLua` and `enableBackend`:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+extensionApis:
+  enableDedicatedRateLimit: true   # defaults to false
+  enableDedicatedRateLimitWorkloadOverrides: false   # defaults to false
+```
+
+While it is disabled, a Gateway whose `EnvoyProxy` sets `rateLimit` is `Accepted=False` with reason
+`InvalidParameters`, and the message names the setting to enable. Envoy Gateway does not fall back to
+the shared RLS: the user asked for an isolated RLS, and silently losing that isolation would be worse
+than a visible error. RLS workload fields on an `EnvoyProxy` without `rateLimit` have no effect either
+way. Disabling the setting after dedicated RLS is in use goes through the same path: the affected
+Gateways are rejected and their dedicated RLS is removed.
+
+The two settings are control-plane-wide opt-ins. `enableDedicatedRateLimit` allows Gateway owners to
+configure a dedicated RLS using built-in workload defaults. It does not permit RLS workload customization.
+When `enableDedicatedRateLimitWorkloadOverrides` is false, a Gateway-level `EnvoyProxy` that sets
+`rateLimit` together with any of `rateLimitDeployment`, `rateLimitHpa` or `rateLimitPDB` is rejected with
+Gateway `Accepted=False`, reason `InvalidParameters`, and a message naming the customization setting.
+Workload fields are not silently ignored. Fields on a GatewayClass or without `rateLimit` retain the
+scope behavior described below.
+
+Admins may additionally enable `enableDedicatedRateLimitWorkloadOverrides` to accept those workload
+fields. This requires `enableDedicatedRateLimit: true`; an inconsistent control-plane configuration is
+rejected at startup. The RBAC or admission restrictions above apply whenever customization is enabled.
+Disabling customization rejects Gateways still specifying workload fields through the same invalid
+parameters path; users should remove those fields before disabling it. Controller-owned isolation
+settings remain protected even when both switches and `EnvoyProxyPatch` are enabled.
 
 `rateLimit` is not accepted in the control-plane default `EnvoyGateway.envoyProxy`. Control-plane-wide
 rate limiting stays configured in one place, `EnvoyGateway.rateLimit`.
 
 ### Example
+
+This example customizes replicas and therefore requires both
+`extensionApis.enableDedicatedRateLimit: true` and
+`extensionApis.enableDedicatedRateLimitWorkloadOverrides: true`
+(see [Enabling dedicated RLS](#enabling-dedicated-rls)).
+Omit the `provider` block to use built-in workload defaults with only the first switch enabled.
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -151,134 +293,177 @@ spec:
 
 ## Scope
 
-Where `rateLimit` is set decides who shares the dedicated RLS:
+A dedicated RLS always serves exactly one Gateway. Which RLS a Gateway uses is decided as follows:
 
-| `rateLimit` set on                                  | Result                                                          |
-| --------------------------------------------------- | --------------------------------------------------------------- |
-| The Gateway's `EnvoyProxy`                          | One RLS for that Gateway.                                       |
-| The GatewayClass's `EnvoyProxy`                     | One RLS shared by every Gateway in the class.                   |
-| Class configuration, with `mergeGateways` enabled   | One RLS for the merged Gateways; Gateway-level `parametersRef` is invalid. |
-| No `EnvoyProxy` level, `EnvoyGateway.rateLimit` set | The shared control-plane RLS (today's behaviour).               |
-| No `EnvoyProxy` level, no shared RLS                | Global rate limits are rejected (today's behaviour).            |
+| Configuration                                              | Result                                                   |
+| ---------------------------------------------------------- | -------------------------------------------------------- |
+| The Gateway's own `EnvoyProxy` sets `rateLimit`            | A dedicated RLS for that Gateway.                        |
+| Only the GatewayClass's `EnvoyProxy` sets `rateLimit`      | Ignored; one of the last two rows applies.               |
+| `mergeGateways` enabled                                    | No Gateway-level `EnvoyProxy`; one of the last two rows. |
+| No Gateway-level `rateLimit`, `EnvoyGateway.rateLimit` set | The shared control-plane RLS (today's behaviour).        |
+| No Gateway-level `rateLimit`, no shared RLS                | Global rate limits are rejected (today's behaviour).     |
 
-Sharing an RLS per GatewayClass trades isolation for footprint: Gateways in the class share capacity and
-a failure domain again, but with fewer RLS deployments and a common Redis connection. This fits when the
-GatewayClass is already the team boundary.
+### Shared rules
 
-Ordinary rules keep separate counters through their Gateway listener domains. Rules with `shared: true`
-instead use the existing policy domain and share a bucket across that policy's targets using the same
-Redis backend. This design preserves those domains and Redis keys; an RLS scope is not an additional
-counter namespace.
+Ordinary rules keep separate counters through their Gateway listener domains, as today.
 
-When a policy's targets use RLS scopes backed by different Redis databases, its shared bucket splits into
-one independent bucket per database. For example, a shared 100rps rule spanning two such backends permits
-up to 100rps on each backend, rather than 100rps in total.
+Rules with `shared: true` share one bucket among the policy's targets **that use the same RLS**. Each
+dedicated RLS keeps its own bucket for the rule, and the shared control-plane RLS keeps one bucket for
+all targets on it. For example, a shared 100rps rule whose targets are on Gateway A (dedicated RLS),
+Gateway B (dedicated RLS) and Gateways C and D (shared RLS) allows up to 100rps on A, 100rps on B and
+100rps across C and D together.
 
-Whenever a shared rule's effective targets span multiple RLS scopes, including the shared control-plane
-scope, the policy reports `SharedRateLimitCrossScope=True` with reason `MultipleRLSScopes`. The warning
-identifies the scopes and explains that the bucket may split depending on their Redis backends; the
-policy remains accepted. It is based only on resolved scope identities, without comparing Redis URLs,
-Secret contents or database identities, and is reported even when the scopes have identical backend
-settings. The condition is removed when no shared rule's effective targets span multiple scopes. Users
-needing a common bucket should keep those targets on the same RLS scope.
+Domains are generated exactly as today, on every RLS; proxies and RLS configuration see no change.
+Buckets are kept apart in Redis instead. The RLS supports a `CACHE_KEY_PREFIX` setting that it prepends
+to every Redis key it reads or writes. Envoy Gateway sets it on each dedicated RLS Deployment to
+`<gatewayNamespace>/<gatewayName>:` and leaves it unset on the shared RLS, as today. All keys of a
+dedicated RLS, for shared and ordinary rules alike, are therefore separate from those of every other RLS,
+even when several RLS use the same Redis database. Whether targets share a bucket depends only on which
+RLS their Gateways use, never on the Redis backends behind them.
 
-Separate RLS scopes pointing at the same Redis database can still share counters for `shared: true`
-rules with the same policy domain and descriptors. Dedicated deployments alone do not isolate those
-counters. Conversely, different Redis backends cannot provide a common bucket merely because the policy
-is shared. The user guide must explain both cases; rules and domains remain generated as today.
+The prefix cannot collide with existing keys. The RLS builds each key from the prefix, the domain, `_`
+and the descriptors. Domains consist only of Kubernetes names, listener section names and `/`, so a
+shared RLS key contains only lowercase letters, digits, `-`, `.` and `/` before its first `_`. A
+dedicated RLS key always contains `:` before that point, so it never matches a shared RLS key. Two
+dedicated RLS keys differ in the text before their first `:`, which is their Gateway's namespace and
+name.
 
-### Inheritance from the GatewayClass
+The prefix is derived from the Gateway, not from the RLS settings. It stays the same when the RLS is
+updated, including when its Redis backend changes.
 
-**Replace (no `mergeType`).** A Gateway-level `EnvoyProxy` replaces the class one completely. A Gateway
-that brings its own `EnvoyProxy` for an unrelated reason, such as replicas, therefore leaves the class RLS:
-it falls back to the shared RLS, or gets its own if it repeats the `rateLimit` block. Users who want such a
-Gateway to stay on the class RLS set `mergeType`. The user guide should call this out.
+Users who need one bucket across Gateways should keep those Gateways on the shared RLS. A shared bucket
+never spans more than one RLS.
 
-**StrategicMerge and JSONMerge.** These merge `EnvoyProxy` field by field today. This design adds new
-behaviour for `rateLimit`: the block is treated as a single unit instead of being merged field by field.
+Whenever a shared rule's effective targets use more than one RLS, the policy reports
+`SharedRateLimitCrossScope=True` with reason `MultipleRLSScopes`. The message lists the RLS involved
+and states that each enforces the limit separately. The policy remains accepted, and the condition is
+removed when no shared rule's targets span more than one RLS. The user guide must explain this
+behaviour.
 
-* A Gateway that does not set `rateLimit` inherits the class block and stays on the class RLS.
-* A Gateway that sets `rateLimit` replaces the class block in full and gets its own RLS, even when the
-  values equal the class configuration. The block must include `backend`, so an `EnvoyProxy` patch that
-  only sets `timeout` is rejected when it is applied.
+### GatewayClass EnvoyProxy
 
-This requires Envoy Gateway to track which level supplied the `rateLimit` block, not just the merged result.
-Scope is determined by attachment and inheritance; there is no explicit `scope` field.
+`rateLimit` and the RLS workload fields (`rateLimitDeployment`, `rateLimitHpa`, `rateLimitPDB`) are
+ignored on an `EnvoyProxy` referenced by a GatewayClass's `spec.parametersRef`. Gateways in the class
+are not affected by them. The GatewayClass stays `Accepted=True`, and its condition message notes that
+these fields are ignored, so the configuration is not silently dropped.
 
-**Both levels set `rateLimit`.** In every mode above, the Gateway's block wins: the Gateway gets its own
-RLS and the class RLS keeps serving the other Gateways in the class. Shared rules spanning this Gateway and
-Gateways on the class RLS report `SharedRateLimitCrossScope`, as described in [Scope](#scope). If the
-Gateway's backend uses a different Redis database from the class, adding the Gateway block splits those
-shared buckets and so loosens their effective total limit; the user guide should call this out.
+These fields are also never inherited from the class through `mergeType`. With StrategicMerge or
+JSONMerge, Envoy Gateway resolves `rateLimit` and the RLS workload fields from the Gateway's own,
+unmerged `EnvoyProxy`; class values for them are discarded before merging. Normal merge rules still
+apply to unrelated proxy fields. A Gateway therefore gets a dedicated RLS only when its own `EnvoyProxy`
+sets a complete `rateLimit` block, including `backend`.
 
-**Merged Gateways.** With `mergeGateways` enabled, the class `rateLimit` block applies to the merged
-Gateways. A Gateway's `spec.infrastructure.parametersRef` must be unset, as required today. Attaching a
-Gateway-level `EnvoyProxy` is invalid, including one supplying `rateLimit`; it is rejected rather than
-ignored with a warning. This design does not change that attachment restriction.
+### Merged Gateways
 
-**Workload settings.** RLS workload settings follow the scope of the selected `rateLimit` block. A class
-RLS uses the class `EnvoyProxy`'s `rateLimitDeployment`, `rateLimitHpa` and `rateLimitPDB`. If a Gateway
-on the class RLS sets these fields, they are ignored and the Gateway reports a warning condition; the
-Gateway is not rejected. A Gateway RLS uses only its own `EnvoyProxy`'s workload settings, without
-inheriting class workload settings, even with StrategicMerge or JSONMerge. For example, a Gateway that
-supplies a new `rateLimit.backend` but no workload settings gets the built-in RLS workload defaults,
-not the class's replicas, HPA or PDB.
+With `mergeGateways` enabled, a Gateway's `spec.infrastructure.parametersRef` must be unset, as required
+today, and the class `rateLimit` block is ignored as above. Merged Gateways therefore keep using the
+shared RLS. This design does not change that attachment restriction.
 
-All three workload fields are resolved from the unmerged `EnvoyProxy` that supplied the selected
-`rateLimit` block, then built-in defaults are applied. Neither `EnvoyGateway.envoyProxy` nor the shared
-RLS settings under `EnvoyGateway.provider.kubernetes` supply defaults for dedicated RLS workloads.
-RLS workload fields in `EnvoyGateway.envoyProxy` are rejected when loading the control-plane config.
-The shared RLS continues to use its existing control-plane workload settings. Normal merge rules still
-apply to unrelated proxy fields.
+### Workload settings
+
+A dedicated RLS uses the `rateLimitDeployment`, `rateLimitHpa` and `rateLimitPDB` of the Gateway's
+`EnvoyProxy`, then built-in defaults for omitted settings. Neither the GatewayClass `EnvoyProxy`,
+`EnvoyGateway.envoyProxy` nor the shared RLS settings under `EnvoyGateway.provider.kubernetes` supply
+defaults for dedicated RLS workloads. RLS workload fields in `EnvoyGateway.envoyProxy` are rejected when
+loading the control-plane config. RLS workload fields on a Gateway `EnvoyProxy` without `rateLimit` have
+no effect and are reported as a warning on the Gateway. The shared RLS continues to use its existing
+control-plane workload settings.
 
 ## How it works
 
 1. **Resolution.** When translating each Gateway, Envoy Gateway works out which RLS it uses (dedicated or
    shared) from the scope rules above. Global rate limit policies are accepted for a Gateway when it has
    either kind of RLS.
-2. **Deployment.** Envoy Gateway deploys one RLS per distinct dedicated scope, named after that scope
-   (for example `envoy-ratelimit-<hash>`). It keeps the RLS while at least one Gateway uses it and removes
-   it once the last Gateway leaves.
-3. **Rate limit configuration.** Each RLS receives only the rate limit rules of the Gateways that use it.
-   The shared RLS keeps receiving the rules of all Gateways
-   without a dedicated RLS. A shared policy domain is included in the configuration of every RLS that
-   serves at least one of the policy's targets. The configuration server runs whenever any RLS exists, even when no shared
-   RLS is configured.
-4. **Proxy configuration.** Each Gateway's proxies are pointed at their RLS, with that scope's `timeout`,
+2. **Deployment.** Envoy Gateway deploys one RLS per Gateway with a dedicated RLS, named after that
+   Gateway (for example `envoy-ratelimit-<hash>`), with a cache key prefix derived from the Gateway (see
+   [Shared rules](#shared-rules)). It removes the RLS when the Gateway is deleted or no longer sets
+   `rateLimit`.
+3. **Rate limit configuration.** Each dedicated RLS receives only the rate limit rules of its Gateway.
+   The shared RLS keeps receiving the rules of all Gateways without a dedicated RLS. A shared policy
+   domain is included in the configuration of every RLS that serves at least one of the policy's
+   targets. The configuration server runs whenever any RLS exists, even when no shared RLS is
+   configured.
+4. **Proxy configuration.** Each Gateway's proxies are pointed at their RLS, with that RLS's `timeout`,
    `failClosed` and connection settings.
 
-```text
-                    ┌──────────────── Envoy Gateway ────────────────┐
-                    │  resolves scope · deploys RLS · pushes rules  │
-                    └──────┬──────────────────┬──────────────────┬──┘
-                           │                  │                  │
- Gateway A (own RLS) ──▶ RLS-A ──▶ Redis-A    │                  │
- Gateways B, C (class) ─────────────▶ RLS-class ──▶ Redis-class  │
- Gateway D (no rateLimit) ──────────────────────────────▶ shared RLS ──▶ shared Redis
+```mermaid
+flowchart LR
+  EG["Envoy Gateway<br/>resolves RLS · deploys · pushes rules"]
+
+  subgraph gw["Gateway namespaces"]
+    A["Gateway A proxies<br/>(own RLS)"]
+    B["Gateway B proxies<br/>(own RLS)"]
+    CD["Gateways C, D proxies<br/>(no rateLimit)"]
+  end
+
+  subgraph cp["Controller namespace"]
+    RA["RLS-A<br/>prefix team-a/gw-a:"]
+    RB["RLS-B<br/>prefix team-b/gw-b:"]
+    RS["shared RLS<br/>no prefix"]
+  end
+
+  RedisA[("Redis-A")]
+  RedisS[("shared Redis")]
+
+  A --> RA --> RedisA
+  B --> RB --> RedisS
+  CD --> RS --> RedisS
+
+  EG -. rules .-> RA
+  EG -. rules .-> RB
+  EG -. rules .-> RS
 ```
+
+Solid arrows are rate limit checks; dotted arrows are rules pushed by Envoy Gateway. RLS-B and the
+shared RLS use the same Redis database but keep separate counters through their cache key prefixes.
 
 ### Service identity
 
-Each RLS has a stable identity: the Gateway (namespace/name), the GatewayClass name, or the existing shared
-identity. Resource names and the configuration each RLS receives are keyed by this identity, so reusing
-one `EnvoyProxy` across several attachments does not merge their services.
+Each RLS has a stable identity: the Gateway (namespace/name) for a dedicated RLS, or the existing shared
+identity. Resource names and the configuration each RLS receives are keyed by this identity, so several
+Gateways referencing the same `EnvoyProxy` each get their own RLS rather than sharing one.
 
-The identity depends only on scope, not on settings. Changing the settings of an existing RLS, including
+The identity depends only on the Gateway, not on settings. Changing the settings of an existing RLS, including
 its Redis backend, therefore updates that RLS in place rather than creating a new one; see
 [Changing the configuration](#changing-the-configuration).
 
 For dedicated RLS, explicit `rateLimitDeployment.name`, `rateLimitHpa.name` and `rateLimitPDB.name` are
 not supported and are rejected as invalid parameters. Envoy Gateway generates the names of the Deployment,
-Service, HPA, PDB and copied credential Secrets from the scope identity. Generated identities distinguish
-Gateway and GatewayClass scopes and reserve the existing shared RLS identity. The HPA target and Service
-and PDB selectors refer only to that scope's Deployment and pods; no selector spans dedicated scopes or
-the shared RLS.
+Service, HPA, PDB and copied credential Secrets from the scope identity. Generated identities reserve the
+existing shared RLS identity and include the scope kind, leaving room for a GatewayClass scope later. The
+HPA target and Service and PDB selectors refer only to that scope's Deployment and pods; no selector
+spans dedicated scopes or the shared RLS.
 
-These identity fields are controller-owned even when `EnvoyProxyPatch` is enabled. Envoy Gateway validates
-the rendered resources after applying workload settings and patches, rejecting changes to generated
-resource names or namespaces, ownership metadata, scope labels and selectors, or the HPA target. Custom
-pod labels cannot overwrite scope labels. These checks also apply to administrator-authored configuration
-and prevent one scope's settings from redirecting reconciliation or traffic to another scope's resources.
+Dedicated RLS pods carry the following scope labels, in addition to the existing
+`app.kubernetes.io/name` and `app.kubernetes.io/component: ratelimit` labels:
+
+| Label                                            | Value                       |
+| ------------------------------------------------ | --------------------------- |
+| `gateway.envoyproxy.io/ratelimit-scope`          | `gateway`                   |
+| `gateway.envoyproxy.io/owning-gateway-namespace` | The Gateway's namespace     |
+| `gateway.envoyproxy.io/owning-gateway-name`      | The Gateway's name          |
+
+The owning-gateway labels are the same ones Envoy Gateway already sets on proxy resources. The shared
+RLS does not carry these labels. A future GatewayClass scope would use a different
+`ratelimit-scope` value. The labels are part of the supported interface, so admins can select dedicated
+RLS pods in NetworkPolicies and admission policies; see
+[Example: restricting dedicated RLS egress](#example-restricting-dedicated-rls-egress).
+
+These identity fields and the dedicated RLS runtime settings `CONFIG_GRPC_XDS_NODE_ID`,
+`CONFIG_GRPC_XDS_SERVER_URL`, `CONFIG_TYPE` and `CACHE_KEY_PREFIX` are controller-owned even when
+`EnvoyProxyPatch` is enabled. Envoy Gateway validates the rendered resources after applying workload
+settings and patches, rejecting changes to generated resource names or namespaces, ownership metadata,
+scope labels and selectors, or the HPA target. Custom pod labels cannot overwrite scope labels. The RLS
+container must keep the generated runtime settings with their literal values, with no duplicate
+definitions or `valueFrom` substitutions, and any change to its `command` or `args` is rejected. These
+checks also apply to administrator-authored configuration.
+
+These checks guard against misconfiguration, such as one scope's settings accidentally redirecting
+reconciliation or traffic to another scope's resources. They are not a security boundary against a
+deliberate author: a custom image can ignore the runtime settings, and additional or init containers
+can read the RLS's mounted credentials and certificates. When workload overrides are enabled, the
+RBAC or admission restrictions in the [security note](#api) remain the boundary and must cover the
+container image and any added containers.
 
 ### Namespace and certificates
 
@@ -289,8 +474,8 @@ today. Running the RLS in the Gateway namespace (in Gateway namespace mode) is a
 
 ### Redis credentials
 
-Redis references are resolved against the `EnvoyProxy` that supplied the `rateLimit` block, even when a
-Gateway inherits it. `urlRef.secretKeyRef` must be in that `EnvoyProxy`'s namespace. A TLS `certificateRef`
+Redis references are resolved against the Gateway's `EnvoyProxy` that supplied the `rateLimit` block.
+`urlRef.secretKeyRef` must be in that `EnvoyProxy`'s namespace. A TLS `certificateRef`
 defaults to the same namespace; a cross-namespace reference requires a `ReferenceGrant` that allows that
 `EnvoyProxy` to reference the Secret.
 
@@ -300,15 +485,14 @@ is removed. A hash of the copied values is set as an annotation on the RLS pod t
 rotation triggers a normal rolling update and new pods pick up the new credentials.
 
 **Missing or revoked credentials.** If a referenced Secret is deleted or its `ReferenceGrant` is revoked,
-Envoy Gateway deletes its copy, updates the hash and the affected Gateways report a condition naming the
-problem. The new pods cannot start
-without the Secret, so the rolling update stalls and running pods keep serving with the credentials they
-already loaded until they are replaced. Once the references are valid again, the rollout completes.
+Envoy Gateway deletes its copy, updates the hash and the Gateway reports a condition naming the problem.
+The new pods cannot start without the Secret, so the rolling update stalls and running pods keep
+serving with the credentials they already loaded until they are replaced. Once the references are valid again, the rollout completes.
 
 Deleting the source Secret is therefore **not** a way to cut off Redis access, and Envoy Gateway does not
 provide an RLS stop switch in the first iteration. Removing the `rateLimit` block isn't one either: the
-Gateways may move to the class or shared RLS instead, and a class RLS keeps running while other Gateways
-use it. To stop a dedicated RLS from using credentials that must no longer be used, revoke them at Redis
+Gateway moves to the shared RLS, if configured, and the dedicated RLS is removed only after that change
+converges. To stop a dedicated RLS from using credentials that must no longer be used, revoke them at Redis
 (change the password or ACL, or revoke the client certificate). The running pods then lose access on
 their next connection attempt, and rate limit checks follow `failClosed`.
 
@@ -323,10 +507,12 @@ These rules are derived from current resources on restart and do not depend on r
 ### Validation and status
 
 A `rateLimit` block without `backend` is rejected by schema validation when the `EnvoyProxy` is applied.
-Other invalid settings, such as an unsupported `serviceSettings` field, are
-reported the same way as other invalid `EnvoyProxy` settings: the affected Gateways are `Accepted=False`
-with reason `InvalidParameters`. The `serviceSettings` restrictions are the same as for the
-shared RLS.
+Other invalid settings, such as an unsupported `serviceSettings` field, `rateLimit` while
+`extensionApis.enableDedicatedRateLimit` is disabled, and RLS workload fields together with `rateLimit`
+while `extensionApis.enableDedicatedRateLimitWorkloadOverrides` is disabled (see
+[Enabling dedicated RLS](#enabling-dedicated-rls)), are reported the same way as other invalid
+`EnvoyProxy` settings: the affected Gateways are `Accepted=False` with reason `InvalidParameters`. The
+`serviceSettings` restrictions are the same as for the shared RLS.
 
 Missing Secrets, missing or invalid credential keys, and denied or revoked Secret references are
 operational credential failures, not fatal `EnvoyProxy` validation errors. They do not set Gateway
@@ -357,14 +543,14 @@ limitations described below.
 
 `RateLimitReady=False` uses the following reasons, in priority order when multiple failures apply:
 
-| Reason | Meaning |
-| ------ | ------- |
-| `InvalidCredentials` | A required credential or its authorization cannot be resolved. |
-| `ProvisioningFailed` | Creation or update of a required Kubernetes resource failed. |
-| `RolloutFailed` | The Deployment reports that the desired rollout exceeded its progress deadline. |
-| `Provisioning` | Required resources have not yet been observed. |
-| `RollingOut` | The current Deployment rollout has not completed. |
-| `NoReadyEndpoints` | The Service has no ready endpoint from the current rollout. |
+| Reason               | Meaning                                                                         |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `InvalidCredentials` | A required credential or its authorization cannot be resolved.                  |
+| `ProvisioningFailed` | Creation or update of a required Kubernetes resource failed.                    |
+| `RolloutFailed`      | The Deployment reports that the desired rollout exceeded its progress deadline. |
+| `Provisioning`       | Required resources have not yet been observed.                                  |
+| `RollingOut`         | The current Deployment rollout has not completed.                               |
+| `NoReadyEndpoints`   | The Service has no ready endpoint from the current rollout.                     |
 
 An unknown observation state uses `RateLimitReady=Unknown` with reason `PendingObservation`. Successful
 convergence uses reason `Ready`. A Gateway that no longer uses global rate limiting has this condition
@@ -384,53 +570,73 @@ makes the Gateway `Accepted=False` with a message saying so.
 ## Changing the configuration
 
 Following the [assumptions](#assumptions), any change to a dedicated RLS (new settings, a new Redis
-backend, or a new scope such as moving a Gateway from the class RLS to its own) is reconciled toward the
-desired state, like other Kubernetes resources. Envoy Gateway creates or updates the RLS, publishes the
-Gateway's rules to it, points the proxies at it, and removes a dedicated RLS once no Gateway uses it. A
+backend, or moving a Gateway between the shared RLS and its own) is reconciled toward the desired state,
+like other Kubernetes resources. Envoy Gateway creates or updates the RLS, publishes the Gateway's rules
+to it, points the proxies at it, and removes a dedicated RLS once its Gateway no longer uses it. A
 control plane restart simply reconciles again.
 
 While a change rolls out, rate limiting may be degraded in two ways:
 
 * **The RLS can't be reached** (not ready yet, or already removed). Those requests follow `failClosed`.
 * **The RLS is reachable but no longer has the Gateway's rules.** This happens when the rules have
-  already moved to the new RLS but some proxies still call the old one, which is still running for other
-  Gateways or not yet removed. The RLS treats an unknown domain as having no limits and allows the
-  request, so **rate limits are not enforced for those requests even with `failClosed: true`**.
+  already moved to the new RLS but some proxies still call the old one, which is the shared RLS still
+  running for other Gateways, or a dedicated RLS not yet removed. The RLS treats an unknown domain as
+  having no limits and allows the request, so **rate limits are not enforced for those requests even
+  with `failClosed: true`**.
 
-Both gaps last until the proxies receive their new configuration, normally seconds. Envoy Gateway does
+Both gaps can persist until the proxies successfully apply their new configuration. There is no
+guaranteed upper bound: disconnected proxies or rejected updates can prolong the gap, including when
+`failClosed: true`. Envoy Gateway does
 not keep old rules on the previous RLS until proxies have switched; that would need the migration support
-this design leaves out. Users who need continuous enforcement should make such changes during a low-traffic window.
+this design leaves out. Users who need continuous enforcement should make such changes during a
+low-traffic window.
+
+**Counters after a change.** Moving a Gateway between the shared RLS and a dedicated one changes the
+cache key prefix of its keys (see [Shared rules](#shared-rules)), selecting a different keyspace even
+if both use the same Redis database. Counters start from zero only when matching, unexpired keys do not
+already exist in the destination keyspace. Switching shared → dedicated → shared can reuse surviving
+shared counters. Likewise, re-enabling the dedicated RLS for the same Gateway, or recreating a Gateway
+with the same namespace and name, can reuse its earlier dedicated counters. A shared policy bucket on
+the destination shared RLS may also already contain usage from other targets. The transition does not
+reset counters of other targets of the same policy. Changing the Redis backend of a dedicated RLS keeps
+its prefix; whether counters carry over then depends on the destination Redis (see
+[Counter behavior when changing Redis backends](#counter-behavior-when-changing-redis-backends)).
 
 ## Upgrade and compatibility
 
-Without `EnvoyProxy.spec.rateLimit`, nothing changes: same shared RLS, same resource names, same
-behaviour.
+Without `EnvoyProxy.spec.rateLimit` on a Gateway's `EnvoyProxy`, nothing changes: same shared RLS, same
+resource names, same behaviour. Dedicated RLS is disabled by default, so upgrading does not let anyone
+create RLS workloads in the controller namespace until an admin sets
+`extensionApis.enableDedicatedRateLimit`. `rateLimit` on a GatewayClass's `EnvoyProxy` is ignored in this
+iteration, so adding GatewayClass support later only changes behaviour for configurations that are
+explicitly reported as ignored today. The GatewayClass condition message makes this visible before
+support lands.
 
 ## Alternatives considered
 
-* **Make the GatewayClass RLS mandatory when configured.** If the GatewayClass sets `rateLimit`, every
-  Gateway in that class uses the class RLS, regardless of `mergeType`. A Gateway-level `rateLimit` is
-  rejected with Gateway `Accepted=False`, reason `InvalidParameters`. Gateway-level configuration of
-  unrelated proxy fields remains subject to existing rules. If the class has no `rateLimit`, a Gateway
-  can configure its own RLS or fall back to the shared control-plane RLS.
-
-  **Pros:** simpler scope resolution, with no need to track whether a merged `rateLimit` block came from
-  the class or Gateway; a clear platform-owned RLS boundary; and unrelated Gateway proxy settings cannot
-  accidentally move a Gateway off the class RLS. Gateway overrides cannot split shared buckets within
-  that class across different Redis backends.
-
-  **Cons:** no per-Gateway RLS exceptions within a class, so a Gateway needing separate capacity, Redis
-  or failure behaviour must move to another GatewayClass. Adding `rateLimit` to a class invalidates
-  existing Gateway-level `rateLimit` configurations, requiring a coordinated change. It also introduces
-  a special inheritance rule: the class RLS remains effective even when the Gateway's `EnvoyProxy`
-  otherwise replaces the class configuration.
-
+* **Support GatewayClass scope in the first iteration.** A class `rateLimit` block would deploy one RLS
+  shared by every Gateway in the class, including merged Gateways. This reduces the number of RLS
+  deployments, but requires deciding how class and Gateway blocks interact under each `mergeType`,
+  tracking which level supplied the merged block, and handling the class RLS lifecycle as Gateways join
+  and leave. Deferred; see [Future work](#future-work-gatewayclass-scope).
+* **No switch; rely on RBAC and admission policy only.** Less configuration, but every upgraded control
+  plane would immediately let anyone who can author an `EnvoyProxy` create pods in the controller
+  namespace, protected only by guidance in the docs.
+* **A runtime flag instead of an `extensionApis` field.** Runtime flags guard breaking changes and
+  experimental behaviour, are often enabled by default and are removed once the change settles; they
+  are not meant as permanent security switches. `EnvoyProxyPatch` is enabled by default for this
+  reason. `extensionApis` already holds the permanent, disabled-by-default switches for risky features.
+* **The switch under `EnvoyGateway.rateLimit`.** That block configures the shared RLS, and one goal is
+  to allow dedicated RLS without a shared RLS, so users would have to set it only to reach the switch.
+* **A single switch for dedicated RLS and workload customization.** Simpler API, but enabling per-Gateway
+  Redis configuration would also allow controller-namespace workload customization. Separate switches
+  let admins offer built-in workloads without requiring workload admission policies.
 * **Named rate limit profiles in the `EnvoyGateway` config**, referenced by name from `EnvoyProxy`. This
   keeps Redis credentials admin-only, but `EnvoyGateway` changes need a control plane restart, and it adds
   a second place to configure per-Gateway infrastructure.
 * **A new `RateLimitService` resource** referenced from `EnvoyProxy` or `BackendTrafficPolicy`. This lets
-  any set of Gateways share one dedicated RLS, but it is a new API. Attaching `rateLimit` to a
-  GatewayClass's `EnvoyProxy` or merging Gateways covers the common sharing cases with the existing API.
+  any set of Gateways share one dedicated RLS, but it is a new API. Per-Gateway isolation, the main
+  need, is covered by the existing `EnvoyProxy` attachment; sharing across Gateways is left to future work.
 * **Choosing the RLS per `BackendTrafficPolicy`.** A proxy would then talk to several RLS instances, which
   makes the proxy configuration much more complex and gives Gateways no isolation by default.
 * **Multiple control planes** (today's workaround). It works, but it is heavy when only the rate limit
@@ -442,24 +648,33 @@ These are the author's recommendations and are open for review.
 
 * `backend` is required in every `rateLimit` block. Overriding only `timeout` or `failClosed` while
   keeping the shared RLS is left to a separate shared-mode design.
-* Scope comes from attachment and inheritance; no explicit `scope` field is added.
-* Shared rules retain their policy domains and Redis keys. Shared targets spanning multiple RLS scopes
-  produce a policy warning that their bucket may split depending on the Redis backends. The warning
-  uses scope identities; separate scopes using the same database can still share counters.
+* Dedicated RLS is supported only at Gateway scope. `rateLimit` and RLS workload fields on a
+  GatewayClass `EnvoyProxy` are ignored, reported in the GatewayClass condition message, and never
+  inherited through `mergeType`. Merged Gateways keep using the shared RLS.
+* Scope comes from the Gateway's own `EnvoyProxy`; no explicit `scope` field is added.
+* A `shared: true` bucket covers only the policy's targets on the same RLS. Domains are unchanged;
+  each dedicated RLS sets `CACHE_KEY_PREFIX` to `<gatewayNamespace>/<gatewayName>:` so its Redis keys
+  stay separate, and the shared RLS keeps no prefix. Targets spanning more than one RLS produce a
+  `SharedRateLimitCrossScope` warning, not a rejection.
 * `rateLimit` is not allowed in the control-plane default `EnvoyGateway.envoyProxy`.
-* Gateway overrides of class RLS workload settings are ignored with a warning, not rejected.
-* When both the Gateway and its GatewayClass set `rateLimit`, the Gateway block wins and gets its own RLS.
-  With `mergeGateways`, Gateway-level `parametersRef` remains invalid, so only the class can supply
-  dedicated RLS settings.
-* Dedicated RLS workload settings come only from the unmerged `EnvoyProxy` supplying `rateLimit`, with
-  built-in defaults for omitted settings; class and control-plane workload settings are not inherited.
+* Dedicated RLS workload settings come only from the Gateway's unmerged `EnvoyProxy`, with built-in
+  defaults for omitted settings; class and control-plane workload settings are not inherited.
 * Dedicated RLS resource names, ownership, scope labels and selectors, and HPA targets are
-  controller-owned. Explicit workload names and patches that change those fields are rejected.
+  controller-owned, as are the runtime settings selecting configuration and Redis key prefixes.
+  Workload settings and patches that change these fields are rejected after rendering.
+* Dedicated RLS is disabled by default and enabled with `extensionApis.enableDedicatedRateLimit`.
+  While disabled, a Gateway whose `EnvoyProxy` sets `rateLimit` is `Accepted=False` with reason
+  `InvalidParameters` and does not fall back to the shared RLS. Workload customization requires the
+  additional, disabled-by-default `extensionApis.enableDedicatedRateLimitWorkloadOverrides` switch.
 * Dedicated RLS workload settings use the existing Kubernetes types. `patch` is gated by
-  `EnvoyProxyPatch`, but disabling patches alone is insufficient protection. Configuration must be
-  administrator-authored or constrained by an admission allowlist covering all workload settings.
+  `EnvoyProxyPatch`, but disabling patches alone is insufficient protection. Even with dedicated RLS
+  enabled, workload customization must be administrator-authored or constrained by an admission
+  allowlist covering all workload settings. Built-in workloads do not require the customization switch.
 * Dedicated RLS deployments run in the controller namespace in the first iteration. Running them in the
   Gateway namespace, and the authentication that needs, is deferred.
+* Dedicated RLS pods carry documented, controller-owned scope labels so admins can select them in
+  NetworkPolicies and admission policies. The proposal includes an example egress policy; Envoy
+  Gateway does not generate NetworkPolicies in the first iteration.
 * Envoy Gateway copies the referenced Redis Secret keys into the controller namespace and keeps the copy
   in sync; a config hash on the pod template rolls the RLS on rotation. Revoked credentials stall that
   rollout, so running pods are not actively stopped; credentials are revoked at Redis.
@@ -471,6 +686,61 @@ These are the author's recommendations and are open for review.
   reconciliation with no migration support. While they converge, unreachable RLS calls follow
   `failClosed`, and calls to an RLS that no longer has the Gateway's rules are allowed.
 * User-managed RLS is deferred to a separate proposal.
+
+## Acceptance and validation plan
+
+Implementation must cover the following cases with meaningful automated tests:
+
+* **Opt-ins and scope:** both switches default off; built-in workloads work with only dedicated RLS
+  enabled; workload overrides require both switches; inconsistent control-plane switches fail startup;
+  class fields are ignored and never inherited.
+* **Coexistence:** shared and dedicated RLS operate together; dedicated-only operation works without a
+  shared RLS; multiple Gateways referencing one `EnvoyProxy` receive distinct services and snapshots.
+* **Counter isolation:** two dedicated RLS and the shared RLS using the same Redis database keep
+  separate counters, including for `shared: true` rules; cross-scope policy warnings appear and clear
+  correctly.
+* **Counter reuse:** switching back to a previously used shared or dedicated keyspace preserves matching
+  unexpired counters rather than promising a reset.
+* **Credentials:** initial missing references, rotation, deletion and ReferenceGrant revocation update
+  copies, rollouts and status as specified, without fallback or removal of rate limit filters.
+* **Reconciliation:** controller restart reconstructs scope selection and readiness; Gateway deletion
+  removes only its resources; updates preserve scope-specific selectors and HPA targets.
+* **Protected settings:** workload settings and patches cannot override names, selectors, ownership,
+  configuration identity, configuration source or cache key prefix, including through duplicate env
+  entries, `valueFrom`, or `command` and `args` changes.
+* **Transitions and failures:** shared/dedicated transitions, an unavailable RLS and delayed proxy
+  updates show the documented failure behavior, including the enforcement gap despite
+  `failClosed: true`.
+
+Use schema/CEL tests for API validation, Gateway translation fixtures for selection and conditions,
+infrastructure tests for rendered resources and protected settings, and xDS/configuration tests for
+per-scope routing and rule distribution. End-to-end tests must demonstrate shared/dedicated coexistence,
+dedicated-only operation, same-Redis counter isolation and credential rotation. Tests of migration gaps
+should control configuration delivery rather than depend on a timing race. These checks are requirements
+for implementation; this proposal itself changes no executable behavior.
+
+## Future work: GatewayClass scope
+
+A dedicated RLS shared by every Gateway in a GatewayClass may be added later, by honouring `rateLimit`
+on the class `EnvoyProxy`. It trades isolation for footprint: Gateways in the class share capacity and a
+failure domain again, but with fewer RLS deployments and a common Redis connection, which fits when the
+GatewayClass is already the team boundary. It would also give merged Gateways a dedicated RLS.
+
+The identity scheme above already leaves room for a GatewayClass scope. Open questions for that design:
+
+* **Inheritance.** Whether a Gateway-level `rateLimit` may override the class RLS, and how the existing
+  `mergeType` modes (replace, StrategicMerge, JSONMerge) apply to the block. One option treats
+  `rateLimit` as a single unit and lets the Gateway block win; another makes the class RLS mandatory and
+  rejects Gateway-level blocks in that class.
+* **Unrelated Gateway overrides.** With replace semantics, a Gateway bringing its own `EnvoyProxy` for an
+  unrelated reason would silently leave the class RLS.
+* **Workload settings.** Whether Gateways on the class RLS may influence its workload settings.
+* **Lifecycle.** Keeping the class RLS while at least one Gateway uses it, and the rule migration gaps
+  when Gateways move between the class RLS and others.
+* **Shared buckets.** Gateway overrides within a class can split `shared: true` buckets across Redis
+  backends.
+* **Migration from ignored configuration.** Class `rateLimit` blocks that are ignored today would start
+  taking effect, so the rollout needs a clear upgrade note.
 
 ## TODO
 
@@ -525,15 +795,15 @@ guarantee counters start at zero: matching, unexpired keys on the destination st
 when returning to a previously used backend. This also applies to changes to the existing shared RLS
 backend and does not require dedicated-mode counter migration or reset support.
 
-### Workload overrides of RLS runtime configuration
+### Shared RLS runtime overrides
 
-Review which runtime settings should remain controller-owned across both shared and dedicated RLS.
-Existing deployment settings can override generated container environment variables, including
-`CONFIG_GRPC_XDS_NODE_ID`, `CONFIG_GRPC_XDS_SERVER_URL` and `CONFIG_TYPE`; workload patches can also
-change them. Such overrides can already prevent the shared RLS from loading its intended rules.
-Dedicated mode adds the possibility of selecting another scope's snapshot, but the general ability to
-replace runtime configuration predates this mode.
+Dedicated RLS runtime settings are protected as specified in [Service identity](#service-identity).
+Existing shared RLS workload overrides remain unchanged in this proposal. A follow-up should define
+supported shared-mode runtime overrides and compatibility before introducing equivalent restrictions.
 
-A follow-up should define supported overrides and compatibility before introducing restrictions on
-these fields. Dedicated mode must generate the correct snapshot identity for each scope; broader
-validation of user-supplied runtime overrides is deferred and is not an additional requirement here.
+### Generated NetworkPolicies for RLS
+
+Consider letting Envoy Gateway generate egress NetworkPolicies for RLS pods, for example one per
+dedicated RLS that allows only its configured Redis and telemetry endpoints. This would apply to the
+shared RLS as well, and needs a way to resolve Redis addresses to namespaces or IP ranges, so it is
+left to a follow-up.
