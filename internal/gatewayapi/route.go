@@ -2039,12 +2039,8 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					irListener.GRPC = &ir.GRPCSettings{}
 				}
 
-				// Backward-compatible defaulting for listeners with an attached GRPCRoute.
-				// gRPC stats may already be populated from EnvoyProxy at this point, so
-				// only default it when unset. gRPC-Web is also enabled by default here,
-				// but any explicit ClientTrafficPolicy setting is translated later and
-				// will override this value.
-				irListener.GRPC.EnableGRPCWeb = new(true)
+				// gRPC stats may already be populated from EnvoyProxy, so only default
+				// them when unset. gRPC-Web defaults are applied per route in xDS.
 				if irListener.GRPC.EnableGRPCStats == nil {
 					irListener.GRPC.EnableGRPCStats = new(true)
 				}
