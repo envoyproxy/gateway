@@ -95,12 +95,14 @@ type PassiveHealthCheck struct {
 }
 
 // ActiveHealthCheck defines the active health check configuration.
-// EG supports various types of active health checking including HTTP, TCP.
+// EG supports various types of active health checking including HTTP, TCP, GRPC and UDP.
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' ? has(self.http) : !has(self.http)",message="If Health Checker type is HTTP, http field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'TCP' ? has(self.tcp) : !has(self.tcp)",message="If Health Checker type is TCP, tcp field needs to be set."
 // +kubebuilder:validation:XValidation:rule="has(self.grpc) ? self.type == 'GRPC' : true", message="The grpc field can only be set if the Health Checker type is GRPC."
+// +kubebuilder:validation:XValidation:rule="self.type == 'UDP' ? has(self.udp) : !has(self.udp)",message="If Health Checker type is UDP, udp field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'UDP' ? !has(self.disableConnectionReuse) : true",message="disableConnectionReuse cannot be set if the Health Checker type is UDP."
 type ActiveHealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
 	//
@@ -144,12 +146,13 @@ type ActiveHealthCheck struct {
 	// new connection for each health check, which is useful for backends (such as
 	// haproxy-style agent checks) that do not expect a reused connection.
 	// Defaults to false, which reuses the connection across probes.
+	// It cannot be set for the UDP health checker, which always uses a new socket per probe.
 	//
 	// +optional
 	DisableConnectionReuse *bool `json:"disableConnectionReuse,omitempty"`
 
 	// Type defines the type of health checker.
-	// +kubebuilder:validation:Enum=HTTP;TCP;GRPC
+	// +kubebuilder:validation:Enum=HTTP;TCP;GRPC;UDP
 	// +unionDiscriminator
 	Type ActiveHealthCheckerType `json:"type" yaml:"type"`
 
@@ -168,6 +171,11 @@ type ActiveHealthCheck struct {
 	// +optional
 	GRPC *GRPCActiveHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
 
+	// UDP defines the configuration of the UDP health checker.
+	// It's required while the health checker type is UDP.
+	// +optional
+	UDP *UDPActiveHealthChecker `json:"udp,omitempty" yaml:"udp,omitempty"`
+
 	// Overrides defines the configuration of the overriding health check settings for all endpoints
 	// in the backend cluster. This allows customization of port and other settings that may differ
 	// from the main service configuration.
@@ -182,7 +190,7 @@ type ActiveHealthCheck struct {
 }
 
 // ActiveHealthCheckerType is the type of health checker.
-// +kubebuilder:validation:Enum=HTTP;TCP;GRPC
+// +kubebuilder:validation:Enum=HTTP;TCP;GRPC;UDP
 type ActiveHealthCheckerType string
 
 const (
@@ -192,6 +200,8 @@ const (
 	ActiveHealthCheckerTypeTCP ActiveHealthCheckerType = "TCP"
 	// ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.
 	ActiveHealthCheckerTypeGRPC ActiveHealthCheckerType = "GRPC"
+	// ActiveHealthCheckerTypeUDP defines the UDP type of health checking.
+	ActiveHealthCheckerTypeUDP ActiveHealthCheckerType = "UDP"
 )
 
 // HTTPActiveHealthChecker defines the settings of http health check.
@@ -274,6 +284,15 @@ type TCPActiveHealthChecker struct {
 	// Receive defines the expected response payload.
 	// +optional
 	Receive *ActiveHealthCheckPayload `json:"receive,omitempty" yaml:"receive,omitempty"`
+}
+
+// UDPActiveHealthChecker defines the settings of the UDP health check.
+type UDPActiveHealthChecker struct {
+	// Send defines the payload sent as one datagram on each probe.
+	Send ActiveHealthCheckPayload `json:"send" yaml:"send"`
+	// Receive defines the reply that marks the probe as successful.
+	// The reply must match this payload exactly.
+	Receive ActiveHealthCheckPayload `json:"receive" yaml:"receive"`
 }
 
 // GRPCActiveHealthChecker defines the settings of the GRPC health check.

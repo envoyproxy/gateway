@@ -65,16 +65,18 @@ backendTrafficPolicies:
         sectionName: foo
       conditions:
       - lastTransitionTime: null
+        message: only the UDP active health checker works with a UDPRoute, so the
+          HTTP health checker is ignored; passive health checks have no effect when
+          targeting a UDPRoute; spec.targetRef is deprecated and will be removed in
+          v1.11, use spec.targetRefs instead
+        reason: Warnings
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy

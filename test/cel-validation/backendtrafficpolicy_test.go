@@ -3237,6 +3237,102 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 			},
 		},
 		{
+			desc: "valid udp health checker",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				setActiveHealthCheck(btp, &egv1a1.ActiveHealthCheck{
+					Type: egv1a1.ActiveHealthCheckerTypeUDP,
+					UDP: &egv1a1.UDPActiveHealthChecker{
+						Send: egv1a1.ActiveHealthCheckPayload{
+							Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+							Text: new("ping"),
+						},
+						Receive: egv1a1.ActiveHealthCheckPayload{
+							Type:   egv1a1.ActiveHealthCheckPayloadTypeBinary,
+							Binary: []byte("pong"),
+						},
+					},
+				})
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "udp health checker type without udp settings",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				setActiveHealthCheck(btp, &egv1a1.ActiveHealthCheck{
+					Type: egv1a1.ActiveHealthCheckerTypeUDP,
+				})
+			},
+			wantErrors: []string{
+				"If Health Checker type is UDP, udp field needs to be set.",
+			},
+		},
+		{
+			desc: "udp settings with tcp health checker type",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				setActiveHealthCheck(btp, &egv1a1.ActiveHealthCheck{
+					Type: egv1a1.ActiveHealthCheckerTypeTCP,
+					TCP:  &egv1a1.TCPActiveHealthChecker{},
+					UDP: &egv1a1.UDPActiveHealthChecker{
+						Send: egv1a1.ActiveHealthCheckPayload{
+							Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+							Text: new("ping"),
+						},
+						Receive: egv1a1.ActiveHealthCheckPayload{
+							Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+							Text: new("pong"),
+						},
+					},
+				})
+			},
+			wantErrors: []string{
+				"If Health Checker type is UDP, udp field needs to be set.",
+			},
+		},
+		{
+			desc: "udp health checker with disableConnectionReuse",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				setActiveHealthCheck(btp, &egv1a1.ActiveHealthCheck{
+					Type:                   egv1a1.ActiveHealthCheckerTypeUDP,
+					DisableConnectionReuse: new(true),
+					UDP: &egv1a1.UDPActiveHealthChecker{
+						Send: egv1a1.ActiveHealthCheckPayload{
+							Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+							Text: new("ping"),
+						},
+						Receive: egv1a1.ActiveHealthCheckPayload{
+							Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+							Text: new("pong"),
+						},
+					},
+				})
+			},
+			wantErrors: []string{
+				"disableConnectionReuse cannot be set if the Health Checker type is UDP.",
+			},
+		},
+		{
+			desc: "udp health checker with an invalid send payload",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				setActiveHealthCheck(btp, &egv1a1.ActiveHealthCheck{
+					Type: egv1a1.ActiveHealthCheckerTypeUDP,
+					UDP: &egv1a1.UDPActiveHealthChecker{
+						Send: egv1a1.ActiveHealthCheckPayload{
+							Type:   egv1a1.ActiveHealthCheckPayloadTypeText,
+							Binary: []byte("ping"),
+						},
+						Receive: egv1a1.ActiveHealthCheckPayload{
+							Type: egv1a1.ActiveHealthCheckPayloadTypeText,
+							Text: new("pong"),
+						},
+					},
+				})
+			},
+			wantErrors: []string{
+				"spec.HealthCheck.active.udp.send: Invalid value:",
+				"If payload type is Text, text field needs to be set.",
+			},
+		},
+		{
 			desc: " valid timeout",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				d := gwapiv1.Duration("3s")
@@ -6058,4 +6154,24 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			t.Fatalf("Unexpected response while creating BackendTrafficPolicy; got err=\n%v\n;want error=%q", err, wantError)
 		}
 	})
+}
+
+// setActiveHealthCheck points btp at the eg Gateway with the given active health check.
+func setActiveHealthCheck(btp *egv1a1.BackendTrafficPolicy, active *egv1a1.ActiveHealthCheck) {
+	btp.Spec = egv1a1.BackendTrafficPolicySpec{
+		PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+			TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+					Group: gwapiv1.Group("gateway.networking.k8s.io"),
+					Kind:  gwapiv1.Kind("Gateway"),
+					Name:  gwapiv1.ObjectName("eg"),
+				},
+			},
+		},
+		BackendSettings: egv1a1.BackendSettings{
+			ClusterSettings: egv1a1.ClusterSettings{
+				HealthCheck: &egv1a1.HealthCheck{Active: active},
+			},
+		},
+	}
 }
