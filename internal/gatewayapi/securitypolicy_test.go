@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -1580,6 +1581,50 @@ func useFreshOIDCDiscoveryFallbackCache(t *testing.T) {
 	t.Cleanup(func() {
 		oidcDiscoveryFallback = original
 	})
+}
+
+// useLocalOIDCDiscovery sends every OIDC discovery request to a local TLS server, so that tests
+// translating OIDC policies never reach the real issuers. The server returns the endpoints of
+// accounts.google.com recorded in the TestTranslate golden files, and a 404 for any other issuer,
+// which securitypolicy-with-oidc-invalid-issuer expects.
+func useLocalOIDCDiscovery(t *testing.T) {
+	t.Helper()
+
+	documents := map[string]string{
+		"accounts.google.com": `{"authorization_endpoint":"https://accounts.google.com/o/oauth2/v2/auth","token_endpoint":"https://oauth2.googleapis.com/token"}`,
+	}
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		document, ok := documents[r.Host]
+		if !ok || r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, document)
+	}))
+	t.Cleanup(server.Close)
+
+	original := newOIDCDiscoveryHTTPClient
+	newOIDCDiscoveryHTTPClient = func(_ *ir.TLSUpstreamConfig) (*http.Client, error) {
+		return &http.Client{
+			Timeout: defaultOIDCHTTPTimeout,
+			Transport: &http.Transport{
+				// Connect to the local server regardless of the issuer host.
+				DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+					var dialer net.Dialer
+					return dialer.DialContext(ctx, network, server.Listener.Addr().String())
+				},
+				//nolint:gosec // The local server uses a self-signed certificate.
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}, nil
+	}
+	t.Cleanup(func() {
+		newOIDCDiscoveryHTTPClient = original
+	})
+
+	// Successful discovery results are retained process-wide; isolate them per test.
+	useFreshOIDCDiscoveryFallbackCache(t)
 }
 
 func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
