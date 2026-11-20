@@ -1217,6 +1217,83 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				"spec.headers.earlyRequestHeaders.mutations[0].write.action",
 			},
 		},
+		{
+			desc: "valid server header settings",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						ServerHeader: &egv1a1.ServerHeader{
+							Type:  egv1a1.ServerHeaderTransformationOverwrite,
+							Value: new("envoy-gateway"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "server header value without an overwriting type",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-headers"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						ServerHeader: &egv1a1.ServerHeader{
+							Type:  egv1a1.ServerHeaderTransformationPassThrough,
+							Value: new("envoy-gateway"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"ClientTrafficPolicy.gateway.envoyproxy.io \"ctp-headers\" is invalid:",
+				"spec.headers.serverHeader: Invalid value:",
+				": value can only be set when type is Overwrite or AppendIfAbsent.",
+			},
+		},
+		{
+			desc: "invalid server name",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Name = "ctp-headers"
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Headers: &egv1a1.HeaderSettings{
+						ServerHeader: &egv1a1.ServerHeader{
+							Type:  egv1a1.ServerHeaderTransformationOverwrite,
+							Value: new(" envoy-gateway"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.headers.serverHeader.value in body should match",
+			},
+		},
 	}
 
 	for _, tc := range cases {
