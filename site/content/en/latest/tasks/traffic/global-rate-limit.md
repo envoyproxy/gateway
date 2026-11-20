@@ -1571,6 +1571,127 @@ server: envoy
 
 ```
 
+## Limit Concurrent Requests per User
+
+A rate limit counts requests per time window, so it doesn't stop a client from keeping many slow requests open at the same time.
+To limit the number of requests in flight instead, set a request cost and a negative response cost on the same rule.
+The counter is increased when a request starts and decreased again when the stream is closed, so it tracks the requests
+that are currently open for each descriptor, and new requests are rate limited once it reaches the limit.
+
+Here is an example that allows each distinct user, identified by the `x-user-id` header, to have at most 2 requests in flight.
+
+**Note:** The rate limit service must support negative hits. The rate limit image that Envoy Gateway deploys by default does.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - type: Distinct
+            name: x-user-id
+        limit:
+          requests: 2
+          unit: Hour
+        cost:
+          request:
+            from: Number
+            number: 1
+          response:
+            from: Number
+            number: 1
+            negative: true
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: policy-httproute
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit
+  rateLimit:
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - type: Distinct
+            name: x-user-id
+        limit:
+          requests: 2
+          unit: Hour
+        cost:
+          request:
+            from: Number
+            number: 1
+          response:
+            from: Number
+            number: 1
+            negative: true
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+This example uses the `http-ratelimit` HTTPRoute from [Rate Limit Specific User](#rate-limit-specific-user).
+
+The example backend delays its response when the request has a `delay` query parameter. Let's open 2 requests for user `one`
+that take 10 seconds each, and send more requests while they are still open:
+
+```shell
+# Open 2 slow requests for user one in the background
+for i in {1..2}; do curl -s -o /dev/null -w "one (slow): %{http_code}\n" --header "Host: ratelimit.example" --header "x-user-id: one" "http://${GATEWAY_HOST}/get?delay=10s" & done
+sleep 1
+
+# User one already has 2 requests in flight, so this one is rate limited
+curl -s -o /dev/null -w "one: %{http_code}\n" --header "Host: ratelimit.example" --header "x-user-id: one" http://${GATEWAY_HOST}/get
+
+# Other users are not affected
+curl -s -o /dev/null -w "two: %{http_code}\n" --header "Host: ratelimit.example" --header "x-user-id: two" http://${GATEWAY_HOST}/get
+
+# Once the slow requests have finished, user one can send requests again
+wait
+curl -s -o /dev/null -w "one: %{http_code}\n" --header "Host: ratelimit.example" --header "x-user-id: one" http://${GATEWAY_HOST}/get
+```
+
+```console
+one: 429
+two: 200
+one (slow): 200
+one (slow): 200
+one: 200
+```
+
+Keep the following in mind when using this pattern:
+
+* The counters still belong to a time window. When a new window starts, the counter starts again from zero and the requests
+  still open from the previous window are no longer counted, so the limit can briefly be exceeded. A longer `unit`, such as
+  `Hour`, makes this less frequent.
+* The decrease is sent to the rate limit service when the stream is closed and is not retried. If that call fails, the
+  counter stays higher than the real number of requests in flight until the window ends.
+
 ## Rate Limit Policy Merging
 
 This example demonstrates how to implement a layered rate limiting strategy using BackendTrafficPolicy merging. This approach allows platform teams to set global abuse prevention limits at the Gateway level, while application teams can define more specific rate limits for their individual routes.

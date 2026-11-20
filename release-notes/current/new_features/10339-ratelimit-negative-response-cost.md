@@ -1,0 +1,1 @@
+Added `negative` to the `BackendTrafficPolicy` global rate limit response cost, so the cost is added back to the counters when the stream is closed instead of being consumed. Combined with a request cost, the counter tracks the requests in flight per descriptor, which can be used to limit concurrency per client. Requires a rate limit service that supports negative hits.

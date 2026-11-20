@@ -145,6 +145,7 @@ type RateLimitRule struct {
 	XRateLimitHeaders *XRateLimitHeadersOption `json:"xRateLimitHeaders,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="!has(self.request) || !has(self.request.negative) || !self.request.negative",message="negative is only supported for response cost"
 type RateLimitCost struct {
 	// Request specifies the number to reduce the rate limit counters
 	// on the request path. If this is not specified, the default behavior
@@ -165,6 +166,10 @@ type RateLimitCost struct {
 	//
 	// This is optional and if not specified, the rate limit counters are not reduced
 	// on the response path.
+	//
+	// Set Negative to give the cost back to the counters when the stream is closed
+	// instead of consuming it. Together with a request cost, this tracks the number
+	// of requests in flight for each descriptor, which can be used to limit concurrency.
 	//
 	// Currently, this is only supported for HTTP Global Rate Limits.
 	//
@@ -189,6 +194,20 @@ type RateLimitCostSpecifier struct {
 	//
 	// +optional
 	Metadata *RateLimitCostMetadata `json:"metadata,omitempty"`
+	// Negative adds the cost back to the rate limit counters instead of consuming it.
+	// It is only supported for the response cost.
+	//
+	// For example, a request cost of 1 with a negative response cost of 1 increments
+	// the counter when the request starts and decrements it when the stream is closed,
+	// so the counter tracks the requests in flight within the current window.
+	//
+	// The counters are still reset at the end of each window, and the decrement is
+	// not retried if the call to the rate limit service fails.
+	//
+	// The rate limit service must support negative hits.
+	//
+	// +optional
+	Negative *bool `json:"negative,omitempty"`
 }
 
 // RateLimitCostFrom specifies the source of the rate limit cost.
