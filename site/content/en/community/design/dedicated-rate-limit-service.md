@@ -600,7 +600,7 @@ These identity fields and the dedicated RLS runtime settings `CONFIG_GRPC_XDS_NO
 `CONFIG_GRPC_XDS_SERVER_URL`, `CONFIG_TYPE` and `CACHE_KEY_PREFIX` are controller-owned even when
 `EnvoyProxyPatch` is enabled. Envoy Gateway validates the rendered resources after applying workload
 settings and patches, rejecting changes to generated resource names or namespaces, ownership metadata,
-scope labels and selectors, the HPA target, or the credential hash annotation on the pod template (see
+scope labels and selectors, the HPA target, or the credential version annotation on the pod template (see
 [Redis credentials](#redis-credentials)). Without that annotation, a credential rotation would update
 only the copied Secret, and running pods would keep the old values with no rolling update. Custom pod
 labels and annotations cannot overwrite these labels or the annotation.
@@ -687,8 +687,16 @@ defaults to the same namespace; a cross-namespace reference requires a `Referenc
 
 Because the RLS runs in the controller namespace, Envoy Gateway copies only the referenced keys into a
 Secret it owns for that RLS. It keeps the copy in sync with the source Secret and deletes it when the RLS
-is removed. A hash of the copied values is set as a controller-owned annotation on the RLS pod template,
-so a credential rotation triggers a normal rolling update and new pods pick up the new credentials.
+is removed. A credential version is set as a controller-owned annotation on the RLS pod template, so a
+credential rotation triggers a normal rolling update and new pods pick up the new credentials.
+
+The annotation is never derived from the credential values themselves. A plain hash of a Redis URL
+containing a human-chosen password would let anyone who can read Deployments in the controller
+namespace, but not Secrets, test password guesses offline. Instead, it is a hash of non-secret version
+data: the UID and `resourceVersion` of each referenced source Secret, and whether each reference is
+currently authorized. Any change to a source Secret therefore rolls the RLS, including changes to keys
+it does not use, which is acceptable for configuration that rarely changes (see
+[Assumptions](#assumptions)).
 Workload settings and patches cannot remove or change this annotation (see
 [Service identity](#service-identity)).
 
@@ -750,7 +758,7 @@ dedicated RLS, `RateLimitReady=True` requires all of the following for the curre
 * All credential references resolve successfully and the owned credential copies are up to date.
 * Infrastructure reconciliation has succeeded. The Deployment has observed its latest generation,
   completed the desired rollout, and has at least one available replica, with no old replicas remaining.
-  Its pod template includes the current credential hash.
+  Its pod template includes the current credential version.
 * The Service has at least one ready endpoint belonging to the current rollout.
 
 The controller recomputes readiness as desired workload settings, credentials, workloads and endpoints
@@ -827,6 +835,12 @@ not keep old rules on the previous RLS until proxies have switched; that would n
 this design leaves out. Users who need continuous enforcement should make such changes during a
 low-traffic window.
 
+Changing the Redis backend of a dedicated RLS also splits counters briefly. During the rolling update,
+old and new pods use different Redis databases, and each enforces the full limit, so clients can exceed
+it until the rollout completes. This is not new with dedicated RLS: changing the shared RLS backend in
+`EnvoyGateway.rateLimit` does the same today. See
+[Counter behavior when changing Redis backends](#counter-behavior-when-changing-redis-backends).
+
 **Counters after a change.** Moving a Gateway between the shared RLS and a dedicated one changes the
 cache key prefix of its keys (see [Shared rules](#shared-rules)), selecting a different keyspace even
 if both use the same Redis database. Counters start from zero only when matching, unexpired keys do not
@@ -894,7 +908,7 @@ These are the author's recommendations and are open for review.
 * Dedicated RLS workload settings come only from the Gateway's unmerged `EnvoyProxy`, with built-in
   defaults for omitted settings; class and control-plane workload settings are not inherited.
 * Dedicated RLS resource names, ownership, scope labels and selectors, HPA targets and the credential
-  hash annotation are controller-owned, as are the runtime settings selecting configuration and Redis
+  version annotation are controller-owned, as are the runtime settings selecting configuration and Redis
   key prefixes, and the Redis connection settings, credential volumes and mounts.
   Workload settings and patches that change these fields are rejected after rendering.
 * Dedicated RLS is disabled by default and enabled with `extensionApis.enableDedicatedRateLimit`.
@@ -924,7 +938,8 @@ These are the author's recommendations and are open for review.
   namespace mode only for Gateways in different namespaces; selecting individual Gateways within one
   namespace requires admission-protected identity labels. Per-scope client identities are deferred.
 * Envoy Gateway copies the referenced Redis Secret keys into the controller namespace and keeps the copy
-  in sync; a config hash on the pod template rolls the RLS on rotation. Revoked credentials stall that
+  in sync; a credential version on the pod template, derived from source Secret metadata rather than
+  credential values, rolls the RLS on rotation. Revoked credentials stall that
   rollout under the default strategy, so running pods are not actively stopped; with `Recreate` or a
   strategy allowing all replicas to be unavailable they are. Credentials are revoked at Redis.
 * Credential resolution failures report `RateLimitReady=False` without rejecting the Gateway, changing
@@ -977,7 +992,7 @@ Implementation must cover the following cases with meaningful automated tests:
   disabled-switch behavior.
 * **Protected settings:** workload settings and patches cannot override names, selectors, ownership,
   configuration identity, configuration source, cache key prefix, Redis connection settings, credential
-  volumes and mounts or the credential hash annotation, including through duplicate env entries,
+  volumes and mounts or the credential version annotation, including through duplicate env entries,
   `valueFrom`, or `command` and `args` changes; a credential rotation still rolls the pods when a patch
   tries to remove the annotation; a `REDIS_URL` env override is rejected rather than used.
 * **Transitions and failures:** shared/dedicated transitions, an unavailable RLS and delayed proxy
