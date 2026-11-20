@@ -1,0 +1,16 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+    envoyProxy:
+      image: "private-hub/envoyproxy/envoy:dev"
+config:
+  envoyGateway:
+    envoyProxy:
+      provider:
+        kubernetes:
+          envoyDaemonSet:
+            pod:
+              nodeSelector:
+                node-role: edge

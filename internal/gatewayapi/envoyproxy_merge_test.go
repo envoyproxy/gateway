@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -375,6 +376,159 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "gatewayclass StrategicMerge daemonset - converts default deployment and drops its patch and hpa",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+							Replicas:  new(int32(2)),
+							Container: &egv1a1.KubernetesContainerSpec{Image: new("mirror.example/envoy:dev")},
+							Patch: &egv1a1.KubernetesPatchSpec{
+								Value: apiextensionsv1.JSON{Raw: []byte(`{"spec":{"replicas":3}}`)},
+							},
+						},
+						EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{MaxReplicas: new(int32(5))},
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: new(egv1a1.StrategicMerge),
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
+								Pod: &egv1a1.KubernetesPodSpec{NodeSelector: map[string]string{"role": "edge"}},
+							},
+						},
+					},
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
+							Pod:       &egv1a1.KubernetesPodSpec{NodeSelector: map[string]string{"role": "edge"}},
+							Container: &egv1a1.KubernetesContainerSpec{Image: new("mirror.example/envoy:dev")},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "gatewayclass JSONMerge daemonset - converts default deployment",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+							Container: &egv1a1.KubernetesContainerSpec{Image: new("mirror.example/envoy:dev")},
+						},
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: new(egv1a1.JSONMerge),
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{},
+						},
+					},
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				MergeType: new(egv1a1.JSONMerge),
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
+							Container: &egv1a1.KubernetesContainerSpec{Image: new("mirror.example/envoy:dev")},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "gateway StrategicMerge deployment - converts default daemonset",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
+							Container: &egv1a1.KubernetesContainerSpec{Image: new("mirror.example/envoy:dev")},
+						},
+					},
+				},
+			},
+			gatewayProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: new(egv1a1.StrategicMerge),
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{Replicas: new(int32(3))},
+						},
+					},
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+							Replicas:  new(int32(3)),
+							Container: &egv1a1.KubernetesContainerSpec{Image: new("mirror.example/envoy:dev")},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "gateway StrategicMerge daemonset - converts gatewayclass deployment",
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+								Name:      new("edge-proxy"),
+								Container: &egv1a1.KubernetesContainerSpec{Image: new("mirror.example/envoy:dev")},
+							},
+						},
+					},
+				},
+			},
+			gatewayProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: new(egv1a1.StrategicMerge),
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{},
+						},
+					},
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
+							Name:      new("edge-proxy"),
+							Container: &egv1a1.KubernetesContainerSpec{Image: new("mirror.example/envoy:dev")},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -397,4 +551,32 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			require.Empty(t, diff)
 		})
 	}
+}
+
+func TestMergeEnvoyProxyConfigsWorkloadKindDoesNotMutateDefault(t *testing.T) {
+	defaultSpec := &egv1a1.EnvoyProxySpec{
+		Provider: &egv1a1.EnvoyProxyProvider{
+			Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+			Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+				EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{Replicas: new(int32(2))},
+				EnvoyHpa:        &egv1a1.KubernetesHorizontalPodAutoscalerSpec{MaxReplicas: new(int32(5))},
+			},
+		},
+	}
+	original := defaultSpec.DeepCopy()
+	gatewayClassProxy := &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			MergeType: new(egv1a1.StrategicMerge),
+			Provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+				Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+					EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{},
+				},
+			},
+		},
+	}
+
+	_, err := MergeEnvoyProxyConfigs(defaultSpec, gatewayClassProxy, nil)
+	require.NoError(t, err)
+	require.Empty(t, cmp.Diff(original, defaultSpec))
 }

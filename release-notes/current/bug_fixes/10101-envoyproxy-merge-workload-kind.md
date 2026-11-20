@@ -1,0 +1,1 @@
+Fixed a merged EnvoyProxy (with `mergeType` set) rendering both an Envoy Deployment and DaemonSet when it selects a different workload kind than a less specific configuration; the less specific workload is now converted to the selected kind, keeping its container, pod and name settings.

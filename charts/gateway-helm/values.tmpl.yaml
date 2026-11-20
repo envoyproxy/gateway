@@ -28,9 +28,10 @@ global:
     envoyProxy:
       # -- Full image for the managed Envoy Proxy data plane.
       # This updates the generated `envoyProxy` config and does not change the `envoy-gateway`
-      # control plane Deployment image. If not specified, the default image built into
-      # `envoy-gateway` is used.
-      image: ""
+      # control plane Deployment image. Defaults to the Envoy Proxy image this Envoy Gateway
+      # release is built for. An image set inline under `config.envoyGateway.envoyProxy` takes
+      # precedence. Set to `""` to omit it and fall back to the default image built into `envoy-gateway`.
+      image: ${EnvoyProxyImage}
       # -- Image pull policy for the managed Envoy Proxy data plane.
       # Default behavior: IfNotPresent.
       pullPolicy: ""
