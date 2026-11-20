@@ -44,4 +44,31 @@ type DNS struct {
 	// If set, this configuration overrides other defaults.
 	// +optional
 	LookupFamily *DNSLookupFamily `json:"lookupFamily,omitempty"`
+	// Type determines how Envoy uses the addresses it resolves for a backend that is
+	// specified as a fully qualified domain name (FQDN).
+	//
+	// Strict treats every resolved address as a separate endpoint, with its own
+	// connection pool, and load balances across them.
+	//
+	// Logical uses only the first resolved address and keeps existing connections when
+	// the DNS answer changes. This suits large web services and SaaS endpoints that
+	// return a rotating set of addresses and balance load behind them. It only applies
+	// to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+	// keeps using Strict.
+	//
+	// Defaults to Strict.
+	//
+	// +optional
+	Type *DNSType `json:"type,omitempty"`
 }
+
+// DNSType defines how Envoy uses the addresses resolved for an FQDN backend.
+// +kubebuilder:validation:Enum=Strict;Logical
+type DNSType string
+
+const (
+	// StrictDNSType makes every resolved address a separate endpoint.
+	StrictDNSType DNSType = "Strict"
+	// LogicalDNSType uses only the first resolved address as the single endpoint.
+	LogicalDNSType DNSType = "Logical"
+)

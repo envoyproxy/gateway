@@ -734,6 +734,7 @@ func translateDNS(policy *egv1a1.BackendSettings, policyName string) *ir.DNS {
 	irDNS := &ir.DNS{
 		LookupFamily:  policy.DNS.LookupFamily,
 		RespectDNSTTL: policy.DNS.RespectDNSTTL,
+		Type:          policy.DNS.Type,
 		Name:          policyName,
 	}
 
