@@ -53,6 +53,9 @@ needs to be isolated.
 * Rate limit backends other than Redis.
 * Dedicated RLS on the host (standalone) provider or with remote infrastructure in the first iteration.
 * Changing how rate limit rules or domains are generated.
+* Validating RLS workload overrides beyond the settings Envoy Gateway generates. Overrides are
+  trusted, administrator-controlled configuration, as they are for the shared RLS today (see
+  [Trust boundary](#trust-boundary)).
 * Per-Gateway `timeout`, `failClosed` or other proxy-side settings while keeping the shared RLS. That
   needs a separate shared-mode design.
 * Uninterrupted rate limiting while the dedicated RLS configuration is being changed.
@@ -455,6 +458,8 @@ the prefix, including escaped references, rather than resolving dependencies.
 An explicit, fixed `CACHE_KEY_PREFIX` takes precedence over `envFrom`, so unrelated `envFrom` sources
 are allowed when that explicit value passes validation. An explicit empty string is also allowed.
 Without either an explicit prefix or `envFrom`, the shared RLS keeps its default empty prefix.
+Variables defined inside a custom container image are not inspected; see
+[Trust boundary](#trust-boundary).
 Secret and ConfigMap values can change what newly started pods receive without a control-plane restart,
 so externally sourced prefixes are rejected rather than checked once. Fixed explicit values change only
 with the `EnvoyGateway` configuration, which requires a restart. Shared prefixes that pass this check
@@ -620,6 +625,24 @@ can read the RLS's mounted credentials and certificates. When workload overrides
 RBAC or admission restrictions in the [security note](#api) remain the boundary and must cover the
 container image and any added containers.
 
+#### Trust boundary
+
+Envoy Gateway validates only the settings it generates, listed above. Everything an author adds on top
+through workload overrides or patches is trusted configuration and is not validated, for the shared
+RLS today and for dedicated RLS alike. This includes additional environment variables, `envFrom`
+sources not listed above, variables defined inside a custom image, additional RLS features configured
+through them (for example a second Redis connection for per-second limits), and additional containers.
+Such settings can change what the RLS connects to or how it stores counters, and the readiness and
+credential behavior in this design then do not describe them.
+
+This is not new with dedicated RLS: the shared RLS already accepts the same overrides from the
+`EnvoyGateway` configuration. Dedicated RLS adds only the control over who may author them: workload
+overrides are disabled unless an admin enables
+`enableDedicatedRateLimitWorkloadOverrides`, and the [security note](#api) requires them to be
+administrator-authored or admission-restricted. Validating arbitrary RLS settings, or restricting the
+shared RLS overrides, is out of scope for this proposal (see
+[Shared RLS runtime overrides](#shared-rls-runtime-overrides)).
+
 ### Namespace and certificates
 
 In the first iteration, dedicated RLS deployments run in the controller namespace, like the shared one.
@@ -757,8 +780,9 @@ retain their existing control-plane behavior.
 
 ### Host provider and remote infrastructure
 
-Not supported in the first iteration. Setting `rateLimit` on an `EnvoyProxy` makes the Gateway
-`Accepted=False`, with a message saying so, when either of these is used:
+Not supported in the first iteration. While `enableDedicatedRateLimit` is true, setting `rateLimit` on
+a Gateway's `EnvoyProxy` makes the Gateway `Accepted=False`, with a message saying so, when either of
+these is used:
 
 * The host provider.
 * Remote infrastructure (`EnvoyGateway.provider.custom.infrastructure.type: Remote`). The remote
@@ -766,6 +790,13 @@ Not supported in the first iteration. Setting `rateLimit` on an `EnvoyProxy` mak
   carries no scope, backend, settings or address. A remote manager also cannot report the Deployment
   and Service state that `RateLimitReady` requires. Supporting it needs an extension of that contract
   and of the readiness model.
+
+While `enableDedicatedRateLimit` is false, this check does not run. `rateLimit` is ignored as for any
+other provider, and the Gateway stays accepted, as described in
+[Enabling dedicated RLS](#enabling-dedicated-rls). Rejecting it then would let a block the admin never
+enabled take down all of the Gateway's listeners. Admins should therefore not enable dedicated RLS on
+these providers; if they do, the Gateways that set `rateLimit` are rejected, which is visible and
+limited to Gateways that asked for a dedicated RLS.
 
 ### Tooling
 
@@ -882,7 +913,8 @@ These are the author's recommendations and are open for review.
   allowlist covering all workload settings. Built-in workloads do not require the customization switch.
 * Dedicated RLS deployments run in the controller namespace in the first iteration. Running them in the
   Gateway namespace, and the authentication that needs, is deferred. The host provider and remote
-  infrastructure are not supported; `rateLimit` makes such Gateways `Accepted=False`.
+  infrastructure are not supported; while `enableDedicatedRateLimit` is true, `rateLimit` makes such
+  Gateways `Accepted=False`, and while it is false the block is ignored as on other providers.
 * Dedicated RLS pods carry documented, controller-owned scope labels so admins can select them in
   NetworkPolicies and admission policies. The proposal includes example NetworkPolicies; Envoy Gateway
   does not generate NetworkPolicies in the first iteration.
@@ -939,8 +971,10 @@ Implementation must cover the following cases with meaningful automated tests:
 * **API:** an `EnvoyProxy` whose `rateLimit` omits `failClosed` is accepted and behaves as `false`;
   generated API docs for `urlRef` and `certificateRef` describe both the `EnvoyGateway` and the
   `EnvoyProxy` namespace rules.
-* **Unsupported infrastructure:** with the host provider or remote infrastructure, `rateLimit` sets the
-  Gateway `Accepted=False` and no RLS infrastructure request is sent.
+* **Unsupported infrastructure:** with the host provider or remote infrastructure and
+  `enableDedicatedRateLimit` true, `rateLimit` sets the Gateway `Accepted=False` and no RLS
+  infrastructure request is sent; with the switch false, the Gateway stays accepted and follows the
+  disabled-switch behavior.
 * **Protected settings:** workload settings and patches cannot override names, selectors, ownership,
   configuration identity, configuration source, cache key prefix, Redis connection settings, credential
   volumes and mounts or the credential hash annotation, including through duplicate env entries,
