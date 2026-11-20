@@ -469,6 +469,11 @@ func (in *BackendCluster) DeepCopyInto(out *BackendCluster) {
 		*out = new(ResourceMetadata)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.StatName != nil {
+		in, out := &in.StatName, &out.StatName
+		*out = new(string)
+		**out = **in
+	}
 	if in.Traffic != nil {
 		in, out := &in.Traffic, &out.Traffic
 		*out = new(ClusterTrafficFeatures)
