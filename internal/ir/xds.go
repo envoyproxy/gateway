@@ -2722,7 +2722,8 @@ func (d DestinationEndpoint) Validate() error {
 			errs = errors.Join(errs, ErrDestEndpointUDSHostInvalid)
 		}
 	} else { // IP or FQDN
-		err := validation.IsDNS1123Subdomain(d.Host)
+		hostnameToValidate := strings.TrimSuffix(d.Host, ".")
+		err := validation.IsDNS1123Subdomain(hostnameToValidate)
 		_, pErr := netip.ParseAddr(d.Host)
 
 		if err != nil && pErr != nil {
