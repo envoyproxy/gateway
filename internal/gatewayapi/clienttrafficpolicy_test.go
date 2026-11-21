@@ -373,6 +373,7 @@ func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 		"Headers":             false,
 		"Timeout":             false,
 		"Connection":          false,
+		"TCP":                 false,
 		"HTTP1":               true, // any http1 block on a listener-level CTP masks whatever a gateway-wide CTP set
 		"HTTP2":               false,
 		"HTTP3":               false,
