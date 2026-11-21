@@ -39,11 +39,12 @@ type SecurityPolicy struct {
 //
 // NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, TCPRoute,
 // TLSRoute, and UDPRoute.
-// When a SecurityPolicy targets a TCPRoute, TLSRoute, or UDPRoute, only client-IP CIDR based
-// authorization (Authorization rules that use Principal.ClientCIDRs) is applied. Other
-// authentication/authorization features such as JWT, API Key, Basic Auth,
-// OIDC, External Authorization, or GeoIP based authorization are not applicable
-// to TCPRoute, TLSRoute, or UDPRoute targets.
+// When a SecurityPolicy targets a TCPRoute, TLSRoute, or UDPRoute, only TCPAuthorization or
+// UDPAuthorization applies. Using Authorization for TCPRoute, TLSRoute, or UDPRoute targets is
+// deprecated and will be removed in a future release; until then it still applies when
+// the matching TCPAuthorization or UDPAuthorization is not set. Other authentication/
+// authorization features such as JWT, API Key, Basic Auth, OIDC, External Authorization,
+// or GeoIP based authorization are not applicable to TCPRoute, TLSRoute, or UDPRoute targets.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
@@ -106,10 +107,32 @@ type SecurityPolicySpec struct {
 	// +optional
 	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
 
-	// Authorization defines the authorization configuration.
+	// Authorization defines the authorization configuration for HTTP traffic:
+	// HTTP, HTTPS and GRPC listeners, HTTPRoute and GRPCRoute.
+	//
+	// Using Authorization for TCP and UDP traffic is deprecated and will be removed
+	// in a future release: use TCPAuthorization and UDPAuthorization instead. Until
+	// they are set, Authorization still applies to TCP and UDP listeners and to
+	// TCPRoute, TLSRoute and UDPRoute targets, as it did before.
 	//
 	// +optional
 	Authorization *Authorization `json:"authorization,omitempty"`
+
+	// TCPAuthorization defines the authorization configuration for TCP traffic:
+	// TCP and TLS listeners, TCPRoute and TLSRoute. It is ignored for other targets.
+	// When set, it replaces Authorization for TCP traffic.
+	//
+	// +optional
+	// +notImplementedHide
+	TCPAuthorization *TCPAuthorization `json:"tcpAuthorization,omitempty"`
+
+	// UDPAuthorization defines the authorization configuration for UDP traffic:
+	// UDP listeners and UDPRoute. It is ignored for other targets.
+	// When set, it replaces Authorization for UDP traffic.
+	//
+	// +optional
+	// +notImplementedHide
+	UDPAuthorization *UDPAuthorization `json:"udpAuthorization,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

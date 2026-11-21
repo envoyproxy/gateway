@@ -274,6 +274,10 @@ AuthorizationAction defines the action to be taken if a rule matches.
 _Appears in:_
 - [Authorization](#authorization)
 - [AuthorizationRule](#authorizationrule)
+- [TCPAuthorization](#tcpauthorization)
+- [TCPAuthorizationRule](#tcpauthorizationrule)
+- [UDPAuthorization](#udpauthorization)
+- [UDPAuthorizationRule](#udpauthorizationrule)
 
 | Value | Description |
 | ----- | ----------- |
@@ -939,6 +943,8 @@ A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address 
 
 _Appears in:_
 - [Principal](#principal)
+- [TCPPrincipal](#tcpprincipal)
+- [UDPPrincipal](#udpprincipal)
 - [XForwardedForSettings](#xforwardedforsettings)
 
 
@@ -6660,11 +6666,12 @@ SecurityPolicySpec defines the desired state of SecurityPolicy.
 
 NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, TCPRoute,
 TLSRoute, and UDPRoute.
-When a SecurityPolicy targets a TCPRoute, TLSRoute, or UDPRoute, only client-IP CIDR based
-authorization (Authorization rules that use Principal.ClientCIDRs) is applied. Other
-authentication/authorization features such as JWT, API Key, Basic Auth,
-OIDC, External Authorization, or GeoIP based authorization are not applicable
-to TCPRoute, TLSRoute, or UDPRoute targets.
+When a SecurityPolicy targets a TCPRoute, TLSRoute, or UDPRoute, only TCPAuthorization or
+UDPAuthorization applies. Using Authorization for TCPRoute, TLSRoute, or UDPRoute targets is
+deprecated and will be removed in a future release; until then it still applies when
+the matching TCPAuthorization or UDPAuthorization is not set. Other authentication/
+authorization features such as JWT, API Key, Basic Auth, OIDC, External Authorization,
+or GeoIP based authorization are not applicable to TCPRoute, TLSRoute, or UDPRoute targets.
 
 _Appears in:_
 - [SecurityPolicy](#securitypolicy)
@@ -6682,7 +6689,7 @@ _Appears in:_
 | `jwt` | _[JWT](#jwt)_ |  false  |  | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` | _[OIDC](#oidc)_ |  false  |  | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 | `extAuth` | _[ExtAuth](#extauth)_ |  false  |  | ExtAuth defines the configuration for External Authorization. |
-| `authorization` | _[Authorization](#authorization)_ |  false  |  | Authorization defines the authorization configuration. |
+| `authorization` | _[Authorization](#authorization)_ |  false  |  | Authorization defines the authorization configuration for HTTP traffic:<br />HTTP, HTTPS and GRPC listeners, HTTPRoute and GRPCRoute.<br />Using Authorization for TCP and UDP traffic is deprecated and will be removed<br />in a future release: use TCPAuthorization and UDPAuthorization instead. Until<br />they are set, Authorization still applies to TCP and UDP listeners and to<br />TCPRoute, TLSRoute and UDPRoute targets, as it did before. |
 
 
 #### ServiceExternalTrafficPolicy
@@ -6996,6 +7003,39 @@ _Appears in:_
 | `receive` | _[ActiveHealthCheckPayload](#activehealthcheckpayload)_ |  false  |  | Receive defines the expected response payload. |
 
 
+#### TCPAuthorization
+
+
+
+TCPAuthorization defines the authorization configuration for TCP traffic.
+
+Note: if neither `Rules` nor `DefaultAction` is specified, the default action is to deny all connections.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `rules` | _[TCPAuthorizationRule](#tcpauthorizationrule) array_ |  false  |  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped. |
+| `defaultAction` | _[AuthorizationAction](#authorizationaction)_ |  false  |  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
+
+
+#### TCPAuthorizationRule
+
+
+
+TCPAuthorizationRule defines a single authorization rule for TCP traffic.
+
+_Appears in:_
+- [TCPAuthorization](#tcpauthorization)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  false  |  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
+| `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action defines the action to be taken if the rule matches. |
+| `principal` | _[TCPPrincipal](#tcpprincipal)_ |  true  |  | Principal specifies the client identity of a connection. |
+
+
 #### TCPClientTimeout
 
 
@@ -7029,6 +7069,21 @@ _Appears in:_
 | `probes` | _integer_ |  false  |  | The total number of unacknowledged probes to send before deciding<br />the connection is dead.<br />Defaults to 9. |
 | `idleTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | The duration a connection needs to be idle before keep-alive<br />probes start being sent.<br />The duration format is<br />Defaults to `7200s`. |
 | `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | The duration between keep-alive probes.<br />Defaults to `75s`. |
+
+
+#### TCPPrincipal
+
+
+
+TCPPrincipal specifies the client identity of a TCP connection.
+If there are multiple principal types, all principals must match for the rule to match.
+
+_Appears in:_
+- [TCPAuthorizationRule](#tcpauthorizationrule)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is the peer address of the TCP connection, or the address<br />carried by the PROXY protocol when it is enabled on the listener with<br />`ClientTrafficPolicy`. |
 
 
 #### TCPTimeout
@@ -7303,6 +7358,54 @@ _Appears in:_
 | `internal` | The gRPC status code in the response headers is “internal”.<br /> | 
 | `resource-exhausted` | The gRPC status code in the response headers is “resource-exhausted”.<br /> | 
 | `unavailable` | The gRPC status code in the response headers is “unavailable”.<br /> | 
+
+
+#### UDPAuthorization
+
+
+
+UDPAuthorization defines the authorization configuration for UDP traffic.
+
+Note: if neither `Rules` nor `DefaultAction` is specified, the default action is to deny all datagrams.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `rules` | _[UDPAuthorizationRule](#udpauthorizationrule) array_ |  false  |  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped. |
+| `defaultAction` | _[AuthorizationAction](#authorizationaction)_ |  false  |  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
+
+
+#### UDPAuthorizationRule
+
+
+
+UDPAuthorizationRule defines a single authorization rule for UDP traffic.
+
+_Appears in:_
+- [UDPAuthorization](#udpauthorization)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  false  |  | Name is a user-friendly name for the rule.<br />If not specified, Envoy Gateway will generate a unique name for the rule. |
+| `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action defines the action to be taken if the rule matches. |
+| `principal` | _[UDPPrincipal](#udpprincipal)_ |  true  |  | Principal specifies the client identity of a datagram. |
+
+
+#### UDPPrincipal
+
+
+
+UDPPrincipal specifies the client identity of a UDP datagram.
+If there are multiple principal types, all principals must match for the rule to match.
+
+_Appears in:_
+- [UDPAuthorizationRule](#udpauthorizationrule)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is the source address of the datagram. The PROXY protocol<br />is not available for UDP, so any load balancer or NAT in front of Envoy<br />must preserve the source address for this to match the original client. |
 
 
 #### UnixSocket
