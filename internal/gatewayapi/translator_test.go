@@ -43,6 +43,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/wasm"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 func mustUnmarshal(t *testing.T, val []byte, out any) {
@@ -257,6 +258,7 @@ func TestTranslate(t *testing.T) {
 			}
 
 			translator := &Translator{
+				BootstrapValidator:              bootstrap.Validator{},
 				GatewayControllerName:           egv1a1.GatewayControllerName,
 				GatewayClassName:                "envoy-gateway-class",
 				GlobalRateLimitEnabled:          true,
@@ -657,6 +659,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			mustUnmarshal(t, input, resources)
 
 			translator := &Translator{
+				BootstrapValidator:     bootstrap.Validator{},
 				GatewayControllerName:  egv1a1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
 				GlobalRateLimitEnabled: true,
@@ -1387,8 +1390,9 @@ func TestGetRelevantGatewaysClearsStaleEnvoyProxyWarning(t *testing.T) {
 	}
 
 	translator := &Translator{
-		GatewayClassName: "eg",
-		Logger:           logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		GatewayClassName:   "eg",
+		BootstrapValidator: bootstrap.Validator{},
+		Logger:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 	}
 
 	t.Run("GatewayClass", func(t *testing.T) {
