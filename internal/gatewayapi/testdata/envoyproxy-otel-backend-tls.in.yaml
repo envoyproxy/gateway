@@ -64,7 +64,7 @@ backends:
     spec:
       endpoints:
         - fqdn:
-            hostname: otel-collector.example.com
+            hostname: otel-collector.example.com.
             port: 443
       tls:
         wellKnownCACertificates: System

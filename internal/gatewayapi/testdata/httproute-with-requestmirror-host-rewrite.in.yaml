@@ -199,7 +199,7 @@ backends:
     spec:
       endpoints:
         - fqdn:
-            hostname: fqdn-mirror.example.internal
+            hostname: fqdn-mirror.example.internal.
             port: 8080
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: Backend
