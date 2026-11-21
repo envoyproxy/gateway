@@ -160,6 +160,11 @@ access, the platform administrator must enforce all of the following:
 * RLS caller isolation as described below: separate tenant namespaces and enforced namespace-based
   ingress. Shared certificates and mutable pod labels alone do not qualify. Deployments without
   enforced tenant namespace isolation support trusted Gateway owners only in v1.
+* The `EnvoyProxyPatch` runtime flag disabled. It is enabled by default, and proxy `patch` fields
+  merge arbitrary fields with no allowlist, including `hostNetwork` and object metadata such as the
+  namespace. A tenant could otherwise run its proxy on the node network, where its traffic no longer
+  originates from its namespace, or render the proxy into another tenant's namespace, and so call
+  another Gateway's RLS.
 * Workload overrides remain disabled for tenant authors. If enabled for administrator-authored
   resources, admission or RBAC must prevent tenants from editing or selecting privileged override
   configurations. Restricting edits alone is insufficient if tenants can attach an administrator's
@@ -668,7 +673,10 @@ when they are in different namespaces. In the default mode, all proxies run in t
 namespace, and NetworkPolicy can separate Gateways only if admission policy also prevents `EnvoyProxy`
 pod labels from setting the proxy component and owning-gateway labels. The namespace-based example
 does not separate Gateways in the same namespace; separating those Gateways also requires protected
-Gateway identity labels and corresponding per-Gateway ingress selectors.
+Gateway identity labels and corresponding per-Gateway ingress selectors. Source namespace identifies a
+caller only while its proxies run in that namespace on the pod network, so the `EnvoyProxyPatch`
+runtime flag must also be disabled (see
+[Requirements for untrusted Gateway owners](#requirements-for-untrusted-gateway-owners)).
 
 V1 supports untrusted owners only with enforced isolation by tenant namespace and the deployment
 controls above. Untrusted deployments with proxies sharing the controller namespace, or tenants sharing
