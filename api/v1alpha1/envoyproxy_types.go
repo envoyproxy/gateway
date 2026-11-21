@@ -530,6 +530,9 @@ const (
 
 	// StatFormatterBackendRefs defines the Route Name formatter for stats
 	StatFormatterBackendRefs string = "%BACKEND_REFS%"
+
+	// StatFormatterBackendKind defines the Backend Kind formatter for stats
+	StatFormatterBackendKind string = "%BACKEND_KIND%"
 )
 
 type ProxyTelemetry struct {

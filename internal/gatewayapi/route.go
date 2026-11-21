@@ -306,6 +306,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			routeBackendDestinations = make([]routeBackendRefDestination, 0, len(rule.BackendRefs))
 			backendWeights           = &ir.BackendWeights{}
 			backendRefNames          = make([]string, len(rule.BackendRefs))
+			backendRefKinds          = make([]string, len(rule.BackendRefs))
 			backendCustomRefs        = make([]*ir.UnstructuredRef, 0, len(rule.BackendRefs))
 			processDestinationError  error
 			failedNoReadyEndpoints   bool
@@ -385,6 +386,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
+			backendRefKinds[i] = strings.ToLower(KindDerefOr(rule.BackendRefs[i].Kind, resource.KindService))
 			backendWeights.AddWeighted(backendDest.ds, backendDest.ds.Weight)
 
 			routeBackendDestinations = append(routeBackendDestinations, backendDest)
@@ -515,7 +517,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				routeWithBackends.routeRuleMetadata = routeRuleMetadata
 				routeWithBackends.routeRuleName = rule.Name
 				if pattern != "" {
-					routeWithBackends.statName = new(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
+					routeWithBackends.statName = new(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames, backendRefKinds))
 				}
 			}
 			routesWithBackends = append(routesWithBackends, routeWithBackends)
@@ -1554,6 +1556,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			routeBackendDestinations = make([]routeBackendRefDestination, 0, len(rule.BackendRefs))
 			backendWeights           = &ir.BackendWeights{}
 			backendRefNames          = make([]string, len(rule.BackendRefs))
+			backendRefKinds          = make([]string, len(rule.BackendRefs))
 			processDestinationError  error
 			failedNoReadyEndpoints   bool
 			hasDynamicResolver       bool
@@ -1608,6 +1611,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			}
 
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
+			backendRefKinds[i] = strings.ToLower(KindDerefOr(rule.BackendRefs[i].Kind, resource.KindService))
 			backendWeights.AddWeighted(backendDest.ds, backendDest.ds.Weight)
 
 			routeBackendDestinations = append(routeBackendDestinations, backendDest)
@@ -1713,7 +1717,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				routeWithBackends.routeRuleMetadata = routeRuleMetadata
 				routeWithBackends.routeRuleName = rule.Name
 				if pattern != "" {
-					routeWithBackends.statName = new(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
+					routeWithBackends.statName = new(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames, backendRefKinds))
 				}
 			}
 			routesWithBackends = append(routesWithBackends, routeWithBackends)
@@ -3894,7 +3898,7 @@ func getStatPattern(routeContext RouteContext, parentRef *RouteParentContext, co
 	return pattern
 }
 
-func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, idx int, refs []string) string {
+func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.SectionName, idx int, refs, kinds []string) string {
 	statName := strings.ReplaceAll(pattern, egv1a1.StatFormatterRouteName, route.GetName())
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteNamespace, route.GetNamespace())
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteKind, strings.ToLower(route.GetObjectKind().GroupVersionKind().Kind))
@@ -3905,5 +3909,6 @@ func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.Section
 	}
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", idx))
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterBackendRefs, strings.Join(refs, "|"))
+	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterBackendKind, strings.Join(kinds, "|"))
 	return statName
 }

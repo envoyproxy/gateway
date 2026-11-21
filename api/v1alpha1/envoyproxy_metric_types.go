@@ -70,6 +70,7 @@ type ProxyMetrics struct {
 	// `%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section
 	// `%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section
 	// `%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|...` format
+	// `%BACKEND_KIND%`: lowercase kinds of all backends referenced in `<KIND>|<KIND>|...` format, in the same order as `%BACKEND_REFS%`
 	// Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
 	// A cluster shared by several routes through MergeBackends has no single route, so this
 	// pattern isn't applied to it. Its stats are named `<NAMESPACE>/<NAME>` after the backend
@@ -78,7 +79,7 @@ type ProxyMetrics struct {
 	// Example: `httproute/my-ns/my-route/rule/0`
 	//
 	// +kubebuilder:validation:MaxLength=1024
-	// +kubebuilder:validation:XValidation:rule="self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME|ROUTE_RULE_NUMBER|BACKEND_REFS)%)*$')",message="clusterStatName contains an unsupported or unterminated operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%, %ROUTE_KIND%, %ROUTE_RULE_NAME%, %ROUTE_RULE_NUMBER% and %BACKEND_REFS%"
+	// +kubebuilder:validation:XValidation:rule="self.matches('^([^%]|%(ROUTE_NAME|ROUTE_NAMESPACE|ROUTE_KIND|ROUTE_RULE_NAME|ROUTE_RULE_NUMBER|BACKEND_REFS|BACKEND_KIND)%)*$')",message="clusterStatName contains an unsupported or unterminated operator; supported operators are %ROUTE_NAME%, %ROUTE_NAMESPACE%, %ROUTE_KIND%, %ROUTE_RULE_NAME%, %ROUTE_RULE_NUMBER%, %BACKEND_REFS% and %BACKEND_KIND%"
 	// +optional
 	ClusterStatName *string `json:"clusterStatName,omitempty"`
 }

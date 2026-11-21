@@ -1169,6 +1169,19 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "ProxyMetrics-clusterStatName-backend-kind",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: new("%ROUTE_NAMESPACE%/%ROUTE_NAME%/%BACKEND_KIND%/%BACKEND_REFS%"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "ProxyMetrics-clusterStatName-unterminated-operator",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
