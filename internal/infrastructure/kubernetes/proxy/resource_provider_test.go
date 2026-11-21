@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	gwapiresource "github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -88,7 +89,7 @@ func (f *fakeKubernetesInfraProvider) GetEnvoyGateway() *egv1a1.EnvoyGateway {
 }
 
 func (f *fakeKubernetesInfraProvider) GetOwnerReferenceUID(_ context.Context, _ *ir.Infra) (map[string]types.UID, error) {
-	if f.EnvoyGateway.GatewayNamespaceMode() {
+	if apihelpers.GatewayNamespaceMode(f.EnvoyGateway) {
 		return map[string]types.UID{
 			gwapiresource.KindGateway: "test-owner-reference-uid-for-gateway",
 		}, nil
@@ -99,7 +100,7 @@ func (f *fakeKubernetesInfraProvider) GetOwnerReferenceUID(_ context.Context, _ 
 }
 
 func (f *fakeKubernetesInfraProvider) GetResourceNamespace(infra *ir.Infra) string {
-	if f.EnvoyGateway.GatewayNamespaceMode() {
+	if apihelpers.GatewayNamespaceMode(f.EnvoyGateway) {
 		return infra.Proxy.Namespace
 	}
 	return f.ControllerNamespace
@@ -126,7 +127,7 @@ func newTestInfraWithNamespacedName(gwNN types.NamespacedName) *ir.Infra {
 func newTestInfraWithCustomServiceAccount(gwNN types.NamespacedName) *ir.Infra {
 	i := newTestInfraWithNamespacedName(gwNN)
 	i.Proxy.Config = new(egv1a1.EnvoyProxy)
-	i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+	i.Proxy.Config.Spec.Provider = apihelpers.DefaultEnvoyProxyProvider()
 	i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 		EnvoyServiceAccount: &egv1a1.KubernetesServiceAccountSpec{
 			Name: new("custom-sa"),
@@ -239,7 +240,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -356,7 +357,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -398,7 +399,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -431,7 +432,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -543,7 +544,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(3)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -718,7 +719,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 			},
 			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 				MinReplicas: new(int32(3)),
@@ -740,7 +741,7 @@ func TestDeployment(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
-			kube := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+			kube := apihelpers.GetEnvoyProxyKubeProvider(apihelpers.GetEnvoyProxyProvider(tc.infra.GetProxyInfra().GetProxyConfig()))
 			if tc.deploy != nil {
 				kube.EnvoyDeployment = tc.deploy
 			}
@@ -871,7 +872,7 @@ func TestDaemonSet(t *testing.T) {
 			caseName: "custom",
 			infra:    newTestInfra(),
 			daemonset: &egv1a1.KubernetesDaemonSetSpec{
-				Strategy: egv1a1.DefaultKubernetesDaemonSetStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDaemonSetStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -953,7 +954,7 @@ func TestDaemonSet(t *testing.T) {
 			caseName: "extension-env",
 			infra:    newTestInfra(),
 			daemonset: &egv1a1.KubernetesDaemonSetSpec{
-				Strategy: egv1a1.DefaultKubernetesDaemonSetStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDaemonSetStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -994,7 +995,7 @@ func TestDaemonSet(t *testing.T) {
 			caseName: "default-env",
 			infra:    newTestInfra(),
 			daemonset: &egv1a1.KubernetesDaemonSetSpec{
-				Strategy: egv1a1.DefaultKubernetesDaemonSetStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDaemonSetStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -1026,7 +1027,7 @@ func TestDaemonSet(t *testing.T) {
 			caseName: "volumes",
 			infra:    newTestInfra(),
 			daemonset: &egv1a1.KubernetesDaemonSetSpec{
-				Strategy: egv1a1.DefaultKubernetesDaemonSetStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDaemonSetStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -1245,11 +1246,11 @@ func TestDaemonSet(t *testing.T) {
 				}
 			}
 
-			kube := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+			kube := apihelpers.GetEnvoyProxyKubeProvider(apihelpers.GetEnvoyProxyProvider(tc.infra.GetProxyInfra().GetProxyConfig()))
 
 			// fill deploument, use daemonset
 			kube.EnvoyDeployment = nil
-			kube.EnvoyDaemonSet = egv1a1.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage)
+			kube.EnvoyDaemonSet = apihelpers.DefaultKubernetesDaemonSet(egv1a1.DefaultEnvoyProxyImage)
 
 			if tc.daemonset != nil {
 				kube.EnvoyDaemonSet = tc.daemonset
@@ -1482,7 +1483,7 @@ func TestService(t *testing.T) {
 				}
 			}
 
-			provider := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+			provider := apihelpers.GetEnvoyProxyKubeProvider(apihelpers.GetEnvoyProxyProvider(tc.infra.GetProxyInfra().GetProxyConfig()))
 			if tc.service != nil {
 				provider.EnvoyService = tc.service
 			}
@@ -1775,8 +1776,8 @@ func TestPDB(t *testing.T) {
 				}
 			}
 
-			provider := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
-			provider.Kubernetes = egv1a1.DefaultEnvoyProxyKubeProvider()
+			provider := apihelpers.GetEnvoyProxyProvider(tc.infra.GetProxyInfra().GetProxyConfig())
+			provider.Kubernetes = apihelpers.DefaultEnvoyProxyKubeProvider()
 
 			if tc.deploy != nil {
 				provider.Kubernetes.EnvoyDeployment = tc.deploy
@@ -1785,8 +1786,7 @@ func TestPDB(t *testing.T) {
 			if tc.pdb != nil {
 				provider.Kubernetes.EnvoyPDB = tc.pdb
 			}
-
-			provider.GetEnvoyProxyKubeProvider()
+			apihelpers.GetEnvoyProxyKubeProvider(provider)
 
 			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), tc.infra)
 			require.NoError(t, err)
@@ -1928,8 +1928,8 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				}
 			}
 
-			provider := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
-			provider.Kubernetes = egv1a1.DefaultEnvoyProxyKubeProvider()
+			provider := apihelpers.GetEnvoyProxyProvider(tc.infra.GetProxyInfra().GetProxyConfig())
+			provider.Kubernetes = apihelpers.DefaultEnvoyProxyKubeProvider()
 
 			if tc.hpa != nil {
 				provider.Kubernetes.EnvoyHpa = tc.hpa
@@ -1937,7 +1937,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			if tc.deploy != nil {
 				provider.Kubernetes.EnvoyDeployment = tc.deploy
 			}
-			provider.GetEnvoyProxyKubeProvider()
+			apihelpers.GetEnvoyProxyKubeProvider(provider)
 
 			r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), tc.infra)
 			require.NoError(t, err)
@@ -2232,8 +2232,8 @@ func TestEnvoyProxyPatchDisabled(t *testing.T) {
 		}
 
 		infra := newTestInfra()
-		provider := infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
-		provider.Kubernetes = egv1a1.DefaultEnvoyProxyKubeProvider()
+		provider := apihelpers.GetEnvoyProxyProvider(infra.GetProxyInfra().GetProxyConfig())
+		provider.Kubernetes = apihelpers.DefaultEnvoyProxyKubeProvider()
 		configure(provider.Kubernetes)
 
 		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
@@ -2412,7 +2412,7 @@ func TestSanitizeControllerServiceAccount(t *testing.T) {
 	newInfraWithSA := func(saName string) *ir.Infra {
 		i := newTestInfra()
 		i.Proxy.Config = new(egv1a1.EnvoyProxy)
-		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider = apihelpers.DefaultEnvoyProxyProvider()
 		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 			EnvoyServiceAccount: &egv1a1.KubernetesServiceAccountSpec{
 				Name: &saName,
@@ -2424,7 +2424,7 @@ func TestSanitizeControllerServiceAccount(t *testing.T) {
 	newInfraWithSAPatch := func(saName string) *ir.Infra {
 		i := newTestInfra()
 		i.Proxy.Config = new(egv1a1.EnvoyProxy)
-		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider = apihelpers.DefaultEnvoyProxyProvider()
 		patch := []byte(`{"spec":{"template":{"spec":{"serviceAccountName":"` + saName + `"}}}}`)
 		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 			EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
@@ -2507,11 +2507,11 @@ func TestSanitizeControllerServiceAccount(t *testing.T) {
 		cfg := newCfgWithSA(controllerSA, false)
 		i := newTestInfra()
 		i.Proxy.Config = new(egv1a1.EnvoyProxy)
-		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider = apihelpers.DefaultEnvoyProxyProvider()
 		saName := controllerSA
 		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 			EnvoyServiceAccount: &egv1a1.KubernetesServiceAccountSpec{Name: &saName},
-			EnvoyDaemonSet:      egv1a1.DefaultKubernetesDaemonSet(""),
+			EnvoyDaemonSet:      apihelpers.DefaultKubernetesDaemonSet(""),
 		}
 		r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), i)
 		require.NoError(t, err)
@@ -2549,7 +2549,7 @@ func TestCheckResourceName(t *testing.T) {
 	newInfraWithDeploymentName := func(name string) *ir.Infra {
 		i := newTestInfra()
 		i.Proxy.Config = new(egv1a1.EnvoyProxy)
-		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider = apihelpers.DefaultEnvoyProxyProvider()
 		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 			EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 				Name: &name,
@@ -2561,7 +2561,7 @@ func TestCheckResourceName(t *testing.T) {
 	newInfraWithDeploymentNamePatch := func(name string) *ir.Infra {
 		i := newTestInfra()
 		i.Proxy.Config = new(egv1a1.EnvoyProxy)
-		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider = apihelpers.DefaultEnvoyProxyProvider()
 		patch := []byte(`{"metadata":{"name":"` + name + `"}}`)
 		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 			EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
@@ -2577,7 +2577,7 @@ func TestCheckResourceName(t *testing.T) {
 	newInfraWithServiceName := func(name string) *ir.Infra {
 		i := newTestInfra()
 		i.Proxy.Config = new(egv1a1.EnvoyProxy)
-		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider = apihelpers.DefaultEnvoyProxyProvider()
 		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 			EnvoyService: &egv1a1.KubernetesServiceSpec{
 				Name: &name,
@@ -2673,7 +2673,7 @@ func TestCheckPodSpecVolumes(t *testing.T) {
 	newInfraWithVolumePatch := func(patch []byte) *ir.Infra {
 		i := newTestInfra()
 		i.Proxy.Config = new(egv1a1.EnvoyProxy)
-		i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+		i.Proxy.Config.Spec.Provider = apihelpers.DefaultEnvoyProxyProvider()
 		i.Proxy.Config.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 			EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
@@ -2789,7 +2789,7 @@ func TestNearMissNames(t *testing.T) {
 
 	i := newTestInfra()
 	i.Proxy.Config = new(egv1a1.EnvoyProxy)
-	i.Proxy.Config.Spec.Provider = egv1a1.DefaultEnvoyProxyProvider()
+	i.Proxy.Config.Spec.Provider = apihelpers.DefaultEnvoyProxyProvider()
 	saName := nearMissName
 	deployName := nearMissName
 	svcName := nearMissName
@@ -2881,7 +2881,7 @@ func TestAutoscalingAndDisruptionBudgetGatewayNameLabel(t *testing.T) {
 			if mode == "merged" {
 				infra.Proxy.GetProxyMetadata().Labels = gatewayapi.GatewayClassOwnerLabel("eg-class")
 			}
-			provider := infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+			provider := apihelpers.GetEnvoyProxyKubeProvider(apihelpers.GetEnvoyProxyProvider(infra.GetProxyInfra().GetProxyConfig()))
 			provider.EnvoyPDB = &egv1a1.KubernetesPodDisruptionBudgetSpec{
 				MinAvailable: new(intstr.FromInt32(1)),
 			}

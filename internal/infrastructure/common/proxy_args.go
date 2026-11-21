@@ -10,6 +10,7 @@ import (
 	"time"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
@@ -79,7 +80,7 @@ func BuildProxyArgs(
 		"--service-cluster", serviceCluster,
 		"--service-node", serviceNode,
 		"--config-yaml", bootstrapConfigurations,
-		"--log-level", string(logging.DefaultEnvoyProxyLoggingLevel()),
+		"--log-level", string(apihelpers.DefaultEnvoyProxyLoggingLevel(&logging)),
 		"--drain-strategy", drainStrategyArg(shutdownConfig),
 	}
 
@@ -88,7 +89,7 @@ func BuildProxyArgs(
 		args = append(args, "--concurrency", fmt.Sprintf("%d", *infra.Config.Spec.Concurrency))
 	}
 
-	if componentsLogLevel := logging.GetEnvoyProxyComponentLevel(); componentsLogLevel != "" {
+	if componentsLogLevel := apihelpers.GetEnvoyProxyComponentLevel(&logging); componentsLogLevel != "" {
 		args = append(args, "--component-log-level", componentsLogLevel)
 	}
 

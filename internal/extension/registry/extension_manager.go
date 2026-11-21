@@ -20,6 +20,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	grpcExtension "github.com/envoyproxy/gateway/internal/extension"
@@ -57,7 +58,7 @@ func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
 		return nil, err
 	}
 
-	extensions := cfg.EnvoyGateway.GetExtensionManagers()
+	extensions := apihelpers.GetExtensionManagers(&cfg.EnvoyGateway.EnvoyGatewaySpec)
 
 	switch len(extensions) {
 	case 0:

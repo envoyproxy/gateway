@@ -36,6 +36,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
@@ -118,8 +119,8 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		},
 	}
 
-	kubernetesConfigParams := svrCfg.EnvoyGateway.Provider.GetKubernetesConfiguration()
-	kubernetesInfrastructureConfigParams := svrCfg.EnvoyGateway.Provider.GetKubernetesInfrastructureConfiguration()
+	kubernetesConfigParams := apihelpers.GetKubernetesConfiguration(svrCfg.EnvoyGateway.Provider)
+	kubernetesInfrastructureConfigParams := apihelpers.GetKubernetesInfrastructureConfiguration(svrCfg.EnvoyGateway.Provider)
 
 	if metricsOpts != nil {
 		mgrOpts.Metrics = *metricsOpts
@@ -128,7 +129,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	log.SetLogger(mgrOpts.Logger)
 	klog.SetLogger(mgrOpts.Logger)
 
-	restCfg.QPS, restCfg.Burst = kubernetesConfigParams.Client.RateLimit.GetQPSAndBurst()
+	restCfg.QPS, restCfg.Burst = apihelpers.GetQPSAndBurst(kubernetesConfigParams.Client.RateLimit)
 
 	if !ptr.Deref(kubernetesConfigParams.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
@@ -213,7 +214,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	// If GatewayNamespaceMode is enabled, we need to watch all namespaces for the envoy proxy infrastructure resources.
 	// If not, we only watch the controller namespace to avoid unnecessary RBAC permissions.
 	// A label selector is still applied in both cases to limit the cache to only the resources owned by EG to reduce memory and sync churn.
-	if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
+	if apihelpers.GatewayNamespaceMode(svrCfg.EnvoyGateway) {
 		// Keep ServiceAccount/Deployment unfiltered because the Envoy Gateway controller service account and deployment
 		// are needed to watch for changes, and EG controller's labels can be customized by users while installation
 		// and may not be present in the cache.
@@ -281,7 +282,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	// When configured with an explicit namespace watch list, scope the default
 	// cache to those namespaces and add type-specific controller namespace
 	// exceptions below.
-	if svrCfg.EnvoyGateway.WatchesNamespaces() {
+	if apihelpers.WatchesNamespaces(svrCfg.EnvoyGateway) {
 		watchedNamespaces := map[string]cache.Config{}
 		for _, watchNS := range kubernetesConfigParams.Watch.Namespaces {
 			watchedNamespaces[watchNS] = cache.Config{}
@@ -316,7 +317,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			UnsafeDisableDeepCopy: new(true),
 			Namespaces:            watchedAndControllerNamespaces,
 		})
-		if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
+		if apihelpers.GatewayNamespaceMode(svrCfg.EnvoyGateway) {
 			// GatewayNamespaceMode still needs controller namespace access for
 			// EG controller resources and the xDS CA Secret.
 			setByObject(mgrOpts.Cache.ByObject, &corev1.ServiceAccount{}, cache.ByObject{

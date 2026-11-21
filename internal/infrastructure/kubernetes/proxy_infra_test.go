@@ -27,6 +27,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -138,7 +139,7 @@ func TestCreateProxyInfra(t *testing.T) {
 		Spec: egv1a1.EnvoyProxySpec{
 			Provider: &egv1a1.EnvoyProxyProvider{
 				Type:       egv1a1.EnvoyProxyProviderTypeKubernetes,
-				Kubernetes: egv1a1.DefaultEnvoyProxyKubeProvider(),
+				Kubernetes: apihelpers.DefaultEnvoyProxyKubeProvider(),
 			},
 		},
 	}

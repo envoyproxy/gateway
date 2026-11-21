@@ -17,6 +17,7 @@ import (
 	func_e_api "github.com/tetratelabs/func-e/api"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -162,7 +163,7 @@ func (i *Infra) stopEnvoy(proxyName string) {
 func (i *Infra) getEnvoyVersion(proxyConfig *egv1a1.EnvoyProxy) string {
 	// Note these helper functions gracefully handle nil pointer dereferencing, so it's safe to
 	// chain method calls.
-	version := proxyConfig.GetEnvoyProxyProvider().GetEnvoyProxyHostProvider().GetEnvoyVersion()
+	version := apihelpers.GetEnvoyVersion(apihelpers.GetEnvoyProxyHostProvider(apihelpers.GetEnvoyProxyProvider(proxyConfig)))
 	if version == "" {
 		// If the version is not explicitly set, use the default version EG is built with.
 		// This is only populated to a concrete version in release branches.

@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package v1alpha1
+package apihelpers
 
 import (
 	"encoding/json"
@@ -15,6 +15,8 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // DefaultKubernetesDeploymentStrategy returns the default deployment strategy settings.
@@ -37,8 +39,8 @@ func DefaultKubernetesContainerImage(image string) *string {
 }
 
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
-func DefaultKubernetesDeployment(image string) *KubernetesDeploymentSpec {
-	return &KubernetesDeploymentSpec{
+func DefaultKubernetesDeployment(image string) *egv1a1.KubernetesDeploymentSpec {
+	return &egv1a1.KubernetesDeploymentSpec{
 		Strategy:  DefaultKubernetesDeploymentStrategy(),
 		Pod:       DefaultKubernetesPod(),
 		Container: DefaultKubernetesContainer(image),
@@ -46,8 +48,8 @@ func DefaultKubernetesDeployment(image string) *KubernetesDeploymentSpec {
 }
 
 // DefaultKubernetesDaemonSet returns a new DefaultKubernetesDaemonSet with default settings.
-func DefaultKubernetesDaemonSet(image string) *KubernetesDaemonSetSpec {
-	return &KubernetesDaemonSetSpec{
+func DefaultKubernetesDaemonSet(image string) *egv1a1.KubernetesDaemonSetSpec {
+	return &egv1a1.KubernetesDaemonSetSpec{
 		Strategy:  DefaultKubernetesDaemonSetStrategy(),
 		Pod:       DefaultKubernetesPod(),
 		Container: DefaultKubernetesContainer(image),
@@ -55,13 +57,13 @@ func DefaultKubernetesDaemonSet(image string) *KubernetesDaemonSetSpec {
 }
 
 // DefaultKubernetesPod returns a new KubernetesPodSpec with default settings.
-func DefaultKubernetesPod() *KubernetesPodSpec {
-	return &KubernetesPodSpec{}
+func DefaultKubernetesPod() *egv1a1.KubernetesPodSpec {
+	return &egv1a1.KubernetesPodSpec{}
 }
 
 // DefaultKubernetesContainer returns a new KubernetesContainerSpec with default settings.
-func DefaultKubernetesContainer(image string) *KubernetesContainerSpec {
-	return &KubernetesContainerSpec{
+func DefaultKubernetesContainer(image string) *egv1a1.KubernetesContainerSpec {
+	return &egv1a1.KubernetesContainerSpec{
 		Resources: DefaultResourceRequirements(),
 		Image:     DefaultKubernetesContainerImage(image),
 	}
@@ -71,40 +73,42 @@ func DefaultKubernetesContainer(image string) *KubernetesContainerSpec {
 func DefaultResourceRequirements() *corev1.ResourceRequirements {
 	return &corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(DefaultDeploymentCPUResourceRequests),
-			corev1.ResourceMemory: resource.MustParse(DefaultDeploymentMemoryResourceRequests),
+			corev1.ResourceCPU:    resource.MustParse(egv1a1.DefaultDeploymentCPUResourceRequests),
+			corev1.ResourceMemory: resource.MustParse(egv1a1.DefaultDeploymentMemoryResourceRequests),
 		},
 	}
 }
 
 // DefaultKubernetesService returns a new KubernetesServiceSpec with default settings.
-func DefaultKubernetesService() *KubernetesServiceSpec {
-	return &KubernetesServiceSpec{
+func DefaultKubernetesService() *egv1a1.KubernetesServiceSpec {
+	return &egv1a1.KubernetesServiceSpec{
 		Type:                  DefaultKubernetesServiceType(),
 		ExternalTrafficPolicy: DefaultKubernetesServiceExternalTrafficPolicy(),
 	}
 }
 
 // DefaultKubernetesServiceType returns a new KubernetesServiceType with default settings.
-func DefaultKubernetesServiceType() *ServiceType {
-	return GetKubernetesServiceType(ServiceTypeLoadBalancer)
+func DefaultKubernetesServiceType() *egv1a1.ServiceType {
+	return GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer)
 }
 
 // GetKubernetesServiceType returns the KubernetesServiceType pointer.
-func GetKubernetesServiceType(serviceType ServiceType) *ServiceType {
+func GetKubernetesServiceType(serviceType egv1a1.ServiceType) *egv1a1.ServiceType {
 	return &serviceType
 }
 
-func DefaultKubernetesServiceExternalTrafficPolicy() *ServiceExternalTrafficPolicy {
-	return GetKubernetesServiceExternalTrafficPolicy(ServiceExternalTrafficPolicyLocal)
+// DefaultKubernetesServiceExternalTrafficPolicy returns the default external traffic policy.
+func DefaultKubernetesServiceExternalTrafficPolicy() *egv1a1.ServiceExternalTrafficPolicy {
+	return GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyLocal)
 }
 
-func GetKubernetesServiceExternalTrafficPolicy(serviceExternalTrafficPolicy ServiceExternalTrafficPolicy) *ServiceExternalTrafficPolicy {
+// GetKubernetesServiceExternalTrafficPolicy returns the ServiceExternalTrafficPolicy pointer.
+func GetKubernetesServiceExternalTrafficPolicy(serviceExternalTrafficPolicy egv1a1.ServiceExternalTrafficPolicy) *egv1a1.ServiceExternalTrafficPolicy {
 	return &serviceExternalTrafficPolicy
 }
 
 // defaultKubernetesDeploymentSpec fill a default KubernetesDeploymentSpec if unspecified.
-func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(image string) {
+func defaultKubernetesDeploymentSpec(deployment *egv1a1.KubernetesDeploymentSpec, image string) {
 	if deployment.Strategy == nil {
 		deployment.Strategy = DefaultKubernetesDeploymentStrategy()
 	}
@@ -127,7 +131,7 @@ func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(imag
 }
 
 // defaultKubernetesDaemonSetSpec fill a default KubernetesDaemonSetSpec if unspecified.
-func (daemonset *KubernetesDaemonSetSpec) defaultKubernetesDaemonSetSpec(image string) {
+func defaultKubernetesDaemonSetSpec(daemonset *egv1a1.KubernetesDaemonSetSpec, image string) {
 	if daemonset.Strategy == nil {
 		daemonset.Strategy = DefaultKubernetesDaemonSetStrategy()
 	}
@@ -149,16 +153,16 @@ func (daemonset *KubernetesDaemonSetSpec) defaultKubernetesDaemonSetSpec(image s
 	}
 }
 
-// setDefault fill a default HorizontalPodAutoscalerSpec if unspecified
-func (hpa *KubernetesHorizontalPodAutoscalerSpec) setDefault() {
+// setHPADefaults fill a default HorizontalPodAutoscalerSpec if unspecified
+func setHPADefaults(hpa *egv1a1.KubernetesHorizontalPodAutoscalerSpec) {
 	if len(hpa.Metrics) == 0 {
 		hpa.Metrics = DefaultEnvoyProxyHpaMetrics()
 	}
 }
 
-// ApplyMergePatch applies a merge patch to a PodDisruptionBudget based on the merge type.
+// ApplyPodDisruptionBudgetPatch applies the spec's merge patch to a PodDisruptionBudget.
 // If disabled is true, the patch is ignored and old is returned unchanged.
-func (pdb *KubernetesPodDisruptionBudgetSpec) ApplyMergePatch(old *policyv1.PodDisruptionBudget, disabled bool) (*policyv1.PodDisruptionBudget, error) {
+func ApplyPodDisruptionBudgetPatch(pdb *egv1a1.KubernetesPodDisruptionBudgetSpec, old *policyv1.PodDisruptionBudget, disabled bool) (*policyv1.PodDisruptionBudget, error) {
 	if pdb.Patch == nil || disabled {
 		return old, nil
 	}
@@ -173,9 +177,9 @@ func (pdb *KubernetesPodDisruptionBudgetSpec) ApplyMergePatch(old *policyv1.PodD
 	}
 
 	switch {
-	case pdb.Patch.Type == nil || *pdb.Patch.Type == StrategicMerge:
+	case pdb.Patch.Type == nil || *pdb.Patch.Type == egv1a1.StrategicMerge:
 		patchedJSON, err = strategicpatch.StrategicMergePatch(originalJSON, pdb.Patch.Value.Raw, policyv1.PodDisruptionBudget{})
-	case *pdb.Patch.Type == JSONMerge:
+	case *pdb.Patch.Type == egv1a1.JSONMerge:
 		patchedJSON, err = jsonpatch.MergePatch(originalJSON, pdb.Patch.Value.Raw)
 	default:
 		return nil, fmt.Errorf("unsupported merge type: %s", *pdb.Patch.Type)
@@ -184,7 +188,7 @@ func (pdb *KubernetesPodDisruptionBudgetSpec) ApplyMergePatch(old *policyv1.PodD
 		return nil, fmt.Errorf("error applying merge patch: %w", err)
 	}
 
-	// Deserialize the patched JSON into a new HorizontalPodAutoscaler object
+	// Deserialize the patched JSON into a new PodDisruptionBudget object
 	var patchedPdb policyv1.PodDisruptionBudget
 	if err := json.Unmarshal(patchedJSON, &patchedPdb); err != nil {
 		return nil, fmt.Errorf("error unmarshaling patched PodDisruptionBudget: %w", err)

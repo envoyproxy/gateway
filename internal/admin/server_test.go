@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
@@ -24,7 +25,7 @@ func TestInitAdminServer(t *testing.T) {
 		},
 	}
 
-	svrConfig.Logger = logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
+	svrConfig.Logger = logging.NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging())
 	runner := New(&Config{
 		Server: *svrConfig,
 	})

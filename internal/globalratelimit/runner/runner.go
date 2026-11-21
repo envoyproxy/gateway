@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
@@ -258,11 +259,11 @@ func (r *Runner) loadTLSConfig() (*tls.Config, error) {
 	var certPath, keyPath, caPath string
 
 	switch {
-	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+	case apihelpers.IsRunningOnKubernetes(r.EnvoyGateway.Provider):
 		certPath = rateLimitTLSCertFilepath
 		keyPath = rateLimitTLSKeyFilepath
 		caPath = rateLimitTLSCACertFilepath
-	case r.EnvoyGateway.Provider.IsRunningOnHost():
+	case apihelpers.IsRunningOnHost(r.EnvoyGateway.Provider):
 		// Get configuration from provider
 		var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
 		if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&

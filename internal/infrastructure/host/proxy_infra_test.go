@@ -21,6 +21,7 @@ import (
 	func_e_api "github.com/tetratelabs/func-e/api"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
@@ -437,19 +438,19 @@ func TestGetEnvoyVersion(t *testing.T) {
 		{
 			name:         "k8s provider default release version",
 			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.35.0",
-			provider:     egv1a1.DefaultEnvoyProxyProvider(),
+			provider:     apihelpers.DefaultEnvoyProxyProvider(),
 			want:         "1.35.0",
 		},
 		{
 			name:         "k8s provider default release version pinned by digest",
 			defaultImage: "docker.io/envoyproxy/envoy:distroless-v1.39.1@sha256:eb2c01c13125d1629637cb4e4cce7207009fb7cc2c8027f9742758549d15b6f4",
-			provider:     egv1a1.DefaultEnvoyProxyProvider(),
+			provider:     apihelpers.DefaultEnvoyProxyProvider(),
 			want:         "1.39.1",
 		},
 		{
 			name:         "k8s provider dev version",
 			defaultImage: "docker.io/envoyproxy/envoy:distroless-dev",
-			provider:     egv1a1.DefaultEnvoyProxyProvider(),
+			provider:     apihelpers.DefaultEnvoyProxyProvider(),
 			want:         "",
 		},
 		{

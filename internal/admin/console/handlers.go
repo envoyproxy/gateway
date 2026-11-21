@@ -13,6 +13,7 @@ import (
 	"time"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 )
@@ -85,7 +86,7 @@ func (h *Handler) handlePprof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enablePprof := h.cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnablePprof
+	enablePprof := apihelpers.GetEnvoyGatewayAdmin(h.cfg.EnvoyGateway).EnablePprof
 	data := struct {
 		Title       string
 		EnablePprof bool
