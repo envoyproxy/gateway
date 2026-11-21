@@ -224,6 +224,19 @@ type EnvoyProxySpec struct {
 	// +optional
 	Lua *LuaValidationConfig `json:"lua,omitempty"`
 
+	// FormatStrings configures how the gateway controller validates Envoy format strings, the
+	// command operators such as %REQ(:AUTHORITY)% or %RESPONSE_CODE%, before the configuration is
+	// sent to the proxies. It applies to the access log formats of this EnvoyProxy and to the
+	// header values of HTTPRoute and GRPCRoute filters attached to Gateways that use this
+	// EnvoyProxy.
+	//
+	// Envoy rejects a listener or route configuration that contains an unknown command operator.
+	// Running proxies then keep serving their previous configuration, while new proxy pods fail to
+	// start with it.
+	//
+	// +optional
+	FormatStrings *FormatStringValidationConfig `json:"formatStrings,omitempty"`
+
 	// DynamicModules defines the set of dynamic modules that are allowed to be
 	// used by EnvoyExtensionPolicy resources and dynamic module load balancer
 	// policies. Each entry registers a module by a logical name and specifies
@@ -286,6 +299,42 @@ type MergeBackendsConfig struct {
 type EnvoyProxyGeoIP struct {
 	// Provider defines the GeoIP provider configuration used by GeoIP filter instances.
 	Provider GeoIPProvider `json:"provider"`
+}
+
+// FormatStringValidation is the validation mode for Envoy format strings.
+//
+// Format strings are validated against the command operators supported by the Envoy version that
+// this Envoy Gateway release ships. A proxy running a newer Envoy image may support operators that
+// the validation does not know yet, so keep the Warn mode for custom images.
+//
+// +kubebuilder:validation:Enum=Warn;Strict;Disabled
+type FormatStringValidation string
+
+const (
+	// FormatStringValidationWarn is the default mode. Invalid format strings are reported with a
+	// Warning condition on the EnvoyProxy for access log formats, and on the route for header
+	// values, but the configuration is still sent to the proxies.
+	FormatStringValidationWarn FormatStringValidation = "Warn"
+
+	// FormatStringValidationStrict rejects invalid format strings before they reach the proxies.
+	// An access log setting with an invalid format is dropped and reported with a Warning condition
+	// on the EnvoyProxy. An HTTPRoute or GRPCRoute with an invalid header value is not accepted by
+	// Gateways that use this EnvoyProxy.
+	FormatStringValidationStrict FormatStringValidation = "Strict"
+
+	// FormatStringValidationDisabled disables format string validation.
+	FormatStringValidationDisabled FormatStringValidation = "Disabled"
+)
+
+// FormatStringValidationConfig configures how Envoy format strings are validated in the gateway
+// controller.
+type FormatStringValidationConfig struct {
+	// ValidationType determines how invalid format strings are handled.
+	// Default: Warn
+	//
+	// +kubebuilder:default=Warn
+	// +optional
+	ValidationType *FormatStringValidation `json:"validationType,omitempty"`
 }
 
 // +kubebuilder:validation:Enum=Strict;InsecureSyntax;Disabled
