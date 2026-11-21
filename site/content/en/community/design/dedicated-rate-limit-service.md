@@ -51,7 +51,8 @@ needs to be isolated.
 * User-managed (bring-your-own) RLS in the first iteration. Envoy Gateway still deploys and configures
   the RLS. A user-managed RLS may be proposed separately as a follow-up.
 * Rate limit backends other than Redis.
-* Dedicated RLS on the host (standalone) provider or with remote infrastructure in the first iteration.
+* Dedicated RLS with any infrastructure other than Envoy Gateway's built-in Kubernetes infrastructure
+  in the first iteration.
 * Changing how rate limit rules or domains are generated.
 * Validating RLS workload overrides beyond the settings Envoy Gateway generates. Overrides are
   trusted, administrator-controlled configuration, as they are for the shared RLS today (see
@@ -431,21 +432,26 @@ namespace and name.
 Admins can already set `CACHE_KEY_PREFIX` on the shared RLS through
 `EnvoyGateway.provider.kubernetes.rateLimitDeployment` (container env or patch), for example `eg:rl:`
 as shown in the global rate limit task. Such prefixes keep working. Only a shared prefix that could
-reproduce the start of a dedicated key is a problem. In every dedicated key, the text before the first
-`:` is `<namespace>/<name>`, which contains `/`, and there is a `:` before the first `_`. For a shared
-prefix P:
+reproduce the start of a dedicated key is a problem. Every dedicated key has a `:` before its first
+`_`, and the text before its first `:` is a Gateway identity `<namespace>/<name>`: a valid namespace
+name, one `/`, and a valid Gateway name. For a shared prefix P:
 
 * If P contains no `:`, the shared key has no `:` before its first `_`, because neither P nor the
   domain contains one, so it never matches a dedicated key.
-* If P contains `:` and the text before its first `:` contains no `/`, as in `eg:rl:`, the text before
-  the shared key's first `:` contains no `/`, so it never matches a dedicated key either.
-* If P contains `/` before its first `:`, as in `team-a/gw-a:`, it can equal a dedicated prefix and
-  merge buckets.
+* If P contains `:`, the shared key can match a dedicated key only if the text before P's first `:` is
+  itself a possible Gateway identity. `eg:rl:` (`eg` has no `/`) and `ops/cache/shared:` (two `/`) are
+  not, so they never collide. `team-a/gw-a:` is, so it could merge buckets with that Gateway's
+  dedicated RLS.
+
+The check does not compare P with the Gateways that exist at startup. Gateways can be created later
+without a control-plane restart, so any prefix that could equal some Gateway's dedicated prefix is
+rejected.
 
 While `enableDedicatedRateLimit` is true, Envoy Gateway therefore checks the shared RLS Deployment after
 applying its workload settings and patches, and fails startup with an error naming the prefix if:
 
-* the effective `CACHE_KEY_PREFIX` contains `/` before its first `:`;
+* the text before the first `:` of the effective `CACHE_KEY_PREFIX` is a possible Gateway identity:
+  a valid Kubernetes namespace name, exactly one `/`, and a valid Gateway name;
 * an explicit `CACHE_KEY_PREFIX` uses `valueFrom`, contains `$(`, or appears more than once in `env`; or
 * no explicit `CACHE_KEY_PREFIX` is set and the RLS container has an `envFrom` source, which could
   supply the prefix.
@@ -817,24 +823,29 @@ convergence uses reason `Ready`. A Gateway that no longer uses global rate limit
 removed, as does a Gateway that switches to the shared RLS. Shared RLS status and credential validation
 retain their existing control-plane behavior.
 
-### Host provider and remote infrastructure
+### Supported infrastructure
 
-Not supported in the first iteration. While `enableDedicatedRateLimit` is true, setting `rateLimit` on
-a Gateway's `EnvoyProxy` makes the Gateway `Accepted=False`, with a message saying so, when either of
-these is used:
+Dedicated RLS is supported only when Envoy Gateway provisions infrastructure itself with its built-in
+Kubernetes infrastructure manager, that is, with `provider.type: Kubernetes`. That manager is the only
+one that can create a per-Gateway RLS and report the Deployment and Service state that `RateLimitReady`
+requires. Every other configuration is unsupported in the first iteration, including:
 
-* The host provider.
-* Remote infrastructure (`EnvoyGateway.provider.custom.infrastructure.type: Remote`). The remote
-  infrastructure contract has no way to request a per-Gateway RLS: `CreateOrUpdateRateLimitInfraRequest`
-  carries no scope, backend, settings or address. A remote manager also cannot report the Deployment
-  and Service state that `RateLimitReady` requires. Supporting it needs an extension of that contract
-  and of the readiness model.
+* the host provider;
+* a custom provider with remote infrastructure: the remote contract cannot request a per-Gateway RLS,
+  because `CreateOrUpdateRateLimitInfraRequest` carries no scope, backend, settings or address;
+* a custom provider without infrastructure, where nothing provisions the RLS at all;
+* any infrastructure type added in the future, until it is explicitly supported.
+
+While `enableDedicatedRateLimit` is true, setting `rateLimit` on a Gateway's `EnvoyProxy` with
+unsupported infrastructure makes the Gateway `Accepted=False`, with a message saying so, and no RLS
+infrastructure request is sent. Supporting more infrastructure needs its own provisioning and readiness
+contract.
 
 While `enableDedicatedRateLimit` is false, this check does not run. `rateLimit` is ignored as for any
 other provider, and the Gateway stays accepted, as described in
 [Enabling dedicated RLS](#enabling-dedicated-rls). Rejecting it then would let a block the admin never
-enabled take down all of the Gateway's listeners. Admins should therefore not enable dedicated RLS on
-these providers; if they do, the Gateways that set `rateLimit` are rejected, which is visible and
+enabled take down all of the Gateway's listeners. Admins should therefore not enable dedicated RLS with
+unsupported infrastructure; if they do, the Gateways that set `rateLimit` are rejected, which is visible and
 limited to Gateways that asked for a dedicated RLS.
 
 ### Tooling
@@ -959,9 +970,10 @@ These are the author's recommendations and are open for review.
   enabled, workload customization must be administrator-authored or constrained by an admission
   allowlist covering all workload settings. Built-in workloads do not require the customization switch.
 * Dedicated RLS deployments run in the controller namespace in the first iteration. Running them in the
-  Gateway namespace, and the authentication that needs, is deferred. The host provider and remote
-  infrastructure are not supported; while `enableDedicatedRateLimit` is true, `rateLimit` makes such
-  Gateways `Accepted=False`, and while it is false the block is ignored as on other providers.
+  Gateway namespace, and the authentication that needs, is deferred. Only the built-in Kubernetes
+  infrastructure is supported; with any other infrastructure, `rateLimit` makes the Gateway
+  `Accepted=False` while `enableDedicatedRateLimit` is true, and is ignored as usual while it is
+  false.
 * Dedicated RLS pods carry documented, controller-owned scope labels so admins can select them in
   NetworkPolicies and admission policies. The proposal includes example NetworkPolicies; Envoy Gateway
   does not generate NetworkPolicies in the first iteration.
@@ -1000,7 +1012,8 @@ Implementation must cover the following cases with meaningful automated tests:
   shared RLS; multiple Gateways referencing one `EnvoyProxy` receive distinct services and snapshots.
 * **Counter isolation:** two dedicated RLS and the shared RLS using the same Redis database keep
   separate counters, including for `shared: true` rules and a shared RLS with an admin-set prefix such
-  as `eg:rl:`; while dedicated RLS is enabled, a shared prefix with `/` before its first `:`, a
+  as `eg:rl:` or `ops/cache/shared:`; while dedicated RLS is enabled, a shared prefix that starts
+  with a possible Gateway identity and `:`, such as `team-a/gw-a:`, a
   `valueFrom` prefix, a prefix containing `$(`, duplicate prefix entries, or `envFrom` without an
   explicit prefix fails startup. Cover `$(PREFIX)` expanding to `team-a/gw-a:` and an indirect Secret
   dependency. An explicit safe prefix, including an empty string, works alongside `envFrom`.
@@ -1021,8 +1034,8 @@ Implementation must cover the following cases with meaningful automated tests:
 * **API:** an `EnvoyProxy` whose `rateLimit` omits `failClosed` is accepted and behaves as `false`;
   generated API docs for `urlRef` and `certificateRef` describe both the `EnvoyGateway` and the
   `EnvoyProxy` namespace rules.
-* **Unsupported infrastructure:** with the host provider or remote infrastructure and
-  `enableDedicatedRateLimit` true, `rateLimit` sets the Gateway `Accepted=False` and no RLS
+* **Unsupported infrastructure:** with the host provider, a custom provider with remote infrastructure,
+  or a custom provider without infrastructure, and `enableDedicatedRateLimit` true, `rateLimit` sets the Gateway `Accepted=False` and no RLS
   infrastructure request is sent; with the switch false, the Gateway stays accepted and follows the
   disabled-switch behavior.
 * **Protected settings:** workload settings and patches cannot override names, selectors, ownership,
