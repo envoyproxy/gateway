@@ -136,6 +136,98 @@ func TestSetEnvoyProxyWarnings(t *testing.T) {
 	})
 }
 
+func TestAddEnvoyProxyWarning(t *testing.T) {
+	ancestor := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName("eg")}
+	telemetryWarning := func(msg string) *EnvoyProxyWarning {
+		return &EnvoyProxyWarning{Reason: egv1a1.EnvoyProxyReasonInvalidField, Message: msg}
+	}
+
+	t.Run("sets a warning when there is none yet", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		AddEnvoyProxyWarning(ep, ancestor, telemetryWarning("bad sink"))
+
+		require.Len(t, ep.Status.Ancestors, 1)
+		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		require.NotNil(t, cond)
+		assert.Equal(t, string(egv1a1.EnvoyProxyReasonInvalidField), cond.Reason)
+		assert.Equal(t, "bad sink", cond.Message)
+	})
+
+	t.Run("no-op when there is nothing to add", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		AddEnvoyProxyWarning(ep, ancestor, nil, telemetryWarning(""))
+		assert.Empty(t, ep.Status.Ancestors)
+	})
+
+	t.Run("no-op for a nil EnvoyProxy or ancestor", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			AddEnvoyProxyWarning(nil, ancestor, telemetryWarning("bad sink"))
+			AddEnvoyProxyWarning(&egv1a1.EnvoyProxy{}, nil, telemetryWarning("bad sink"))
+		})
+	})
+
+	t.Run("preserves a warning set earlier in the translation", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		SetEnvoyProxyWarnings(ep, ancestor, DeprecatedFieldsWarning(map[string]DeprecatedField{
+			"spec.luaValidation": {Replacement: "spec.lua.validationType"},
+		}))
+		AddEnvoyProxyWarning(ep, ancestor, telemetryWarning("bad sink"))
+
+		require.Len(t, ep.Status.Ancestors, 1)
+		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		require.NotNil(t, cond)
+		assert.Equal(t, string(egv1a1.EnvoyProxyReasonMultipleWarnings), cond.Reason)
+		assert.Equal(t, "spec.luaValidation is deprecated, use spec.lua.validationType instead; bad sink", cond.Message)
+	})
+
+	t.Run("keeps the shared reason when it does not change", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		SetEnvoyProxyWarnings(ep, ancestor, InvalidFieldsWarning([]validation.InvalidField{{Path: "filterOrder", Err: errors.New("cycle")}}))
+		AddEnvoyProxyWarning(ep, ancestor, telemetryWarning("bad sink"))
+
+		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		require.NotNil(t, cond)
+		assert.Equal(t, string(egv1a1.EnvoyProxyReasonInvalidField), cond.Reason)
+		assert.Equal(t, "The following invalid fields were ignored: filterOrder: cycle; bad sink", cond.Message)
+	})
+
+	t.Run("does not add the same warning twice", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		AddEnvoyProxyWarning(ep, ancestor, telemetryWarning("bad sink"))
+		ep.Generation++
+		AddEnvoyProxyWarning(ep, ancestor, telemetryWarning("bad sink"))
+
+		require.Len(t, ep.Status.Ancestors, 1)
+		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		require.NotNil(t, cond)
+		assert.Equal(t, "bad sink", cond.Message)
+	})
+
+	t.Run("merges several warnings at once", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		AddEnvoyProxyWarning(ep, ancestor,
+			telemetryWarning("bad access log sink"),
+			&EnvoyProxyWarning{Reason: egv1a1.EnvoyProxyReasonDeprecatedField, Message: "deprecated field"})
+
+		cond := meta.FindStatusCondition(ep.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		require.NotNil(t, cond)
+		assert.Equal(t, string(egv1a1.EnvoyProxyReasonMultipleWarnings), cond.Reason)
+		assert.Equal(t, "bad access log sink; deprecated field", cond.Message)
+	})
+
+	t.Run("keeps the Accepted condition of the same ancestor", func(t *testing.T) {
+		ep := &egv1a1.EnvoyProxy{}
+		UpdateEnvoyProxyStatusAccepted(ep, ancestor, egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
+		AddEnvoyProxyWarning(ep, ancestor, telemetryWarning("bad sink"))
+
+		require.Len(t, ep.Status.Ancestors, 1)
+		conds := ep.Status.Ancestors[0].Conditions
+		require.Len(t, conds, 2)
+		assert.NotNil(t, meta.FindStatusCondition(conds, string(egv1a1.EnvoyProxyConditionAccepted)))
+		assert.NotNil(t, meta.FindStatusCondition(conds, string(egv1a1.EnvoyProxyConditionWarning)))
+	})
+}
+
 func TestMergeBoundedWarningMessages(t *testing.T) {
 	t.Run("short messages are merged as before", func(t *testing.T) {
 		assert.Equal(t, "a; b", mergeBoundedWarningMessages("a", "b"))

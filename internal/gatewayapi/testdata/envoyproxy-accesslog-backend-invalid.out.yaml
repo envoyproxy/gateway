@@ -14,13 +14,6 @@ gateways:
       port: 80
       protocol: HTTP
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Invalid access log backendRefs in the referenced EnvoyProxy: service
-        monitoring/service-not-found not found'
-      reason: InvalidParameters
-      status: "False"
-      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -142,6 +135,11 @@ infraIR:
       namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-1:
+    accessLog:
+      text:
+      - format: |
+          [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+        path: /dev/stdout
     globalResources:
       proxyServiceCluster:
         metadata:
