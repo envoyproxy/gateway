@@ -85,6 +85,29 @@ func TestValidateIPRunningOnHost(t *testing.T) {
 			runningOnHost: true,
 		},
 		{
+			name:          "ipv4 unspecified not ok when in k8s",
+			address:       "0.0.0.0",
+			runningOnHost: false,
+			expectedErr:   "IP address 0.0.0.0 is unspecified and connects to the loopback interface, which is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ipv6 unspecified not ok when in k8s",
+			address:       "::",
+			runningOnHost: false,
+			expectedErr:   "IP address :: is unspecified and connects to the loopback interface, which is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "ipv4-mapped unspecified not ok when in k8s",
+			address:       "0:0:0:0:0:ffff:0:0",
+			runningOnHost: false,
+			expectedErr:   "IP address 0:0:0:0:0:ffff:0:0 is unspecified and connects to the loopback interface, which is only supported when using the Host infrastructure",
+		},
+		{
+			name:          "unspecified ok when running on host",
+			address:       "0.0.0.0",
+			runningOnHost: true,
+		},
+		{
 			name:          "invalid IP not ok in any case",
 			address:       "300.0.0.1",
 			runningOnHost: true,
