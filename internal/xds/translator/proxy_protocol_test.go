@@ -8,7 +8,9 @@ package translator
 import (
 	"testing"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/proxy_protocol/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/stretchr/testify/assert"
@@ -27,6 +29,16 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 	}
 
 	testCases := []testCase{
+		{
+			name: "UDP listener ignores required proxy protocol",
+			listener: &listenerv3.Listener{
+				Address: &corev3.Address{Address: &corev3.Address_SocketAddress{
+					SocketAddress: &corev3.SocketAddress{Protocol: corev3.SocketAddress_UDP},
+				}},
+			},
+			proxyProtocolSettings: &ir.ProxyProtocolSettings{Optional: false},
+			expectedFilterCount:   0,
+		},
 		{
 			name:                  "proxyProtocolSettings=nil (disabled)",
 			listener:              &listenerv3.Listener{},
@@ -62,6 +74,9 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 
 			if tc.expectedFilterCount > 0 {
 				assert.Equal(t, tc.expectedFilterName, tc.listener.ListenerFilters[0].Name)
+				config := &proxyprotocolv3.ProxyProtocol{}
+				require.NoError(t, tc.listener.ListenerFilters[0].GetTypedConfig().UnmarshalTo(config))
+				assert.Equal(t, tc.proxyProtocolSettings.Optional, config.AllowRequestsWithoutProxyProtocol)
 			}
 		})
 	}
@@ -101,12 +116,24 @@ func TestHCMForwardProtoConfig(t *testing.T) {
 	type testCase struct {
 		name           string
 		proxyProtocol  *ir.ProxyProtocolSettings
+		http3Listener  bool
 		wantConfigNil  bool
 		wantHTTPSPorts []uint32
 		wantHTTPPorts  []uint32
 	}
 
 	testCases := []testCase{
+		{
+			name: "HTTP/3 ignores forwardProtoConfig",
+			proxyProtocol: &ir.ProxyProtocolSettings{
+				ForwardProto: &ir.ForwardProtoConfig{
+					HTTPSDestinationPorts: []uint32{443},
+					HTTPDestinationPorts:  []uint32{80},
+				},
+			},
+			http3Listener: true,
+			wantConfigNil: true,
+		},
 		{
 			name: "forwardProtoConfig with both port lists",
 			proxyProtocol: &ir.ProxyProtocolSettings{
@@ -148,7 +175,7 @@ func TestHCMForwardProtoConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tr := &Translator{}
 			xdsListener := &listenerv3.Listener{Name: "test"}
-			require.NoError(t, tr.addHCMToXDSListener(xdsListener, httpListener(tc.proxyProtocol), nil, nil, false, nil, nil))
+			require.NoError(t, tr.addHCMToXDSListener(xdsListener, httpListener(tc.proxyProtocol), nil, nil, tc.http3Listener, nil, nil))
 
 			hcm := extractHCM(t, xdsListener)
 			if tc.wantConfigNil {
