@@ -1,0 +1,1 @@
+Fixed SecurityPolicy authorization reporting the matched policy as `ALLOW` or `DENY` instead of the rule name. Access logs, RBAC dynamic metadata and TCP connection termination details now show the rule's name, or `default` when no rule matched, so a value like `rbac_access_denied_matched_policy[DENY]` becomes `rbac_access_denied_matched_policy[<rule name>]`.

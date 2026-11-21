@@ -43,7 +43,7 @@
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         action: DENY
-                        name: DENY
+                        name: allow-scope-foo-bar
                   predicate:
                     andMatcher:
                       predicate:
@@ -129,7 +129,7 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default
     - match:
         pathSeparatedPrefix: /bar
       metadata:
@@ -160,7 +160,7 @@
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         action: DENY
-                        name: DENY
+                        name: allow-scope-foo
                   predicate:
                     orMatcher:
                       predicate:
@@ -206,4 +206,4 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default
