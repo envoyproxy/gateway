@@ -1,0 +1,1 @@
+Fixed invalid QUIC listeners and LDS NACKs when HTTP/3 and Proxy Protocol are configured together. Downstream Proxy Protocol settings apply only to TCP connections; HTTP/3 remains enabled and accepts QUIC connections without PROXY headers.

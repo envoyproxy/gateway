@@ -10,11 +10,14 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -54,6 +57,114 @@ type testFileConfig struct {
 type rateLimitOutput struct {
 	RouteName          string                          `json:"routeName" yaml:"routeName"`
 	RateLimitsByDomain map[string][]*routev3.RateLimit `json:"rateLimitsByDomain" yaml:"rateLimitsByDomain"`
+}
+
+func TestHTTP3SharedSocketClientValidation(t *testing.T) {
+	tests := []struct {
+		name      string
+		configure func(*ir.HTTPListener)
+		wantHTTP3 bool
+	}{
+		{
+			name: "required",
+			configure: func(listener *ir.HTTPListener) {
+				listener.TLS.ClientValidationEnabled = true
+				listener.TLS.RequireClientCertificate = true
+				listener.TLS.CACertificate = &ir.TLSCACertificate{
+					Name: "client-ca", Certificate: listener.TLS.Certificates[0].Certificate,
+				}
+			},
+		},
+		{
+			name: "optional",
+			configure: func(listener *ir.HTTPListener) {
+				listener.TLS.ClientValidationEnabled = true
+				listener.TLS.CACertificate = &ir.TLSCACertificate{
+					Name: "client-ca", Certificate: listener.TLS.Certificates[0].Certificate,
+				}
+			},
+		},
+		{
+			name: "client-validation-without-ca",
+			configure: func(listener *ir.HTTPListener) {
+				listener.TLS.ClientValidationEnabled = true
+			},
+		},
+		{
+			name: "legacy-ca-without-client-validation-marker",
+			configure: func(listener *ir.HTTPListener) {
+				listener.TLS.CACertificate = &ir.TLSCACertificate{
+					Name: "client-ca", Certificate: listener.TLS.Certificates[0].Certificate,
+				}
+			},
+		},
+		{
+			name: "proxy-only",
+			configure: func(listener *ir.HTTPListener) {
+				listener.HTTP3 = &ir.HTTP3Settings{}
+			},
+			wantHTTP3: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, order := range []string{"protected-first", "sibling-first"} {
+				t.Run(order, func(t *testing.T) {
+					x := requireXdsIRFromInputTestData(t, "testdata/in/xds-ir/http3.yaml")
+					protected, sibling := x.HTTP[1], x.HTTP[2]
+					// Gateway translation has suppressed HTTP/3 on the protected listener.
+					protected.HTTP3 = nil
+					protected.ProxyProtocol = &ir.ProxyProtocolSettings{}
+					tt.configure(protected)
+					x.HTTP = []*ir.HTTPListener{protected, sibling}
+					if order == "sibling-first" {
+						slices.Reverse(x.HTTP)
+					}
+
+					tr := &Translator{ControllerNamespace: "envoy-gateway-system"}
+					tCtx, err := tr.Translate(t.Context(), x)
+					require.NoError(t, err)
+					tcp := findXdsListenerByHostPort(tCtx, protected.Address, protected.Port, corev3.SocketAddress_TCP)
+					quic := findXdsListenerByHostPort(tCtx, protected.Address, protected.Port, corev3.SocketAddress_UDP)
+					require.NotNil(t, tcp)
+					require.NotNil(t, quic)
+
+					hasChain := func(listener *listenerv3.Listener, hostname string) bool {
+						for _, chain := range listener.FilterChains {
+							if slices.Contains(chain.GetFilterChainMatch().GetServerNames(), hostname) {
+								return true
+							}
+						}
+						return false
+					}
+					require.True(t, hasChain(tcp, protected.Hostnames[0]))
+					require.True(t, hasChain(tcp, sibling.Hostnames[0]))
+					require.Equal(t, tt.wantHTTP3, hasChain(quic, protected.Hostnames[0]))
+					require.True(t, hasChain(quic, sibling.Hostnames[0]))
+
+					for _, listener := range x.HTTP {
+						cfg := findXdsRouteConfig(tCtx, routeConfigName(listener, false))
+						require.NotNil(t, cfg)
+						require.NotEmpty(t, cfg.VirtualHosts)
+						wantHTTP3 := listener == sibling || tt.wantHTTP3
+						for _, vHost := range cfg.VirtualHosts {
+							require.NotEmpty(t, vHost.Routes)
+							for _, route := range vHost.Routes {
+								hasAltSvc := false
+								for _, header := range route.ResponseHeadersToAdd {
+									if header.GetHeader().GetKey() == "alt-svc" {
+										hasAltSvc = true
+									}
+								}
+								require.Equal(t, wantHTTP3, hasAltSvc, "Alt-Svc for %s", listener.Name)
+							}
+						}
+					}
+				})
+			}
+		})
+	}
 }
 
 func TestTranslateXds(t *testing.T) {
