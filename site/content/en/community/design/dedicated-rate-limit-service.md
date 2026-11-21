@@ -57,6 +57,9 @@ needs to be isolated.
 * Validating RLS workload overrides beyond the settings Envoy Gateway generates. Overrides are
   trusted, administrator-controlled configuration, as they are for the shared RLS today (see
   [Trust boundary](#trust-boundary)).
+* Guaranteeing that a custom shared RLS `CACHE_KEY_PREFIX` cannot collide with dedicated RLS keys.
+  Envoy Gateway rejects obviously unsafe values at startup; any remaining risk belongs to the admin who
+  customizes the prefix.
 * Per-Gateway `timeout`, `failClosed` or other proxy-side settings while keeping the shared RLS. That
   needs a separate shared-mode design.
 * Uninterrupted rate limiting while the dedicated RLS configuration is being changed.
@@ -470,6 +473,14 @@ Secret and ConfigMap values can change what newly started pods receive without a
 so externally sourced prefixes are rejected rather than checked once. Fixed explicit values change only
 with the `EnvoyGateway` configuration, which requires a restart. Shared prefixes that pass this check
 keep working as today, and nothing is checked while dedicated RLS is disabled.
+
+This check is a best-effort guard against obvious mistakes, not a guarantee. The shared RLS prefix is
+a customization outside the settings Envoy Gateway generates (see [Trust boundary](#trust-boundary)).
+Admins who customize it take on the risk of choosing an unsafe prefix: if a custom prefix, however
+supplied (including through a custom image or settings the check cannot see), makes shared RLS keys
+match dedicated RLS keys in the same Redis database, the affected counters merge. Envoy Gateway does
+not detect or prevent this beyond the check above. Admins can avoid the risk entirely by leaving the
+shared prefix unset or by giving dedicated RLS a different Redis database from the shared RLS.
 
 The prefix is derived from the Gateway, not from the RLS settings. It stays the same when the RLS is
 updated, including when its Redis backend changes.
