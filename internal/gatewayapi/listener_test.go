@@ -1603,6 +1603,68 @@ func TestProcessProxyObservabilityKeepsWorkingFeatures(t *testing.T) {
 	assert.Contains(t, cond.Message, "telemetry.metrics.sinks[0]")
 }
 
+func TestProcessProxyObservabilityWarnsAboutInheritedTelemetry(t *testing.T) {
+	resources := telemetryTestResources()
+	resources.GatewayClass = &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-class"},
+	}
+	classProxy := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Name: "class-proxy", Namespace: "test-namespace"},
+		Spec: egv1a1.EnvoyProxySpec{
+			Telemetry: &egv1a1.ProxyTelemetry{
+				AccessLog: &egv1a1.ProxyAccessLog{
+					Settings: []egv1a1.ProxyAccessLogSetting{
+						{
+							Sinks: []egv1a1.ProxyAccessLogSink{
+								{
+									Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{otelBackendRef("service-not-found")},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	resources.EnvoyProxyForGatewayClass = classProxy
+
+	// The Gateway-level EnvoyProxy only chooses a merge type: telemetry stays inherited.
+	gatewayProxy := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway-proxy", Namespace: "test-namespace"},
+		Spec:       egv1a1.EnvoyProxySpec{MergeType: new(egv1a1.StrategicMerge)},
+	}
+
+	translator := newTelemetryTestTranslator(resources)
+	gwCtx := &GatewayContext{
+		Gateway: &gwapiv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		},
+		envoyProxy:            classProxy,
+		envoyProxyFromGateway: true,
+		gatewayEnvoyProxy:     gatewayProxy,
+	}
+	proxyInfra := &ir.ProxyInfra{Config: gwCtx.envoyProxy}
+
+	translator.processProxyObservability(gwCtx, &ir.Xds{}, proxyInfra, resources)
+
+	// The warning belongs to the EnvoyProxy that configures the failing field.
+	assert.Empty(t, gatewayProxy.Status.Ancestors)
+	require.Len(t, classProxy.Status.Ancestors, 1)
+	ancestor := classProxy.Status.Ancestors[0].AncestorRef
+	require.NotNil(t, ancestor.Kind)
+	assert.Equal(t, resource.KindGatewayClass, string(*ancestor.Kind))
+	assert.Equal(t, gwapiv1.ObjectName("test-class"), ancestor.Name)
+	cond := meta.FindStatusCondition(classProxy.Status.Ancestors[0].Conditions,
+		string(egv1a1.EnvoyProxyConditionWarning))
+	require.NotNil(t, cond)
+	assert.Contains(t, cond.Message, "telemetry.accessLog.settings[0].sinks[0]")
+}
+
 func TestProcessTelemetryWithAbsoluteHostname(t *testing.T) {
 	for _, name := range []string{"access log", "tracing", "metrics"} {
 		t.Run(name, func(t *testing.T) {

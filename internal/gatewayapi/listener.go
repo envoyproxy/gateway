@@ -772,57 +772,105 @@ func getDrainStrategy(envoyProxy *egv1a1.EnvoyProxy) egv1a1.DrainStrategy {
 	return *envoyProxy.Spec.Shutdown.DrainStrategy
 }
 
+// telemetryFeature identifies a telemetry feature that is translated on its own, so that a
+// failure in one of them can be reported on the EnvoyProxy layer that configures it.
+type telemetryFeature int
+
+const (
+	telemetryAccessLog telemetryFeature = iota
+	telemetryTracing
+	telemetryMetrics
+)
+
 func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {
 	envoyProxy := proxyInfra.Config
 
 	// Translate each telemetry feature independently and report the failures as a warning on the
 	// EnvoyProxy, instead of rejecting a Gateway that keeps serving traffic without them.
-	var errs []error
+	type failure struct {
+		feature telemetryFeature
+		err     error
+	}
+	var failures []failure
 
 	accessLog, err := t.processAccessLog(gwCtx, envoyProxy, resources)
 	if err != nil {
-		errs = append(errs, err)
+		failures = append(failures, failure{telemetryAccessLog, err})
 	}
 	xdsIR.AccessLog = accessLog
 
 	tracing, err := t.processTracing(gwCtx, envoyProxy, t.MergeGateways, resources)
 	if err != nil {
-		errs = append(errs, err)
+		failures = append(failures, failure{telemetryTracing, err})
 	}
 	xdsIR.Tracing = tracing
 
 	metrics, resolvedSinks, err := t.processMetrics(gwCtx, envoyProxy, resources)
 	if err != nil {
-		errs = append(errs, err)
+		failures = append(failures, failure{telemetryMetrics, err})
 	}
 	xdsIR.Metrics = metrics
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
 
 	xdsIR.HealthCheckLog = processHealthCheckLog(envoyProxy)
 
-	if len(errs) > 0 {
-		err := utilerrors.NewAggregate(errs)
-		t.Logger.Error(err, "Ignoring invalid telemetry configuration in the referenced EnvoyProxy",
-			"gateway", gwCtx.Name, "namespace", gwCtx.Namespace)
-		ep, ancestor := envoyProxyWarningTarget(gwCtx, resources)
-		msgs := make([]string, 0, len(errs))
-		for _, e := range errs {
-			msgs = append(msgs, e.Error())
+	if len(failures) == 0 {
+		return
+	}
+
+	errs := make([]error, 0, len(failures))
+	for _, f := range failures {
+		errs = append(errs, f.err)
+	}
+	t.Logger.Error(utilerrors.NewAggregate(errs), "Ignoring invalid telemetry configuration in the referenced EnvoyProxy",
+		"gateway", gwCtx.Name, "namespace", gwCtx.Namespace)
+
+	// A merged EnvoyProxy can take each telemetry feature from a different layer, so the failures
+	// of a feature are reported on the layer that configures it rather than on the most specific
+	// EnvoyProxy, where the reported field could not even be set.
+	type warning struct {
+		ep       *egv1a1.EnvoyProxy
+		ancestor *gwapiv1.ParentReference
+		msgs     []string
+	}
+	var warnings []*warning
+	for _, f := range failures {
+		ep, ancestor := telemetryWarningTarget(gwCtx, resources, f.feature)
+		if ep == nil || ancestor == nil {
+			continue
 		}
-		status.AddEnvoyProxyWarning(ep, ancestor, &status.EnvoyProxyWarning{
+		var w *warning
+		for _, candidate := range warnings {
+			if candidate.ep == ep {
+				w = candidate
+				break
+			}
+		}
+		if w == nil {
+			w = &warning{ep: ep, ancestor: ancestor}
+			warnings = append(warnings, w)
+		}
+		w.msgs = append(w.msgs, f.err.Error())
+	}
+
+	for _, w := range warnings {
+		status.AddEnvoyProxyWarning(w.ep, w.ancestor, &status.EnvoyProxyWarning{
 			Reason:  egv1a1.EnvoyProxyReasonInvalidField,
-			Message: fmt.Sprintf("The following invalid telemetry fields were ignored: %s", strings.Join(msgs, "; ")),
+			Message: fmt.Sprintf("The following invalid telemetry fields were ignored: %s", strings.Join(w.msgs, "; ")),
 		})
 	}
 }
 
-// envoyProxyWarningTarget returns the EnvoyProxy whose status should report a telemetry warning
-// for the given Gateway, together with the ancestor the warning belongs to. The EnvoyProxy is the
-// one referenced by the Gateway when it sets one, and the one inherited from the GatewayClass
-// otherwise. Either return value is nil when there is no EnvoyProxy status to update, for example
-// when the telemetry configuration comes from the default EnvoyProxySpec.
-func envoyProxyWarningTarget(gwCtx *GatewayContext, resources *resource.Resources) (*egv1a1.EnvoyProxy, *gwapiv1.ParentReference) {
-	if gwCtx.envoyProxyFromGateway && gwCtx.gatewayEnvoyProxy != nil {
+// telemetryWarningTarget returns the EnvoyProxy whose status should report a failure of the given
+// telemetry feature for the given Gateway, together with the ancestor the warning belongs to. The
+// layer that configures the feature is the one that can fix it: with a merge type that keeps the
+// GatewayClass configuration, a Gateway-level EnvoyProxy leaves the inherited features untouched,
+// and warning it instead of the GatewayClass would report a field it cannot set. Nil is returned
+// when no EnvoyProxy configures the feature, for example when it comes from the default
+// EnvoyProxySpec.
+func telemetryWarningTarget(gwCtx *GatewayContext, resources *resource.Resources, feature telemetryFeature) (*egv1a1.EnvoyProxy, *gwapiv1.ParentReference) {
+	if gwCtx.envoyProxyFromGateway && gwCtx.gatewayEnvoyProxy != nil &&
+		configuresTelemetryFeature(gwCtx.gatewayEnvoyProxy, feature) {
 		return gwCtx.gatewayEnvoyProxy, &gwapiv1.ParentReference{
 			Group:     GroupPtr(gwapiv1.GroupName),
 			Kind:      KindPtr(resource.KindGateway),
@@ -831,7 +879,8 @@ func envoyProxyWarningTarget(gwCtx *GatewayContext, resources *resource.Resource
 		}
 	}
 
-	if resources.EnvoyProxyForGatewayClass != nil && resources.GatewayClass != nil {
+	if resources.EnvoyProxyForGatewayClass != nil && resources.GatewayClass != nil &&
+		configuresTelemetryFeature(resources.EnvoyProxyForGatewayClass, feature) {
 		return resources.EnvoyProxyForGatewayClass, &gwapiv1.ParentReference{
 			Group: GroupPtr(gwapiv1.GroupName),
 			Kind:  KindPtr(resource.KindGatewayClass),
@@ -840,6 +889,27 @@ func envoyProxyWarningTarget(gwCtx *GatewayContext, resources *resource.Resource
 	}
 
 	return nil, nil
+}
+
+// configuresTelemetryFeature reports whether the EnvoyProxy sets the field a failure of the given
+// feature is reported against.
+func configuresTelemetryFeature(ep *egv1a1.EnvoyProxy, feature telemetryFeature) bool {
+	if ep == nil || ep.Spec.Telemetry == nil {
+		return false
+	}
+
+	switch feature {
+	case telemetryAccessLog:
+		accessLog := ep.Spec.Telemetry.AccessLog
+		return accessLog != nil && accessLog.Settings != nil
+	case telemetryTracing:
+		return ep.Spec.Telemetry.Tracing != nil
+	case telemetryMetrics:
+		metrics := ep.Spec.Telemetry.Metrics
+		return metrics != nil && metrics.Sinks != nil
+	}
+
+	return false
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
