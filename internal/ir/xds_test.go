@@ -1411,6 +1411,90 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 	}
 }
 
+func TestValidateDestinationEndpointHostname(t *testing.T) {
+	tests := []struct {
+		name  string
+		input DestinationEndpoint
+		want  error
+	}{
+		{
+			name: "valid hostname",
+			input: DestinationEndpoint{
+				Host: "example.com",
+				Port: 8080,
+			},
+			want: nil,
+		},
+		{
+			name: "valid hostname with trailing dot",
+			input: DestinationEndpoint{
+				Host: "example.com.",
+				Port: 8080,
+			},
+			want: nil,
+		},
+		{
+			name: "multiple trailing dots",
+			input: DestinationEndpoint{
+				Host: "example.com..",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "empty label",
+			input: DestinationEndpoint{
+				Host: "example..com.",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "root hostname",
+			input: DestinationEndpoint{
+				Host: ".",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "valid IPv6",
+			input: DestinationEndpoint{
+				Host: "2001:db8::1",
+				Port: 8080,
+			},
+			want: nil,
+		},
+		{
+			name: "IPv6 with trailing dot",
+			input: DestinationEndpoint{
+				Host: "2001:db8::1.",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "trailing whitespace",
+			input: DestinationEndpoint{
+				Host: "example.com ",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			originalHost := test.input.Host
+			if test.want == nil {
+				require.NoError(t, (&test.input).Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+			require.Equal(t, originalHost, test.input.Host)
+		})
+	}
+}
+
 func TestValidateRouteDestination(t *testing.T) {
 	tests := []struct {
 		name  string

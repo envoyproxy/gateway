@@ -1875,6 +1875,7 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 			resource.KindHTTPRoute,
 			resource.KindGRPCRoute,
 			resource.KindTCPRoute,
+			resource.KindTLSRoute,
 			resource.KindUDPRoute,
 		),
 	}
