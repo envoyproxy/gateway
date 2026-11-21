@@ -1277,7 +1277,8 @@ func (t *Translator) applyRequestMirrorModifier(filterContext *HTTPFiltersContex
 					gwapiv1.RouteReasonUnsupportedValue,
 				).WithType(gwapiv1.RouteConditionAccepted)
 			}
-			mirror.HostRewrite = &ds.Endpoints[0].Host
+			hostname := strings.TrimSuffix(ds.Endpoints[0].Host, ".")
+			mirror.HostRewrite = &hostname
 		}
 	default:
 		return status.NewRouteStatusError(
