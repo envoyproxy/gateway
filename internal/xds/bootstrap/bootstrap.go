@@ -292,25 +292,20 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 		if len(opts.ResolvedMetricSinks) > 0 {
 			metricSinks = opts.ResolvedMetricSinks
 		} else {
-			// Fall back to resolving from ProxyMetrics (legacy path for Service-type backends)
+			// Fall back to the deprecated host/port fields of ProxyMetrics. backendRefs sinks are
+			// rendered only from the resolved list: they need the Service endpoints, Backend
+			// resources and TLS that translation resolves, so re-resolving them from the raw config
+			// would program a sink that translation rejected, or fail the whole bootstrap on one.
 			addresses := sets.New[string]()
 			for _, sink := range proxyMetrics.Sinks {
-				if sink.OpenTelemetry == nil {
+				// A sink that also sets backendRefs is rendered from the resolved list only, so a
+				// backendRef that failed to resolve is not silently replaced by the deprecated host.
+				if sink.OpenTelemetry == nil || sink.OpenTelemetry.Host == nil ||
+					len(sink.OpenTelemetry.BackendRefs) > 0 {
 					continue
 				}
 
-				var host string
-				var port uint32
-				if sink.OpenTelemetry.Host != nil {
-					host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
-				}
-				if len(sink.OpenTelemetry.BackendRefs) > 0 {
-					ref := sink.OpenTelemetry.BackendRefs[0].BackendObjectReference
-					if ref.Port == nil {
-						return "", fmt.Errorf("metrics sink backendRef %s has no port", ref.Name)
-					}
-					host, port = netutils.BackendHostAndPort(ref, "")
-				}
+				host, port := *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 
 				// skip duplicate sinks
 				addr := net.JoinHostPort(host, strconv.Itoa(int(port)))
