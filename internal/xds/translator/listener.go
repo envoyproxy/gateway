@@ -1170,10 +1170,29 @@ func buildTLSParams(tlsConfig *ir.TLSConfig) *tlsv3.TlsParameters {
 		p.SignatureAlgorithms = tlsConfig.SignatureAlgorithms
 		isEmpty = false
 	}
+	if len(tlsConfig.CompliancePolicies) > 0 {
+		p.CompliancePolicies = buildTLSCompliancePolicies(tlsConfig.CompliancePolicies)
+		isEmpty = false
+	}
 	if isEmpty {
 		return nil
 	}
 	return p
+}
+
+func buildTLSCompliancePolicies(policies []ir.TLSCompliancePolicy) []tlsv3.TlsParameters_CompliancePolicy {
+	lookup := map[ir.TLSCompliancePolicy]tlsv3.TlsParameters_CompliancePolicy{
+		ir.TLSCompliancePolicyFIPS202205:  tlsv3.TlsParameters_FIPS_202205,
+		ir.TLSCompliancePolicyCNSA1202603: tlsv3.TlsParameters_CNSA1_202603,
+		ir.TLSCompliancePolicyCNSA2202603: tlsv3.TlsParameters_CNSA2_202603,
+	}
+	out := make([]tlsv3.TlsParameters_CompliancePolicy, 0, len(policies))
+	for _, policy := range policies {
+		if p, ok := lookup[policy]; ok {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func buildTLSVersion(version *ir.TLSVersion) tlsv3.TlsParameters_TlsProtocol {

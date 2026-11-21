@@ -265,6 +265,10 @@ func mergeClientTLSConfigs(
 		mergedConfig.SignatureAlgorithms = backendClientTLSConfig.SignatureAlgorithms
 	}
 
+	if len(backendClientTLSConfig.CompliancePolicies) > 0 {
+		mergedConfig.CompliancePolicies = backendClientTLSConfig.CompliancePolicies
+	}
+
 	if backendClientTLSConfig.ALPNProtocols != nil {
 		mergedConfig.ALPNProtocols = backendClientTLSConfig.ALPNProtocols
 	}
@@ -406,6 +410,9 @@ func (t *Translator) processClientTLSSettings(
 	}
 	if len(clientTLS.SignatureAlgorithms) > 0 {
 		tlsConfig.SignatureAlgorithms = clientTLS.SignatureAlgorithms
+	}
+	if len(clientTLS.CompliancePolicies) > 0 {
+		tlsConfig.CompliancePolicies = toIRTLSCompliancePolicies(clientTLS.CompliancePolicies)
 	}
 	if clientTLS.MinVersion != nil {
 		tlsConfig.MinVersion = new(ir.TLSVersion(*clientTLS.MinVersion))

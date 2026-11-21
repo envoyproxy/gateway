@@ -21,6 +21,8 @@ envoyProxyForGatewayClass:
       SignatureAlgorithms:
         - RSA-PSS-RSAE-SHA256
         - ECDSA-SECP256R1-SHA256
+      compliancePolicies:
+        - FIPS_202205
       alpnProtocols:
         - HTTP/1.1
         - HTTP/2
@@ -493,6 +495,9 @@ backends:
           group: ""
           kind: Secret
           name: client-auth-override
+        # overrides the compliance policy from the EnvoyProxy
+        compliancePolicies:
+          - CNSA1_202603
         alpnProtocols:
           - HTTP/2
       endpoints:
