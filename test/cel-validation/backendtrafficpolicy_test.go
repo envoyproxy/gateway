@@ -5992,6 +5992,216 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 			},
 			wantErrors: []string{"proxyProtocol cannot be used together with http3"},
 		},
+		{
+			desc: "mixed named and unnamed global rate limit rules are accepted",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Name: new("by-ip"),
+									Limit: egv1a1.RateLimitValue{
+										Requests: 10,
+										Unit:     "Minute",
+									},
+								},
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 20, Unit: "Minute"},
+								},
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 30, Unit: "Minute"},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "duplicate global rate limit rule names are rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Name: new("dup"),
+									Limit: egv1a1.RateLimitValue{
+										Requests: 10,
+										Unit:     "Minute",
+									},
+								},
+								{
+									Name: new("dup"),
+									Limit: egv1a1.RateLimitValue{
+										Requests: 20,
+										Unit:     "Minute",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"rate limit rule names must be unique within the global rules slice",
+			},
+		},
+		{
+			desc: "duplicate local rate limit rule names are rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Name: new("dup"),
+									Limit: egv1a1.RateLimitValue{
+										Requests: 10,
+										Unit:     "Minute",
+									},
+								},
+								{
+									Name: new("dup"),
+									Limit: egv1a1.RateLimitValue{
+										Requests: 20,
+										Unit:     "Minute",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"rate limit rule names must be unique within the local rules slice",
+			},
+		},
+		{
+			desc: "selectorless local rate limit rule name is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Name: new("default-bucket"),
+									Limit: egv1a1.RateLimitValue{
+										Requests: 10,
+										Unit:     "Minute",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"local rate limit rule names require clientSelectors",
+			},
+		},
+		{
+			desc: "purely numeric global rate limit rule name is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Name: new("0"),
+									Limit: egv1a1.RateLimitValue{
+										Requests: 10,
+										Unit:     "Minute",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"rate limit rule name must not be purely numeric",
+			},
+		},
+		{
+			desc: "global rate limit rule name containing slash is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Name: new("a/b"),
+									Limit: egv1a1.RateLimitValue{
+										Requests: 10,
+										Unit:     "Minute",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.rateLimit.global.rules[0].name: Invalid value:`,
+			},
+		},
 	}
 }
 
