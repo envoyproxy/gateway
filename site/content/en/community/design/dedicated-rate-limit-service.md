@@ -506,6 +506,25 @@ loading the control-plane config. RLS workload fields on a Gateway `EnvoyProxy` 
 no effect and are reported as a warning on the Gateway. The shared RLS continues to use its existing
 control-plane workload settings.
 
+The exception is where the RLS image comes from. Private-registry and air-gapped installations set the
+RLS image, pull secrets and pull policy in `EnvoyGateway.provider.kubernetes.rateLimitDeployment`, for
+example through the Helm values `global.imageRegistry`, `global.images.ratelimit` and
+`global.imagePullSecrets`. Without them, a built-in dedicated RLS would pull the compiled default image
+and fail with `ImagePullBackOff`, with no admin-level fix while workload overrides are disabled.
+The built-in defaults for a dedicated RLS therefore take these settings from the shared RLS
+configuration:
+
+* the container image;
+* the pod's `imagePullSecrets`;
+* the container's `imagePullPolicy`, including when set through a patch as the Helm chart does.
+
+These are admin-authored and apply to every dedicated RLS whether or not workload overrides are
+enabled. No other shared RLS setting is inherited. `EnvoyGateway.rateLimit` does not need to be set for
+these defaults to apply, so dedicated-only installations can use them too. When workload overrides
+are enabled, a Gateway's `EnvoyProxy` can still override them, subject to the
+[security note](#api). The pull secrets are referenced from the controller namespace, where the RLS
+runs, as they are for the shared RLS today.
+
 ## How it works
 
 1. **Resolution.** When translating each Gateway, Envoy Gateway works out which RLS it uses (dedicated or
@@ -570,6 +589,18 @@ Service, HPA, PDB and copied credential Secrets from the scope identity. Generat
 existing shared RLS identity and include the scope kind, leaving room for a GatewayClass scope later. The
 HPA target and Service and PDB selectors refer only to that scope's Deployment and pods; no selector
 spans dedicated scopes or the shared RLS.
+
+Today the shared RLS pods also depend on two support resources with fixed names in the controller
+namespace: the `envoy-ratelimit` ServiceAccount and, with default telemetry, the
+`statsd-exporter-config` ConfigMap. Envoy Gateway deletes the shared RLS infrastructure, including
+these, when `EnvoyGateway.rateLimit` is not set. Dedicated RLS pods must not depend on resources whose
+lifecycle belongs to another RLS, so each dedicated RLS gets its own ServiceAccount and, when needed,
+its own statsd exporter ConfigMap, with names generated from the scope identity like its other
+resources. They are created and deleted with that dedicated RLS. Deleting the shared RLS, or another
+dedicated RLS, therefore never removes resources a dedicated RLS uses, including in dedicated-only
+installations without `EnvoyGateway.rateLimit`. The shared RLS keeps its existing fixed-name resources.
+The `envoy-rate-limit` TLS Secret is managed by the control plane's certificate setup, not by the RLS
+infrastructure, and remains shared.
 
 Dedicated RLS pods carry the following labels:
 
@@ -906,7 +937,9 @@ These are the author's recommendations and are open for review.
   than one RLS produce a `SharedRateLimitCrossScope` warning, not a rejection.
 * `rateLimit` is not allowed in the control-plane default `EnvoyGateway.envoyProxy`.
 * Dedicated RLS workload settings come only from the Gateway's unmerged `EnvoyProxy`, with built-in
-  defaults for omitted settings; class and control-plane workload settings are not inherited.
+  defaults for omitted settings; class and control-plane workload settings are not inherited, except
+  the image, pull secrets and pull policy from the shared RLS settings, which are the built-in defaults
+  so private-registry installations work.
 * Dedicated RLS resource names, ownership, scope labels and selectors, HPA targets and the credential
   version annotation are controller-owned, as are the runtime settings selecting configuration and Redis
   key prefixes, and the Redis connection settings, credential volumes and mounts.
@@ -955,7 +988,8 @@ These are the author's recommendations and are open for review.
 Implementation must cover the following cases with meaningful automated tests:
 
 * **Opt-ins and scope:** both switches default off; built-in workloads work with only dedicated RLS
-  enabled; workload overrides require both switches; the overrides switch alone has no effect and does
+  enabled and use the image, pull secrets and pull policy from the shared RLS settings, also without
+  `EnvoyGateway.rateLimit`; workload overrides require both switches; the overrides switch alone has no effect and does
   not block startup, so disabling only `enableDedicatedRateLimit` works; class fields are ignored and
   never inherited.
 * **Disabled switches:** Gateways stay accepted and serving with an `EnvoyProxy` warning; with dedicated
@@ -982,7 +1016,8 @@ Implementation must cover the following cases with meaningful automated tests:
   keeps old pods under the default strategy and stops them under `Recreate`.
 * **Reconciliation:** controller restart reconstructs scope selection and readiness; Gateway deletion
   removes only its resources; updates preserve scope-specific selectors and HPA targets; the shared RLS
-  Service and PDB never select dedicated pods.
+  Service and PDB never select dedicated pods; in dedicated-only mode, and when one of several dedicated
+  RLS is deleted, the remaining dedicated RLS keep their ServiceAccounts and ConfigMaps.
 * **API:** an `EnvoyProxy` whose `rateLimit` omits `failClosed` is accepted and behaves as `false`;
   generated API docs for `urlRef` and `certificateRef` describe both the `EnvoyGateway` and the
   `EnvoyProxy` namespace rules.
