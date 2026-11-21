@@ -150,11 +150,7 @@ func SetEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentRefere
 	})
 }
 
-// AddEnvoyProxyWarning adds warnings to the Warning condition of the EnvoyProxy ancestor status,
-// preserving the warnings that SetEnvoyProxyWarnings already set during an earlier translation
-// phase. Identical messages are not added twice, since the same warning is produced for every
-// Gateway that shares the EnvoyProxy. The reason becomes EnvoyProxyReasonMultipleWarnings when the
-// merged warnings have different reasons.
+// AddEnvoyProxyWarning adds warnings to the Warning condition, keeping what SetEnvoyProxyWarnings set.
 func AddEnvoyProxyWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, warnings ...*EnvoyProxyWarning) {
 	if ep == nil || ancestor == nil {
 		return
@@ -210,8 +206,7 @@ func AddEnvoyProxyWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReferen
 	})
 }
 
-// mergeWarningReasons returns the reason to use for a Warning condition that has to hold
-// warnings with the given reasons.
+// mergeWarningReasons returns the reason for a Warning condition that holds both warnings.
 func mergeWarningReasons(a, b egv1a1.EnvoyProxyConditionReason) egv1a1.EnvoyProxyConditionReason {
 	if a == b {
 		return a
@@ -219,11 +214,7 @@ func mergeWarningReasons(a, b egv1a1.EnvoyProxyConditionReason) egv1a1.EnvoyProx
 	return egv1a1.EnvoyProxyReasonMultipleWarnings
 }
 
-// mergeBoundedWarningMessages merges next into the existing warning message like
-// mergePolicyWarningMessages. If the result would be longer than a condition message can be, the
-// existing message is cut short to make room for next, so the newer warning is not truncated off
-// the end. If next alone is too long, the merged message is returned as is and newCondition
-// truncates it.
+// mergeBoundedWarningMessages merges next, cutting short existing so the newer warning survives.
 func mergeBoundedWarningMessages(existing, next string) string {
 	const sep = "; "
 	merged := mergePolicyWarningMessages(existing, next)

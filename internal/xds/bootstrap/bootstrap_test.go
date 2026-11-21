@@ -146,7 +146,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
-			// A backendRefs sink is rendered from the list translation resolved for it.
+			// a backendRefs sink is rendered from the list translation resolved for it.
 			name: "otel-metrics-backendref",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
@@ -433,9 +433,7 @@ func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
 	}
 }
 
-// TestGetRenderedBootstrapConfigSkipsUnresolvedBackendRefSink verifies that bootstrap does not
-// re-resolve a backendRefs sink from the raw ProxyMetrics when translation rejected it: rendering
-// used to fail on a sink without a port, and program the sink anyway when it had one.
+// TestGetRenderedBootstrapConfigSkipsUnresolvedBackendRefSink verifies a rejected backendRefs sink is not rendered.
 func TestGetRenderedBootstrapConfigSkipsUnresolvedBackendRefSink(t *testing.T) {
 	rendered, err := GetRenderedBootstrapConfig(&RenderBootstrapConfigOptions{
 		ProxyMetrics: &egv1a1.ProxyMetrics{
@@ -446,8 +444,7 @@ func TestGetRenderedBootstrapConfigSkipsUnresolvedBackendRefSink(t *testing.T) {
 				{
 					Type: egv1a1.MetricSinkTypeOpenTelemetry,
 					OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-						// The deprecated host is ignored as well, so a rejected backendRef cannot be
-						// replaced by it.
+						// the deprecated host is ignored too, so it cannot replace the rejected backendRef.
 						Host: new("otel-collector.monitoring.svc"),
 						Port: 4317,
 						BackendCluster: egv1a1.BackendCluster{

@@ -772,8 +772,7 @@ func getDrainStrategy(envoyProxy *egv1a1.EnvoyProxy) egv1a1.DrainStrategy {
 	return *envoyProxy.Spec.Shutdown.DrainStrategy
 }
 
-// telemetryFeature identifies a telemetry feature that is translated on its own, so that a
-// failure in one of them can be reported on the EnvoyProxy layer that configures it.
+// telemetryFeature identifies a telemetry feature, so its failures can be reported on the layer that configures it.
 type telemetryFeature int
 
 const (
@@ -785,8 +784,7 @@ const (
 func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {
 	envoyProxy := proxyInfra.Config
 
-	// Translate each telemetry feature independently and report the failures as a warning on the
-	// EnvoyProxy, instead of rejecting a Gateway that keeps serving traffic without them.
+	// translate each feature independently and warn instead of rejecting the Gateway.
 	type failure struct {
 		feature telemetryFeature
 		err     error
@@ -825,9 +823,7 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 	t.Logger.Error(utilerrors.NewAggregate(errs), "Ignoring invalid telemetry configuration in the referenced EnvoyProxy",
 		"gateway", gwCtx.Name, "namespace", gwCtx.Namespace)
 
-	// A merged EnvoyProxy can take each telemetry feature from a different layer, so the failures
-	// of a feature are reported on the layer that configures it rather than on the most specific
-	// EnvoyProxy, where the reported field could not even be set.
+	// a merged config can take each feature from a different layer, so warn the layer that sets it.
 	type warning struct {
 		ep       *egv1a1.EnvoyProxy
 		ancestor *gwapiv1.ParentReference
@@ -861,13 +857,7 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 	}
 }
 
-// telemetryWarningTarget returns the EnvoyProxy whose status should report a failure of the given
-// telemetry feature for the given Gateway, together with the ancestor the warning belongs to. The
-// layer that configures the feature is the one that can fix it: with a merge type that keeps the
-// GatewayClass configuration, a Gateway-level EnvoyProxy leaves the inherited features untouched,
-// and warning it instead of the GatewayClass would report a field it cannot set. Nil is returned
-// when no EnvoyProxy configures the feature, for example when it comes from the default
-// EnvoyProxySpec.
+// telemetryWarningTarget returns the layer that configures the failing feature, where it can be fixed.
 func telemetryWarningTarget(gwCtx *GatewayContext, resources *resource.Resources, feature telemetryFeature) (*egv1a1.EnvoyProxy, *gwapiv1.ParentReference) {
 	if gwCtx.envoyProxyFromGateway && gwCtx.gatewayEnvoyProxy != nil &&
 		configuresTelemetryFeature(gwCtx.gatewayEnvoyProxy, feature) {
@@ -891,8 +881,7 @@ func telemetryWarningTarget(gwCtx *GatewayContext, resources *resource.Resources
 	return nil, nil
 }
 
-// configuresTelemetryFeature reports whether the EnvoyProxy sets the field a failure of the given
-// feature is reported against.
+// configuresTelemetryFeature reports whether the EnvoyProxy sets the field the feature fails on.
 func configuresTelemetryFeature(ep *egv1a1.EnvoyProxy, feature telemetryFeature) bool {
 	if ep == nil || ep.Spec.Telemetry == nil {
 		return false
@@ -961,7 +950,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 	}
 
 	irAccessLog := &ir.AccessLog{}
-	// Collect errors per setting and sink instead of failing the whole access log configuration.
+	// collect errors per sink, so one bad sink does not drop the rest.
 	var errs []error
 	// translate the access log configuration to the IR
 	for i, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
@@ -1016,10 +1005,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 			validExprs = append(validExprs, expr)
 		}
 		if len(celErrs) > 0 {
-			// Drop only the invalid expressions and keep the setting when at least one valid match
-			// remains, so a typo does not disable the logs this setting would otherwise write.
-			// Skipping a setting whose expressions are all invalid is deliberate: an empty match
-			// list means "log everything", which is the opposite of what the user asked for.
+			// drop invalid expressions only; a setting with none left is skipped, since no match means log everything.
 			errs = append(errs, fmt.Errorf("telemetry.accessLog.settings[%d].matches: %w", i, utilerrors.NewAggregate(celErrs)))
 			if len(validExprs) == 0 {
 				continue
@@ -1393,7 +1379,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	var resolvedSinks []ir.ResolvedMetricSink
-	// Collect errors per sink instead of failing the whole metrics configuration.
+	// collect errors per sink, so one bad sink does not drop the rest.
 	var errs []error
 	seen := sets.New[string]()
 

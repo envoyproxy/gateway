@@ -1321,8 +1321,7 @@ func TestProcessAccessLog(t *testing.T) {
 	}
 }
 
-// telemetryTestResources returns resources with a single healthy OpenTelemetry collector
-// Service, so that a backendRef to it resolves while a backendRef to any other name does not.
+// telemetryTestResources returns one healthy collector, so only its backendRef resolves.
 func telemetryTestResources() *resource.Resources {
 	return &resource.Resources{
 		Services: []*corev1.Service{
@@ -1429,7 +1428,7 @@ func TestProcessAccessLogKeepsValidSinks(t *testing.T) {
 							},
 						},
 						{
-							// The invalid CEL expression is dropped, the valid one is kept.
+							// the invalid expression is dropped, the valid one kept.
 							Matches: []string{"response.code >= 400", ")+++"},
 							Format: &egv1a1.ProxyAccessLogFormat{
 								Type: new(egv1a1.ProxyAccessLogFormatTypeText),
@@ -1454,10 +1453,10 @@ func TestProcessAccessLogKeepsValidSinks(t *testing.T) {
 	assert.Contains(t, err.Error(), "telemetry.accessLog.settings[0].sinks[2]")
 	assert.Contains(t, err.Error(), "telemetry.accessLog.settings[1].matches")
 	require.NotNil(t, accessLog)
-	// The File sink and the healthy OpenTelemetry sink survive, only the broken sink is dropped.
+	// only the broken sink is dropped.
 	require.Len(t, accessLog.Text, 2)
 	assert.Equal(t, "/dev/stdout", accessLog.Text[0].Path)
-	// The setting with one invalid expression keeps its File sink and the valid expression only.
+	// the setting keeps its file sink and the valid expression.
 	assert.Equal(t, "/dev/stderr", accessLog.Text[1].Path)
 	assert.Equal(t, []string{"response.code >= 400"}, accessLog.Text[1].CELMatches)
 	require.Len(t, accessLog.OpenTelemetry, 1)
@@ -1575,23 +1574,21 @@ func TestProcessProxyObservabilityKeepsWorkingFeatures(t *testing.T) {
 
 	translator.processProxyObservability(gwCtx, xdsIR, proxyInfra, resources)
 
-	// The Gateway keeps serving and is not rejected because of a telemetry problem.
+	// the Gateway keeps serving despite the telemetry problem.
 	assert.False(t, status.GatewayNotAccepted(gwCtx.Gateway))
 
-	// The valid access log sink and tracing are still translated, and health check logs are not
-	// skipped because of the failing access log sink.
+	// the valid access log sink, tracing, and health check logs are still translated.
 	require.NotNil(t, xdsIR.AccessLog)
 	require.Len(t, xdsIR.AccessLog.Text, 1)
 	assert.Empty(t, xdsIR.AccessLog.OpenTelemetry)
 	require.NotNil(t, xdsIR.Tracing)
 	require.NotNil(t, xdsIR.HealthCheckLog)
 	assert.True(t, xdsIR.HealthCheckLog.AlwaysLogHealthCheckFailures)
-	// The failing metrics sink is skipped, but metrics are still enabled.
+	// the failing metrics sink is skipped, metrics stay enabled.
 	require.NotNil(t, xdsIR.Metrics)
 	assert.Empty(t, proxyInfra.ResolvedMetricSinks)
 
-	// The failure is reported as a warning on the EnvoyProxy, scoped to the failing fields and
-	// attached to the Gateway that references it.
+	// the warning names the failing fields and is attached to the Gateway.
 	require.Len(t, envoyProxy.Status.Ancestors, 1)
 	assert.Equal(t, gwapiv1.ObjectName("test-gateway"), envoyProxy.Status.Ancestors[0].AncestorRef.Name)
 	require.NotNil(t, envoyProxy.Status.Ancestors[0].AncestorRef.Kind)
@@ -1633,7 +1630,7 @@ func TestProcessProxyObservabilityWarnsAboutInheritedTelemetry(t *testing.T) {
 	}
 	resources.EnvoyProxyForGatewayClass = classProxy
 
-	// The Gateway-level EnvoyProxy only chooses a merge type: telemetry stays inherited.
+	// the Gateway-level EnvoyProxy only sets a merge type, telemetry is inherited.
 	gatewayProxy := &egv1a1.EnvoyProxy{
 		ObjectMeta: metav1.ObjectMeta{Name: "gateway-proxy", Namespace: "test-namespace"},
 		Spec:       egv1a1.EnvoyProxySpec{MergeType: new(egv1a1.StrategicMerge)},
@@ -1652,7 +1649,7 @@ func TestProcessProxyObservabilityWarnsAboutInheritedTelemetry(t *testing.T) {
 
 	translator.processProxyObservability(gwCtx, &ir.Xds{}, proxyInfra, resources)
 
-	// The warning belongs to the EnvoyProxy that configures the failing field.
+	// the warning belongs to the EnvoyProxy that configures the failing field.
 	assert.Empty(t, gatewayProxy.Status.Ancestors)
 	require.Len(t, classProxy.Status.Ancestors, 1)
 	ancestor := classProxy.Status.Ancestors[0].AncestorRef
