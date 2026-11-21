@@ -11,6 +11,13 @@ OCI_REGISTRY ?= oci://docker.io/envoyproxy
 CHART_NAME ?= gateway-helm
 CHART_VERSION ?= ${RELEASE_VERSION}
 
+.PHONY: helm-test.grafana-operator
+helm-test.grafana-operator: ## Test dashboard imports with Grafana Operator in a disposable kind cluster.
+	@mkdir -p $(OUTPUT_DIR)
+	@$(GO_TOOL) kind create cluster --name eg-grafana-operator --kubeconfig $(OUTPUT_DIR)/grafana-operator.kubeconfig
+	@trap '$(GO_TOOL) kind delete cluster --name eg-grafana-operator' EXIT; \
+		KUBECONFIG=$(OUTPUT_DIR)/grafana-operator.kubeconfig bash tools/hack/test-grafana-operator.sh
+
 ##@ Helm
 .PHONY: helm-package
 helm-package: ## Package envoy gateway relevant helm charts.

@@ -1,0 +1,1 @@
+Added support for rolling out Grafana dashboards as GrafanaDashboard custom resources (Grafana Operator) in the gateway-addons-helm chart, switchable via the new `dashboard.mode=grafana-operator` value. The default `configmap` mode keeps the existing ConfigMap-based delivery.

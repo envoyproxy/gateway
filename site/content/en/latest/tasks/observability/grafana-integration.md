@@ -65,6 +65,44 @@ This dashboard example shows the overall resources stats for both Envoy Gateway 
 
 ![Envoy Gateway Resources](/img/resources-monitor-dashboard.png)
 
+### Use an existing Grafana Operator instance
+
+Install the Grafana Operator and create a Grafana instance before enabling this mode.
+Label the instance with `dashboards: grafana` and `environment: production`, and configure
+its Prometheus datasource separately. Save the following as `operator-values.yaml`:
+
+```yaml
+grafana:
+  enabled: false
+dashboard:
+  mode: grafana-operator
+  folder: envoy-gateway
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+    matchExpressions:
+      - key: environment
+        operator: In
+        values:
+          - production
+```
+
+```shell
+helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version v0.0.0-latest \
+  -n monitoring --create-namespace -f operator-values.yaml
+```
+
+The selector supports both `matchLabels` and `matchExpressions`; all requirements must match.
+Helm merges maps with defaults. To use only expressions, set `dashboard.instanceSelector.matchLabels: null`.
+Dashboards may be imported into matching instances in other namespaces.
+Switching `dashboard.mode` does not disable the bundled Grafana; set `grafana.enabled: false` explicitly.
+
+## Testing Grafana Operator integration
+
+Run `make helm-test.grafana-operator` with Docker, Go, kubectl, curl and jq installed.
+The target creates and removes a dedicated kind cluster, installs the Operator and Grafana,
+and verifies dashboard imports through the Grafana API.
+
 ## Update Dashboards
 
 All dashboards of Envoy Gateway are maintained under `charts/gateway-addons-helm/dashboards`,
