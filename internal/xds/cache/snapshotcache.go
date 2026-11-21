@@ -15,19 +15,24 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"math"
+	"maps"
 	"strconv"
 	"sync"
 	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/metrics"
@@ -52,6 +57,7 @@ type SnapshotCacheWithCallbacks interface {
 	cachev3.SnapshotCache
 	serverv3.Callbacks
 	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
+	PublishSnapshot(string, *cachev3.Snapshot, context.Context) error
 	SnapshotHasIrKey(string) bool
 	GetIrKeys() []string
 }
@@ -70,71 +76,111 @@ type snapshotCache struct {
 	nodeFrequency       nodeFrequencyMap
 	streamDuration      streamDurationMap
 	deltaStreamDuration streamDurationMap
-	snapshotVersion     int64
 	lastSnapshot        snapshotMap
 	log                 *zap.SugaredLogger
 	mu                  sync.Mutex
 }
 
-// GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
-// translator) and updates the snapshot version.
-func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) error {
+// PublishSnapshot installs an already prepared immutable snapshot. A nil snapshot
+// removes the IR key while sending an empty snapshot to its connected Envoys.
+func (s *snapshotCache) PublishSnapshot(irKey string, snapshot *cachev3.Snapshot, ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	_, span := tracer.Start(ctx, "SnapshotCache.GenerateNewSnapshot")
-	defer span.End()
-
-	sc := trace.SpanContextFromContext(ctx)
-	version := sc.TraceID().String()
-	if !sc.IsValid() {
-		version = s.newSnapshotVersion()
-	}
-
-	// Create a snapshot with all xDS resources.
-	snapshot, err := cachev3.NewSnapshot(
-		version,
-		resources,
-	)
-	if err != nil {
-		xdsSnapshotCreateTotal.WithFailure(metrics.ReasonError).Increment()
-		return err
-	}
-	xdsSnapshotCreateTotal.WithSuccess().Increment()
-
-	// Delete snapshot from cache if resources are nil
-	if resources == nil {
+	if snapshot == nil {
 		delete(s.lastSnapshot, irKey)
+		var err error
+		snapshot, err = PrepareSnapshot(ctx, nil)
+		if err != nil {
+			return err
+		}
 	} else {
-		// Update snapshot in cache
 		s.lastSnapshot[irKey] = snapshot
 	}
-
+	var errs error
 	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
-
-		if err = s.SetSnapshot(context.TODO(), node, snapshot); err != nil {
+		if err := s.SetSnapshot(ctx, node, snapshot); err != nil {
+			errs = errors.Join(errs, err)
 			xdsSnapshotUpdateTotal.WithFailure(metrics.ReasonError, nodeIDLabel.Value(node)).Increment()
-			return err
 		} else {
 			xdsSnapshotUpdateTotal.WithSuccess(nodeIDLabel.Value(node)).Increment()
 		}
 	}
-
-	return nil
+	return errs
 }
 
-// newSnapshotVersion increments the current snapshotVersion
-// and returns as a string.
-func (s *snapshotCache) newSnapshotVersion() string {
-	// Reset the snapshotVersion if it ever hits max size.
-	if s.snapshotVersion == math.MaxInt64 {
-		s.snapshotVersion = 0
-	}
+// GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
+// translator), builds a snapshot and publishes it. Nil resources delete the IR key.
+func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) error {
+	_, span := tracer.Start(ctx, "SnapshotCache.GenerateNewSnapshot")
+	defer span.End()
 
-	// Increment the snapshot version & return as string.
-	s.snapshotVersion++
-	return strconv.FormatInt(s.snapshotVersion, 10)
+	var snapshot *cachev3.Snapshot
+	if resources != nil {
+		var err error
+		if snapshot, err = PrepareSnapshot(ctx, resources); err != nil {
+			return err
+		}
+	}
+	return s.PublishSnapshot(irKey, snapshot, ctx)
+}
+
+// PrepareSnapshot builds a snapshot and its delta xDS hashes, so the work is done
+// before taking the cache lock. The version is the trace ID when ctx carries a
+// trace, which ties a proxy's version_info to the translation, or a UUID otherwise.
+func PrepareSnapshot(ctx context.Context, resources types.XdsResources) (*cachev3.Snapshot, error) {
+	version := string(uuid.NewUUID())
+	if sc := trace.SpanContextFromContext(ctx); sc.IsValid() {
+		version = sc.TraceID().String()
+	}
+	snapshot, err := cachev3.NewSnapshot(version, resources)
+	if err == nil {
+		err = snapshot.ConstructVersionMap()
+	}
+	if err != nil {
+		xdsSnapshotCreateTotal.WithFailure(metrics.ReasonError).Increment()
+		return nil, err
+	}
+	xdsSnapshotCreateTotal.WithSuccess().Increment()
+	return snapshot, nil
+}
+
+// ReplaceEndpoints shares immutable non-EDS resources and copies EDS maps once.
+// Only replacement assignments are serialized and hashed.
+func ReplaceEndpoints(snapshot *cachev3.Snapshot, replacements map[string]*endpointv3.ClusterLoadAssignment) (*cachev3.Snapshot, error) {
+	if len(replacements) == 0 {
+		return snapshot, nil
+	}
+	var updated *cachev3.Snapshot
+	for name, assignment := range replacements {
+		if _, found := snapshot.Resources[cachetypes.Endpoint].Items[name]; !found {
+			return nil, fmt.Errorf("endpoint assignment %q is not in the current snapshot", name)
+		}
+		data, err := cachev3.MarshalResource(assignment)
+		if err != nil {
+			return nil, err
+		}
+		hash := cachev3.HashResource(data)
+		// Skip an unchanged assignment, such as one rebuilt because another port
+		// of the same Service changed, so a no-op update isn't published.
+		if snapshot.VersionMap[resourcev3.EndpointType][name] == hash {
+			continue
+		}
+		if updated == nil {
+			copy := *snapshot
+			updated = &copy
+			updated.Resources[cachetypes.Endpoint].Items = maps.Clone(snapshot.Resources[cachetypes.Endpoint].Items)
+			updated.Resources[cachetypes.Endpoint].Version = string(uuid.NewUUID())
+			updated.VersionMap = maps.Clone(snapshot.VersionMap)
+			updated.VersionMap[resourcev3.EndpointType] = maps.Clone(snapshot.VersionMap[resourcev3.EndpointType])
+		}
+		updated.Resources[cachetypes.Endpoint].Items[name] = cachetypes.ResourceWithTTL{Resource: assignment}
+		updated.VersionMap[resourcev3.EndpointType][name] = hash
+	}
+	if updated == nil {
+		return snapshot, nil
+	}
+	return updated, nil
 }
 
 // NewSnapshotCache gives you a fresh SnapshotCache.

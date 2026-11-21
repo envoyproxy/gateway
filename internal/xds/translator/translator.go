@@ -252,6 +252,11 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	t.ExtensionStats = ExtensionHookStats{}
 
 	tCtx := new(types.ResourceVersionTable)
+	// The fast path doesn't run the Endpoints hook, and the hook names no target,
+	// so keep no contexts while it is registered.
+	if t.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath) && !t.hasEndpointsHook() {
+		tCtx.EndpointContexts = make(types.EndpointContexts)
+	}
 	tCtx.EnableClusterIndex()
 
 	// xDS translation is done in a best-effort manner, so we collect all errors
@@ -392,6 +397,9 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	}
 	phases.End()
 
+	// For the endpoint fast path: drop the clusters that patches target, so fast
+	// updates won't overwrite them.
+	dropPatchTargetedEndpointContexts(tCtx, xdsIR.EnvoyPatchPolicies)
 	return tCtx, errs
 }
 
@@ -1533,7 +1541,11 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	}
 	xdsCluster := result.cluster
 	lb := ptr.Deref(args.loadBalancer, ir.LoadBalancer{})
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, lb.PreferLocal, lb.WeightedZones)
+	assignmentArgs := &types.LoadAssignmentArgs{
+		Settings: args.settings, HealthCheck: args.healthCheck,
+		PreferLocal: lb.PreferLocal, WeightedZones: lb.WeightedZones,
+	}
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, assignmentArgs)
 	for _, ds := range args.settings {
 		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
 		if shouldValidateTLS {
@@ -1597,6 +1609,9 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	if err := tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster); err != nil {
 		return err
 	}
+	// For the endpoint fast path: record what is needed to rebuild this cluster's
+	// endpoints later without full translation.
+	captureEndpointContext(tCtx, args, assignmentArgs)
 
 	// Add the secrets used in the cluster filters. (Currently only used for Credential Injector filter)
 	for _, secret := range result.secrets {

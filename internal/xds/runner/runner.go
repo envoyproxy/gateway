@@ -43,6 +43,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
+	"github.com/envoyproxy/gateway/internal/xds/publisher"
 	"github.com/envoyproxy/gateway/internal/xds/server/kubejwt"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
@@ -94,6 +95,7 @@ type Config struct {
 
 type Runner struct {
 	Config
+	publisher *publisher.Publisher
 
 	// done tracks goroutines started by Start so that Close can block until
 	// they have all exited, ensuring shared state they write to is not
@@ -247,6 +249,11 @@ func (r *Runner) Start(ctx context.Context) error {
 		r.serveXdsServer(ctx)
 	})
 
+	if r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EndpointFastPath) {
+		r.publisher = publisher.New(ctx, &r.ProviderResources.EndpointUpdates, r.cache.PublishSnapshot, r.Logger)
+		r.done.Go(r.publisher.Run)
+	}
+
 	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
 	// Goroutine where Close() is called.
 	sub := r.XdsIR.Subscribe(ctx)
@@ -322,7 +329,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 			)
 
 			if update.Delete {
-				if err := r.cache.GenerateNewSnapshot(key, nil, traceCtx); err != nil {
+				if err := r.deleteFullResult(key, traceCtx); err != nil {
 					traceLogger.Error(err, "failed to delete the snapshot")
 					errChan <- err
 				}
@@ -391,7 +398,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 							errChan <- err
 						} else {
 							// Update snapshot cache
-							if err := r.cache.GenerateNewSnapshot(key, result.XdsResources, traceCtx); err != nil {
+							if err := r.publishFullResult(key, result, traceCtx); err != nil {
 								r.Logger.Error(err, "failed to generate a snapshot")
 								errChan <- err
 							}
@@ -434,6 +441,28 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 		},
 	)
 	r.Logger.Info("subscriber shutting down")
+}
+
+// publishFullResult publishes a full translation result. With the endpoint fast
+// path on, it goes through the publisher so it is ordered with fast updates.
+func (r *Runner) publishFullResult(key string, result *xtypes.ResourceVersionTable, ctx context.Context) error {
+	if r.publisher == nil {
+		return r.cache.GenerateNewSnapshot(key, result.XdsResources, ctx)
+	}
+	snapshot, err := cache.PrepareSnapshot(ctx, result.XdsResources)
+	if err != nil {
+		return err
+	}
+	return r.publisher.Publish(ctx, key, snapshot, result.EndpointContexts)
+}
+
+// deleteFullResult deletes the key's snapshot, through the publisher when the
+// endpoint fast path is on, like publishFullResult.
+func (r *Runner) deleteFullResult(key string, ctx context.Context) error {
+	if r.publisher == nil {
+		return r.cache.GenerateNewSnapshot(key, nil, ctx)
+	}
+	return r.publisher.Delete(ctx, key)
 }
 
 func (r *Runner) loadTLSConfig() (*tls.Config, error) {
