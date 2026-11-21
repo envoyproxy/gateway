@@ -1,0 +1,146 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: regex-redirect
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  hostnames:
+    - redirect.example
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /standalone
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /blogs
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            hostname: example.com
+            statusCode: 301
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /articles
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            hostname: example.com
+            port: 8443
+            statusCode: 302
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /unanchored
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: unanchored-redirect
+    - matches:
+        - path:
+            type: RegularExpression
+            value: '^/regex/[0-9]{2}$'
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect
+    - matches:
+        - path:
+            type: Exact
+            value: /exact/123
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /standalone/999
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect-more-specific
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: regex-redirect-fallback
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: regex-redirect
+  namespace: gateway-conformance-infra
+spec:
+  redirect:
+    path:
+      type: ReplaceRegexMatch
+      replaceRegexMatch:
+        pattern: '^/(blogs|articles|standalone|regex|exact)/([0-9]+)$'
+        substitution: '/post-\2'
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: unanchored-redirect
+  namespace: gateway-conformance-infra
+spec:
+  redirect:
+    path:
+      type: ReplaceRegexMatch
+      replaceRegexMatch:
+        pattern: 'legacy'
+        substitution: 'modern'
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: regex-redirect-more-specific
+  namespace: gateway-conformance-infra
+spec:
+  directResponse:
+    statusCode: 202
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: regex-redirect-fallback
+  namespace: gateway-conformance-infra
+spec:
+  directResponse:
+    statusCode: 418

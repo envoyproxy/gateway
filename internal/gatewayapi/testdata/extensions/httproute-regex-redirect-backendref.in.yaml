@@ -1,0 +1,122 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.envoyproxy.io"
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: builtin-backend-redirect
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /builtin-zero
+      backendRefs:
+      - name: service-1
+        port: 8080
+        weight: 0
+        filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: redirect
+    - matches:
+      - path:
+          value: /builtin
+      backendRefs:
+      - name: service-1
+        port: 8080
+        weight: 1
+        filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: redirect
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: custom-backend-redirect
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /custom-zero
+      backendRefs:
+      - group: storage.example.io
+        kind: S3Backend
+        name: s3-backend
+        port: 443
+        weight: 0
+        filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: redirect
+    - matches:
+      - path:
+          value: /custom
+      backendRefs:
+      - group: storage.example.io
+        kind: S3Backend
+        name: s3-backend
+        port: 443
+        weight: 1
+        filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: redirect
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: redirect
+    namespace: default
+  spec:
+    redirect:
+      path:
+        type: ReplaceRegexMatch
+        replaceRegexMatch:
+          pattern: ^/old$
+          substitution: /new
+extensionRefFilters:
+- apiVersion: storage.example.io/v1alpha1
+  kind: S3Backend
+  metadata:
+    name: s3-backend
+    namespace: default
+  spec:
+    bucket: my-s3-bucket
+    region: us-west-2
+    endpoint: s3.amazonaws.com

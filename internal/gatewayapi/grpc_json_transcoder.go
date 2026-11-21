@@ -125,23 +125,39 @@ func (t *Translator) buildGRPCJSONTranscoder(
 	}, nil
 }
 
-// loadProtoDescriptor returns the descriptor set referenced by protoDesc.
-// The result is cached, so a descriptor set used by many routes is only parsed once.
-func (t *Translator) loadProtoDescriptor(
+func (t *Translator) getProtoDescriptorConfigMap(
 	protoDesc egv1a1.ProtoDescriptor, namespace string,
-) (*parsedProtoDescriptor, error) {
+) (*corev1.ConfigMap, error) {
 	ref := protoDesc.ValueRef
 	if string(ref.Group) != "" || string(ref.Kind) != resource.KindConfigMap {
 		return nil, fmt.Errorf("unsupported valueRef %s/%s, only ConfigMap is supported", ref.Group, ref.Kind)
 	}
 
+	cm := t.GetConfigMap(namespace, string(ref.Name))
+	if cm == nil {
+		return nil, fmt.Errorf("can't find the referenced configmap %s/%s", namespace, ref.Name)
+	}
+	return cm, nil
+}
+
+// loadProtoDescriptor returns the descriptor set referenced by protoDesc.
+// The result is cached, so a descriptor set used by many routes is only parsed once.
+func (t *Translator) loadProtoDescriptor(
+	protoDesc egv1a1.ProtoDescriptor, namespace string,
+) (*parsedProtoDescriptor, error) {
+	cm, err := t.getProtoDescriptorConfigMap(protoDesc, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	ref := protoDesc.ValueRef
 	key := types.NamespacedName{Namespace: namespace, Name: string(ref.Name)}
 	if t.protoDescriptors == nil {
 		t.protoDescriptors = make(map[types.NamespacedName]*parsedProtoDescriptor)
 	}
 	d, ok := t.protoDescriptors[key]
 	if !ok {
-		d = parseProtoDescriptor(t.GetConfigMap(key.Namespace, key.Name), key)
+		d = parseProtoDescriptor(cm, key)
 		t.protoDescriptors[key] = d
 	}
 	if d.err != nil {
