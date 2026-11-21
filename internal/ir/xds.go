@@ -213,6 +213,12 @@ type Xds struct {
 	//
 	// +optional
 	CACertificates []*CACertificateEntry `json:"caCertificates,omitempty" yaml:"caCertificates,omitempty"`
+
+	// ClientCertificates holds upstream client certificates once per Secret, keyed by Name.
+	// A destination's TLS.ClientCertificates entry that has only a Name refers to one of these.
+	//
+	// +optional
+	ClientCertificates []*TLSCertificate `json:"clientCertificates,omitempty" yaml:"clientCertificates,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -543,7 +549,8 @@ const (
 type TLSConfig struct {
 	// Certificates contains the set of certificates associated with this listener
 	Certificates []TLSCertificate `json:"certificates,omitempty" yaml:"certificates,omitempty"`
-	// ClientCertificates contains the set of certificates used for mtls as client side certificates
+	// ClientCertificates contains the set of certificates used for mtls as client side certificates.
+	// On an upstream destination an entry with only a Name refers to Xds.ClientCertificates.
 	ClientCertificates []TLSCertificate `json:"clientCertificates,omitempty" yaml:"clientCertificates,omitempty"`
 	// CACertificate to verify the client
 	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`

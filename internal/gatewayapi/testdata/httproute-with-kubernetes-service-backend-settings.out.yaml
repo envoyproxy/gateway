@@ -172,6 +172,10 @@ xdsIR:
     caCertificates:
     - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCnBsYWNlaG9sZGVyCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
       digest: sha256-64034b9ddda55e2360d15ccdebc562e863f42706ce49c471256295afe1262e2f
+    clientCertificates:
+    - certificate: cGxhY2Vob2xkZXI=
+      name: default/client-auth
+      privateKey: '[redacted]'
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -237,9 +241,7 @@ xdsIR:
               ciphers:
               - ECDHE-RSA-AES128-GCM-SHA256
               clientCertificates:
-              - certificate: cGxhY2Vob2xkZXI=
-                name: default/client-auth
-                privateKey: '[redacted]'
+              - name: default/client-auth
               ecdhCurves:
               - X25519
               maxVersion: "1.3"

@@ -502,7 +502,7 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if err := processClientCertificates(tCtx, oidc.Provider.Destination.Settings); err != nil {
+			if err := processClientCertificates(tCtx, oidc.Provider.Destination.Settings, nil); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
