@@ -69,6 +69,11 @@ needs to be isolated.
   certificate to the shared RLS, which keeps accepting every proxy as today.
 * Automatic certificate renewal or revocation before expiry. Operators manage certificate expiry (see
   [RLS identities and certificates](#rls-identities-and-certificates)).
+* Restart-safe cleanup of dedicated RLS resources. A dedicated RLS's resources are removed when Envoy
+  Gateway observes its Gateway being deleted or dropping `rateLimit`. If that change happens while Envoy
+  Gateway is stopped, they can be left behind in the controller namespace. The same is true today of
+  per-Gateway proxy resources in the default deployment mode, and a startup sweep or Gateway finalizer
+  should cover both together in a separate change.
 * Hardening tenant namespaces or proxy workloads. Proxy `patch`, privileged containers, host
   networking and host path mounts can already let a tenant's proxy escape its namespace's network
   isolation, for every namespace-based NetworkPolicy and not only for the RLS. This proposal relies on
