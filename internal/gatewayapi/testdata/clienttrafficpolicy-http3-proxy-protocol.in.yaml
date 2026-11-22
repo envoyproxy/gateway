@@ -11,7 +11,7 @@ clientTrafficPolicies:
       name: gateway-1
     http3: {}
     proxyProtocol:
-      optional: true
+      optional: false
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
