@@ -206,7 +206,12 @@ func TestBuildXdsClusterLoadAssignmentEndpointHostname(t *testing.T) {
 					}
 					settings := []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{irEndpoint}}}
 					healthCheck := &ir.HealthCheck{Active: &ir.ActiveHealthCheck{HTTP: &ir.HTTPHealthChecker{}}}
-					actual := buildXdsClusterLoadAssignment("test-cluster", settings, healthCheck, locality.preferLocal, locality.weightedZones)
+					actual := buildXdsClusterLoadAssignment("test-cluster", &types.LoadAssignmentArgs{
+						Settings:      settings,
+						HealthCheck:   healthCheck,
+						PreferLocal:   locality.preferLocal,
+						WeightedZones: locality.weightedZones,
+					})
 					require.Len(t, actual.Endpoints, 1)
 					require.Len(t, actual.Endpoints[0].LbEndpoints, 1)
 					endpoint := actual.Endpoints[0].LbEndpoints[0].GetEndpoint()
