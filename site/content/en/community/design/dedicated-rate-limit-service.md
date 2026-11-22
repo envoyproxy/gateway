@@ -88,6 +88,21 @@ require continuous rate-limit enforcement must stop or externally gate affected 
 change and restore it only after verifying the new configuration. A low-traffic window alone does not
 provide that guarantee. Credential rotation remains supported without changing the selected RLS.
 
+**xDS clients are trusted.** This proposal requires that every client of the Envoy Gateway xDS server
+requests only its own Gateway's configuration. In practice, proxy pods run only the Envoy image and
+containers that Envoy Gateway generates, and no other process can authenticate to the xDS server. This
+is a precondition, not a property the design provides: if it does not hold, isolation between dedicated
+RLS does not hold either, and the guarantees in this proposal no longer apply.
+
+This is not new with this proposal; Envoy Gateway already relies on it today. The xDS server does not
+bind clients to their Gateway: in either deployment mode, a client chooses the snapshot it receives.
+A custom proxy image, an extra container in the proxy pod, or any other process with valid xDS client
+credentials can already request another Gateway's configuration, including the private keys of its
+listener certificates and backend client certificates. A dedicated RLS client certificate is one more
+secret in that snapshot and is exposed the same way. Operators who let Gateway owners run such
+workloads must already prevent this, as part of proxy hardening (see [Non-Goals](#non-goals)).
+Authenticating xDS clients per Gateway is a separate xDS change, out of scope for this proposal.
+
 ## API
 
 The setting lives on `EnvoyProxy`, the existing API for per-Gateway infrastructure. A Gateway already
@@ -777,6 +792,9 @@ confidential:
   [Operator responsibility for tenant isolation](#operator-responsibility-for-tenant-isolation)).
 * A Gateway owner can read their own proxies' client certificate, but that only lets them call their
   own Gateway's RLS.
+* Every xDS client requests only its own Gateway's configuration. This is a precondition Envoy
+  Gateway already relies on for listener and backend certificates (see [Assumptions](#assumptions));
+  without it, a custom proxy image or extra container can obtain another Gateway's client certificate.
 
 The shared RLS keeps today's behavior: it accepts every proxy and is not a security boundary between
 Gateways. Egress from a dedicated RLS, for example to an internal address set as its Redis URL, is not
