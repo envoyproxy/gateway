@@ -1032,6 +1032,12 @@ func (t *Translator) routeDestinationForListener(
 			continue
 		}
 		backendCluster := t.getOrCreateBackendCluster(gwIR, bd.backendClusterKey, bd.ds)
+		// statName is only set when clusterStatName is configured. Its route operators can't be
+		// resolved for a cluster shared by several routes, so the merged cluster's stats are
+		// named after the backend instead: what %BACKEND_REFS% expands to for a single backendRef.
+		if statName != nil && backendCluster.StatName == nil {
+			backendCluster.StatName = new(irBackendClusterStatName(bd.backendClusterKey))
+		}
 		destination.BackendClusterRefs = append(destination.BackendClusterRefs, &ir.BackendClusterRef{Name: backendCluster.Name, Weight: bd.ds.Weight})
 	}
 	return destination
@@ -1961,12 +1967,14 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	hasHostnameIntersection := len(parentRef.listeners) == 0
 
 	for _, listener := range parentRef.listeners {
+		if routeIntersectsListener(GetHostnames(route), listener) {
+			hasHostnameIntersection = true
+			listener.IncrementAttachedRoutes()
+		}
 		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
 			continue
 		}
-		hasHostnameIntersection = true
-		listener.IncrementAttachedRoutes()
 		if !listener.IsReady() {
 			continue
 		}
@@ -2562,12 +2570,14 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// need to check hostname intersection if there are listeners
 		hasHostnameIntersection := len(parentRef.listeners) == 0
 		for _, listener := range parentRef.listeners {
+			if routeIntersectsListener(GetHostnames(tlsRoute), listener) {
+				hasHostnameIntersection = true
+				listener.IncrementAttachedRoutes()
+			}
 			hosts := computeHosts(GetHostnames(tlsRoute), listener)
 			if len(hosts) == 0 {
 				continue
 			}
-			hasHostnameIntersection = true
-			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}

@@ -7,7 +7,7 @@ backends:
   spec:
     endpoints:
     - fqdn:
-        hostname: primary.foo.com
+        hostname: primary.foo.com.
         port: 3000
     tls:
       caCertificateRefs:
@@ -447,7 +447,7 @@ xdsIR:
                 settings:
                 - addressType: FQDN
                   endpoints:
-                  - host: primary.foo.com
+                  - host: primary.foo.com.
                     port: 3000
                   metadata:
                     kind: Backend
@@ -517,7 +517,7 @@ xdsIR:
                 settings:
                 - addressType: FQDN
                   endpoints:
-                  - host: primary.foo.com
+                  - host: primary.foo.com.
                     port: 3000
                   metadata:
                     kind: Backend

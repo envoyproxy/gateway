@@ -1,0 +1,1 @@
+Fixed merged backend clusters dropping `clusterStatName`: when it is set, a cluster shared through `mergeBackends` now names its stats `<namespace>/<name>` after the backend, the value the `%BACKEND_REFS%` operator expands to for a rule with one backendRef.

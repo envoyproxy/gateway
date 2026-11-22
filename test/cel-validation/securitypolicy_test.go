@@ -156,6 +156,51 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid TLSRoute targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("TLSRoute"),
+								Name:  gwapiv1.ObjectName("tls-backend"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid TLSRoute targetRef with authorization",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("TLSRoute"),
+								Name:  gwapiv1.ObjectName("tls-backend"),
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						DefaultAction: new(egv1a1.AuthorizationActionDeny),
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: &egv1a1.Principal{
+									ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid mergeType with xRoute targetSelector",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -278,7 +323,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute/UDPRoute",
 			},
 		},
 		{
@@ -323,7 +368,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute/UDPRoute",
 			},
 		},
 		{
@@ -346,7 +391,7 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec: Invalid value:",
 				": this policy can only have a targetRefs[*].group of gateway.networking.k8s.io",
-				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute",
+				": this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute/UDPRoute",
 			},
 		},
 
@@ -429,6 +474,82 @@ func TestSecurityPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "sectionName rejected for TLSRoute - targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("TLSRoute"),
+								Name:  gwapiv1.ObjectName("backend"),
+							},
+							SectionName: &sectionName,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
+		},
+		{
+			desc: "sectionName rejected for TLSRoute - targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("TLSRoute"),
+									Name:  gwapiv1.ObjectName("backend"),
+								},
+								SectionName: &sectionName,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
+		},
+		{
+			desc: "sectionName rejected for TCPRoute - targetRef",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("TCPRoute"),
+								Name:  gwapiv1.ObjectName("backend"),
+							},
+							SectionName: &sectionName,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
+		},
+		{
+			desc: "sectionName rejected for TCPRoute - targetRefs",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("TCPRoute"),
+									Name:  gwapiv1.ObjectName("backend"),
+								},
+								SectionName: &sectionName,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported for TCPRoute/TLSRoute targets"},
 		},
 
 		// cors

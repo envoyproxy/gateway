@@ -22,6 +22,16 @@ func getIPFamily(infra *ir.ProxyInfra) *egv1a1.IPFamily {
 	return infra.Config.Spec.IPFamily
 }
 
+// drainStrategyArg returns the Envoy --drain-strategy value for the given shutdown config.
+func drainStrategyArg(shutdownConfig *egv1a1.ShutdownConfig) string {
+	if shutdownConfig != nil && shutdownConfig.DrainStrategy != nil &&
+		*shutdownConfig.DrainStrategy == egv1a1.DrainStrategyGradual {
+		return "gradual"
+	}
+	// Defaults to immediate when unset.
+	return "immediate"
+}
+
 // BuildProxyArgs builds command arguments for proxy infrastructure.
 func BuildProxyArgs(
 	infra *ir.ProxyInfra,
@@ -70,7 +80,7 @@ func BuildProxyArgs(
 		"--service-node", serviceNode,
 		"--config-yaml", bootstrapConfigurations,
 		"--log-level", string(logging.DefaultEnvoyProxyLoggingLevel()),
-		"--drain-strategy", "immediate",
+		"--drain-strategy", drainStrategyArg(shutdownConfig),
 	}
 
 	if infra.Config != nil &&

@@ -179,6 +179,8 @@ type Xds struct {
 	Metrics *Metrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
 	// HealthCheckLog holds gateway-level HC event logging config.
 	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty" yaml:"healthCheckLog,omitempty"`
+	// DrainStrategy is the drain strategy configured in the EnvoyProxy shutdown settings.
+	DrainStrategy egv1a1.DrainStrategy `json:"drainStrategy,omitempty" yaml:"drainStrategy,omitempty"`
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.
@@ -2555,6 +2557,9 @@ type BackendCluster struct {
 	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
 	// Metadata describes the backend resource (Service, Backend, etc.)
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// StatName is the cluster's alt_stat_name. It is named after the backend, not a route,
+	// since the cluster is shared by every route that references the backend.
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// Traffic holds the cluster-scoped settings from the accepted whole-gateway
 	// BackendTrafficPolicy, if any - gateway level is the only one guaranteed uniform across a
 	// merged cluster's routes.
@@ -2706,7 +2711,8 @@ func (d DestinationEndpoint) Validate() error {
 			errs = errors.Join(errs, ErrDestEndpointUDSHostInvalid)
 		}
 	} else { // IP or FQDN
-		err := validation.IsDNS1123Subdomain(d.Host)
+		hostnameToValidate := strings.TrimSuffix(d.Host, ".")
+		err := validation.IsDNS1123Subdomain(hostnameToValidate)
 		_, pErr := netip.ParseAddr(d.Host)
 
 		if err != nil && pErr != nil {
