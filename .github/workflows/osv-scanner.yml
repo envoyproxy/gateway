@@ -2,24 +2,32 @@ name: OSV-Scanner
 
 on:
   pull_request:
+    # "edited" covers a PR retargeted to a new base without a new push. The
+    # scans also rerun on title/body edits: skipping them would publish a
+    # "skipped" result for the head SHA, which satisfies a required check and
+    # would supersede an earlier failed scan.
+    types: [opened, synchronize, reopened, edited]
     branches:
     - "main"
+    - "release/v*"
   merge_group:
     branches:
     - "main"
   push:
     branches:
     - "main"
+    - "release/v*"
   schedule:
   - cron: '44 15 * * 5'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   scan-scheduled:
-    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@9a96bc4d2b09685b6142bcfe25a3dc17cb2d7347"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
+    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@d3c1414ded37de590f207572e37a7d180f1d0ef7"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
     with:
       scan-args: |-
         --config tools/osv-scanner/vulnerability-scan-config.toml
@@ -32,8 +40,8 @@ jobs:
       security-events: write
 
   scan-pr:
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@9a96bc4d2b09685b6142bcfe25a3dc17cb2d7347"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
+    if: ${{ (github.event_name == 'pull_request' && !startsWith(github.base_ref, 'release/')) || github.event_name == 'merge_group' }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@d3c1414ded37de590f207572e37a7d180f1d0ef7"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
     with:
       scan-args: |-
         --config tools/osv-scanner/vulnerability-scan-config.toml
@@ -43,4 +51,27 @@ jobs:
       actions: read
       contents: read
       # Require writing security events to upload SARIF file to security tab
+      security-events: write
+
+  # The PR scan above only reports vulnerabilities introduced by the PR itself.
+  # Release branches are not continuously updated like main, so a cherry-pick PR
+  # must fail on any known vulnerability, including ones already on the branch.
+  scan-release-pr:
+    if: ${{ github.event_name == 'pull_request' && startsWith(github.base_ref, 'release/') }}
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@d3c1414ded37de590f207572e37a7d180f1d0ef7"  # main, pending release > v2.3.8 (incl. osv-scanner-action#130)
+    with:
+      # PRs from forks cannot write security events, so report through the
+      # failed check and the SARIF artifact instead of code scanning.
+      upload-sarif: false
+      # examples/ and site/ are not part of any release artifact, so their
+      # dependencies should not block a release-branch PR.
+      scan-args: |-
+        --config tools/osv-scanner/vulnerability-scan-config.toml
+        --x-exclude=examples
+        --x-exclude=site
+        --recursive
+        ./
+    permissions:
+      actions: read
+      contents: read
       security-events: write

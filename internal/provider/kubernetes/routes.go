@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
@@ -252,8 +251,7 @@ func (r *gatewayAPIReconciler) processGRPCRouteFilter(
 		},
 	}
 
-	if string(filter.ExtensionRef.Group) == egv1a1.GroupName &&
-		string(filter.ExtensionRef.Kind) == egv1a1.KindHTTPRouteFilter {
+	if gatewayapi.IsHTTPRouteFilterRef(filter.ExtensionRef) {
 		return r.loadHTTPRouteFilter(ctx, key, resourceMap, resourceTree)
 	}
 
@@ -430,21 +428,18 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 			},
 		}
 
-		switch string(filter.ExtensionRef.Kind) {
-		case egv1a1.KindHTTPRouteFilter:
-			if err := r.loadHTTPRouteFilter(ctx, key, resourceMap, resourceTree); err != nil {
-				return err
-			}
-		default:
-			extRefFilter, ok := resourceMap.extensionRefFilters[key]
-			if !ok {
-				return fmt.Errorf("filter not found: %s", filter.ExtensionRef.Name)
-			}
+		if gatewayapi.IsHTTPRouteFilterRef(filter.ExtensionRef) {
+			return r.loadHTTPRouteFilter(ctx, key, resourceMap, resourceTree)
+		}
 
-			if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
-				resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
-				resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
-			}
+		extRefFilter, ok := resourceMap.extensionRefFilters[key]
+		if !ok {
+			return fmt.Errorf("filter not found: %s", filter.ExtensionRef.Name)
+		}
+
+		if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
+			resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
+			resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
 		}
 	}
 	return nil

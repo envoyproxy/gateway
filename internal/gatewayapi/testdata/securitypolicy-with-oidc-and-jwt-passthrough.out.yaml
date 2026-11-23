@@ -217,6 +217,7 @@ xdsIR:
           prefix: /
         security:
           jwt:
+            name: envoy-gateway/security-policy-1
             providers:
             - issuer: https://oauth.foo.com
               name: example1

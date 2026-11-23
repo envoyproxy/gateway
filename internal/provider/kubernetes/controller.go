@@ -16,7 +16,6 @@ import (
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	appsv1 "k8s.io/api/apps/v1"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
@@ -98,7 +98,8 @@ type gatewayAPIReconciler struct {
 	extBackendCRDExists    map[schema.GroupVersionKind]bool
 	extSecretCRDExists     map[schema.GroupVersionKind]bool
 
-	clusterTrustBundleExits bool
+	// clusterTrustBundleGV is the served ClusterTrustBundle API version, empty if none is served.
+	clusterTrustBundleGV schema.GroupVersion
 
 	// Experimental Gateway API features
 }
@@ -323,6 +324,9 @@ func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	}
 }
 
+// isTransientError reports whether err is likely to clear up on its own, either an
+// API server response such as a timeout or throttling, or a connection-level failure
+// (refused, reset, dropped) that client-go returns without a Kubernetes status.
 func isTransientError(err error) bool {
 	return kerrors.IsServerTimeout(err) ||
 		kerrors.IsTimeout(err) ||
@@ -332,7 +336,12 @@ func isTransientError(err error) bool {
 		kerrors.IsInternalError(err) ||
 		kerrors.IsUnexpectedServerError(err) ||
 		errors.Is(err, context.Canceled) ||
-		errors.Is(err, context.DeadlineExceeded)
+		errors.Is(err, context.DeadlineExceeded) ||
+		utilnet.IsConnectionRefused(err) ||
+		utilnet.IsConnectionReset(err) ||
+		utilnet.IsHTTP2ConnectionLost(err) ||
+		utilnet.IsProbableEOF(err) ||
+		utilnet.IsTimeout(err)
 }
 
 // Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
@@ -767,8 +776,33 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		var endpointSliceLabelKey string
 		var endpointSliceIndex string
 		endpointSliceName := string(backendRef.Name)
-		switch backendRefKind {
-		case resource.KindService:
+		// Custom backend resources are matched by group and kind, and must be handled before the
+		// kind switch: an extension can register a kind that collides with a built-in one in its
+		// own group (e.g. custom.example.io/Service).
+		switch {
+		case r.isCustomBackendResource(backendRef.Group, backendRefKind):
+			// Handle custom backend resources defined in extension manager
+			resourceMappings.allAssociatedNamespaces.Insert(string(*backendRef.Namespace))
+			key := utils.NamespacedNameWithGroupKind{
+				NamespacedName: types.NamespacedName{
+					Namespace: string(*backendRef.Namespace),
+					Name:      string(backendRef.Name),
+				},
+				GroupKind: schema.GroupKind{
+					Group: gatewayapi.GroupDerefOr(backendRef.Group, ""),
+					Kind:  backendRefKind,
+				},
+			}
+			if !resourceMappings.allAssociatedBackendRefExtensionFilters.Has(key) {
+				resourceMappings.allAssociatedBackendRefExtensionFilters.Insert(key)
+				if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; exists {
+					resourceMappings.extensionRefFilters[key] = extRefFilter
+					gwcResource.ExtensionRefFilters = append(gwcResource.ExtensionRefFilters, extRefFilter)
+					logger.Info("added custom backend resource to resource tree")
+				}
+			}
+
+		case backendRefKind == resource.KindService:
 			service := new(corev1.Service)
 			err := r.client.Get(ctx, nn, service)
 			if err != nil {
@@ -788,7 +822,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = discoveryv1.LabelServiceName
 			endpointSliceIndex = serviceEndpointSliceIndex
 
-		case resource.KindServiceImport:
+		case backendRefKind == resource.KindServiceImport:
 			serviceImport := new(mcsapiv1a1.ServiceImport)
 			err := r.client.Get(ctx, nn, serviceImport)
 			if err != nil {
@@ -809,7 +843,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			endpointSliceLabelKey = mcsapiv1a1.LabelServiceName
 			endpointSliceIndex = serviceImportEndpointSliceIndex
 
-		case egv1a1.KindBackend:
+		case backendRefKind == egv1a1.KindBackend:
 			if r.backendAPIDisabled() {
 				logger.V(6).Info("skipping Backend processing as Backend API is disabled.")
 				continue
@@ -894,29 +928,6 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 						r.log.Error(err,
 							"failed to process ClientTLS secret for Backend",
 							"backend", backend, "clientCertificateRef", certRef.Name)
-					}
-				}
-			}
-		default:
-			// Handle custom backend resources defined in extension manager
-			if r.isCustomBackendResource(backendRef.Group, backendRefKind) {
-				resourceMappings.allAssociatedNamespaces.Insert(string(*backendRef.Namespace))
-				key := utils.NamespacedNameWithGroupKind{
-					NamespacedName: types.NamespacedName{
-						Namespace: string(*backendRef.Namespace),
-						Name:      string(backendRef.Name),
-					},
-					GroupKind: schema.GroupKind{
-						Group: string(*backendRef.Group),
-						Kind:  backendRefKind,
-					},
-				}
-				if !resourceMappings.allAssociatedBackendRefExtensionFilters.Has(key) {
-					resourceMappings.allAssociatedBackendRefExtensionFilters.Insert(key)
-					if extRefFilter, exists := resourceMappings.extensionRefFilters[key]; exists {
-						resourceMappings.extensionRefFilters[key] = extRefFilter
-						gwcResource.ExtensionRefFilters = append(gwcResource.ExtensionRefFilters, extRefFilter)
-						logger.Info("added custom backend resource to resource tree")
 					}
 				}
 			}
@@ -1484,8 +1495,7 @@ func (r *gatewayAPIReconciler) processClusterTrustBundleRef(
 	resourceTree *resource.Resources,
 	ref gwapiv1.SecretObjectReference,
 ) error {
-	trustBundle := &certificatesv1b1.ClusterTrustBundle{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: string(ref.Name)}, trustBundle)
+	trustBundle, err := r.getClusterTrustBundle(ctx, string(ref.Name))
 	if err != nil {
 		return fmt.Errorf("unable to find the ClusterTrustBundle %s: %w", string(ref.Name), err)
 	}
@@ -1864,6 +1874,7 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 			resource.KindHTTPRoute,
 			resource.KindGRPCRoute,
 			resource.KindTCPRoute,
+			resource.KindTLSRoute,
 			resource.KindUDPRoute,
 		),
 	}
@@ -2228,7 +2239,7 @@ func (r *gatewayAPIReconciler) insertProxyServiceIfExists(ctx context.Context, n
 // processEnvoyPatchPolicies adds EnvoyPatchPolicies to the resourceTree
 func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
 	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
-	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+	if err := r.client.List(ctx, &envoyPatchPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing EnvoyPatchPolicies: %w", err)
 	}
 
@@ -2237,6 +2248,9 @@ func (r *gatewayAPIReconciler) processEnvoyPatchPolicies(ctx context.Context, re
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		envoyPatchPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		envoyPatchPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindEnvoyPatchPolicy))
 		if !resourceMap.allAssociatedEnvoyPatchPolicies.Has(utils.NamespacedName(envoyPatchPolicy).String()) {
 			resourceMap.allAssociatedEnvoyPatchPolicies.Insert(utils.NamespacedName(envoyPatchPolicy).String())
 			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, envoyPatchPolicy)
@@ -2250,7 +2264,7 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
-	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
+	if err := r.client.List(ctx, &clientTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing ClientTrafficPolicies: %w", err)
 	}
 
@@ -2259,6 +2273,9 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		clientTrafficPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		clientTrafficPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindClientTrafficPolicy))
 		if !resourceMap.allAssociatedClientTrafficPolicies.Has(utils.NamespacedName(clientTrafficPolicy).String()) {
 			resourceMap.allAssociatedClientTrafficPolicies.Insert(utils.NamespacedName(clientTrafficPolicy).String())
 			resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, clientTrafficPolicy)
@@ -2343,7 +2360,7 @@ func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayN
 func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
-	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
+	if err := r.client.List(ctx, &backendTrafficPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing BackendTrafficPolicies: %w", err)
 	}
 
@@ -2352,6 +2369,9 @@ func (r *gatewayAPIReconciler) processBackendTrafficPolicies(ctx context.Context
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backendTrafficPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		backendTrafficPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindBackendTrafficPolicy))
 		if !resourceMap.allAssociatedBackendTrafficPolicies.Has(utils.NamespacedName(backendTrafficPolicy).String()) {
 			resourceMap.allAssociatedBackendTrafficPolicies.Insert(utils.NamespacedName(backendTrafficPolicy).String())
 			resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, backendTrafficPolicy)
@@ -2365,7 +2385,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	securityPolicies := egv1a1.SecurityPolicyList{}
-	if err := r.client.List(ctx, &securityPolicies); err != nil {
+	if err := r.client.List(ctx, &securityPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing SecurityPolicies: %w", err)
 	}
 
@@ -2374,6 +2394,9 @@ func (r *gatewayAPIReconciler) processSecurityPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		securityPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		securityPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindSecurityPolicy))
 		if !resourceMap.allAssociatedSecurityPolicies.Has(utils.NamespacedName(securityPolicy).String()) {
 			resourceMap.allAssociatedSecurityPolicies.Insert(utils.NamespacedName(securityPolicy).String())
 			resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, securityPolicy)
@@ -2389,7 +2412,7 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	backendTLSPolicies := gwapiv1.BackendTLSPolicyList{}
-	if err := r.client.List(ctx, &backendTLSPolicies); err != nil {
+	if err := r.client.List(ctx, &backendTLSPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing BackendTLSPolicies: %w", err)
 	}
 
@@ -2398,6 +2421,9 @@ func (r *gatewayAPIReconciler) processBackendTLSPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		backendTLSPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		backendTLSPolicy.SetGroupVersionKind(gwapiv1.SchemeGroupVersion.WithKind(resource.KindBackendTLSPolicy))
 		if !resourceMap.allAssociatedBackendTLSPolicies.Has(utils.NamespacedName(backendTLSPolicy).String()) {
 			resourceMap.allAssociatedBackendTLSPolicies.Insert(utils.NamespacedName(backendTLSPolicy).String())
 			resourceTree.BackendTLSPolicies = append(resourceTree.BackendTLSPolicies, backendTLSPolicy)
@@ -3502,7 +3528,7 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 	ctx context.Context, resourceTree *resource.Resources, resourceMap *resourceMappings,
 ) error {
 	envoyExtensionPolicies := egv1a1.EnvoyExtensionPolicyList{}
-	if err := r.client.List(ctx, &envoyExtensionPolicies); err != nil {
+	if err := r.client.List(ctx, &envoyExtensionPolicies, client.UnsafeDisableDeepCopy); err != nil {
 		return fmt.Errorf("error listing EnvoyExtensionPolicies: %w", err)
 	}
 
@@ -3511,6 +3537,9 @@ func (r *gatewayAPIReconciler) processEnvoyExtensionPolicies(
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
 		envoyExtensionPolicy.Status = gwapiv1.PolicyStatus{}
+		// TypeMeta is not populated when listing with UnsafeDisableDeepCopy. Items[i] is a
+		// value copy of the cached object, so setting it here does not mutate the cache.
+		envoyExtensionPolicy.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(egv1a1.KindEnvoyExtensionPolicy))
 		if !resourceMap.allAssociatedEnvoyExtensionPolicies.Has(utils.NamespacedName(envoyExtensionPolicy).String()) {
 			resourceMap.allAssociatedEnvoyExtensionPolicies.Insert(utils.NamespacedName(envoyExtensionPolicy).String())
 			resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, envoyExtensionPolicy)

@@ -50,6 +50,8 @@ func mustUnmarshal(t *testing.T, val []byte, out any) {
 }
 
 func TestTranslate(t *testing.T) {
+	useLocalOIDCDiscovery(t)
+
 	testCasesConfig := []struct {
 		name                            string
 		EnvoyPatchPolicyEnabled         bool
@@ -661,6 +663,11 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				ExtensionGroupKinds: []schema.GroupKind{
 					{Group: "foo.example.io", Kind: "Foo"},
 					{Group: "bar.example.io", Kind: "Bar"},
+					{Group: "storage.example.io", Kind: "S3Backend"},
+					{Group: "compute.example.io", Kind: "LambdaBackend"},
+					{Group: "custom.example.io", Kind: "HTTPRouteFilter"},
+				},
+				ExtensionBackendGroupKinds: []schema.GroupKind{
 					{Group: "storage.example.io", Kind: "S3Backend"},
 					{Group: "compute.example.io", Kind: "LambdaBackend"},
 				},
@@ -1298,6 +1305,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		Tracing                 *ir.Tracing
 		Metrics                 *ir.Metrics
 		HealthCheckLog          *ir.ProxyHealthCheckLog
+		DrainStrategy           egv1a1.DrainStrategy
 		HTTP                    []*ir.HTTPListener
 		TCP                     []*ir.TCPListener
 		UDP                     []*ir.UDPListener
@@ -1315,6 +1323,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		Tracing:                 a.Tracing,
 		Metrics:                 a.Metrics,
 		HealthCheckLog:          a.HealthCheckLog,
+		DrainStrategy:           a.DrainStrategy,
 		HTTP:                    a.HTTP,
 		TCP:                     a.TCP,
 		UDP:                     a.UDP,

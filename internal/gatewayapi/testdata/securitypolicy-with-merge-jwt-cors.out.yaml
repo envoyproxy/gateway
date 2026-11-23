@@ -261,6 +261,7 @@ xdsIR:
               exact: https://api.example.com
               name: ""
           jwt:
+            name: default/policy-for-route+envoy-gateway/policy-for-gateway
             providers:
             - audiences:
               - example.com

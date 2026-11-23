@@ -1651,6 +1651,21 @@ _Appears in:_
 
 
 
+#### DrainStrategy
+
+_Underlying type:_ _string_
+
+DrainStrategy defines the strategy Envoy uses to drain listener connections.
+
+_Appears in:_
+- [ShutdownConfig](#shutdownconfig)
+
+| Value | Description |
+| ----- | ----------- |
+| `Gradual` | DrainStrategyGradual drains HTTP connections progressively within the drain timeout.<br /> | 
+| `Immediate` | DrainStrategyImmediate drains all HTTP connections once the drain process starts.<br /> | 
+
+
 #### DynamicModule
 
 
@@ -2728,7 +2743,7 @@ _Appears in:_
 | `name` | _string_ |  false  |  | Name is a unique identifier for this extension manager. Required when using<br />the plural ExtensionManagers field. Used for logging, metrics, and error identification. |
 | `resources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | Resources defines the set of K8s resources the extension will handle as route<br />filter resources |
 | `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached Gateway API policies. Only policies in the same namespace as<br />the target Gateway resources are supported. Cross-namespace attachments are not supported. |
-| `backendResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | BackendResources defines the set of K8s resources the extension will handle as<br />custom backendRef resources. These resources can be referenced in HTTPRoute<br />backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)<br />that are not natively supported by Envoy Gateway. |
+| `backendResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | BackendResources defines the set of K8s resources the extension will handle as<br />custom backendRef resources. These resources can be referenced in HTTPRoute<br />backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)<br />that are not natively supported by Envoy Gateway.<br />The backend kinds Envoy Gateway resolves itself (core Service,<br />multicluster.x-k8s.io/ServiceImport and gateway.envoyproxy.io/Backend) are not allowed:<br />backendRefs are matched by group and kind, so listing one of them would hand every backendRef<br />of that kind in the cluster to the extension, bypassing Envoy Gateway's own validation and<br />endpoint resolution for it. Use the xDS translator hooks to adjust the clusters Envoy Gateway<br />generates for those backends instead. |
 | `secretResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | SecretResources defines the set of K8s resources the extension will handle as secret<br />sources. These resources can be referenced in place of a Kubernetes Secret by group<br />and kind, allowing Envoy to use a secret held by an external provider. Currently this<br />covers a Gateway or ListenerSet listener's tls.certificateRefs; other secret consumers<br />may be added over time. |
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  |  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  |  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
@@ -5655,7 +5670,7 @@ _Appears in:_
 | `enableRequestResponseSizesStats` | _boolean_ |  false  |  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
 | `enableCircuitBreakerRemainingStats` | _boolean_ |  false  |  | EnableCircuitBreakerRemainingStats enables Envoy's circuit breaker `remaining_*` gauges,<br />which expose the number of resources remaining before each circuit breaker opens.<br />Enabling this adds 5 additional gauges per cluster, see:<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats#circuit-breakers-statistics |
 | `enableGRPCStats` | _boolean_ |  false  |  | EnableGRPCStats enables the gRPC stats filter on listeners.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
-| `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />`%ROUTE_NAME%`: name of Gateway API xRoute resource<br />`%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource<br />`%ROUTE_KIND%`: kind of Gateway API xRoute resource<br />`%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section<br />`%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section<br />`%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|...` format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`<br />Example: `httproute/my-ns/my-route/rule/0` |
+| `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />`%ROUTE_NAME%`: name of Gateway API xRoute resource<br />`%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource<br />`%ROUTE_KIND%`: kind of Gateway API xRoute resource<br />`%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section<br />`%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section<br />`%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|...` format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />A cluster shared by several routes through MergeBackends has no single route, so this<br />pattern isn't applied to it. Its stats are named `<NAMESPACE>/<NAME>` after the backend<br />instead, the value the `%BACKEND_REFS%` operator expands to for a rule with one backendRef.<br />Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`<br />Example: `httproute/my-ns/my-route/rule/0` |
 
 
 #### ProxyOpenTelemetrySink
@@ -6644,13 +6659,13 @@ Gateway.
 
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
-NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, TCPRoute
-and UDPRoute.
-When a SecurityPolicy targets a TCPRoute or a UDPRoute, only client-IP CIDR based
+NOTE: SecurityPolicy can target Gateway, ListenerSet, HTTPRoute, GRPCRoute, TCPRoute,
+TLSRoute, and UDPRoute.
+When a SecurityPolicy targets a TCPRoute, TLSRoute, or UDPRoute, only client-IP CIDR based
 authorization (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 authentication/authorization features such as JWT, API Key, Basic Auth,
 OIDC, External Authorization, or GeoIP based authorization are not applicable
-to TCPRoute or UDPRoute targets.
+to TCPRoute, TLSRoute, or UDPRoute targets.
 
 _Appears in:_
 - [SecurityPolicy](#securitypolicy)
@@ -6747,6 +6762,7 @@ _Appears in:_
 | `healthCheckFailureDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | HealthCheckFailureDelay defines the delay before failing health checks during the graceful drain process.<br />If unspecified, defaults to 0 seconds. |
 | `drainTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 60 seconds. |
 | `minDrainDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 10 seconds. |
+| `drainStrategy` | _[DrainStrategy](#drainstrategy)_ |  false  |  | DrainStrategy defines how Envoy drains HTTP connections during the graceful drain process.<br />TCP and UDP proxy connections are not drained by either strategy.<br />If unspecified, defaults to "Immediate".<br />Switching to or from "Gradual" changes the listener configuration, which makes the running<br />Envoy proxies replace their listeners and drain the existing connections. |
 
 
 #### ShutdownManager

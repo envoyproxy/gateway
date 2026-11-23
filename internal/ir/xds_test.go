@@ -1411,6 +1411,90 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 	}
 }
 
+func TestValidateDestinationEndpointHostname(t *testing.T) {
+	tests := []struct {
+		name  string
+		input DestinationEndpoint
+		want  error
+	}{
+		{
+			name: "valid hostname",
+			input: DestinationEndpoint{
+				Host: "example.com",
+				Port: 8080,
+			},
+			want: nil,
+		},
+		{
+			name: "valid hostname with trailing dot",
+			input: DestinationEndpoint{
+				Host: "example.com.",
+				Port: 8080,
+			},
+			want: nil,
+		},
+		{
+			name: "multiple trailing dots",
+			input: DestinationEndpoint{
+				Host: "example.com..",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "empty label",
+			input: DestinationEndpoint{
+				Host: "example..com.",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "root hostname",
+			input: DestinationEndpoint{
+				Host: ".",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "valid IPv6",
+			input: DestinationEndpoint{
+				Host: "2001:db8::1",
+				Port: 8080,
+			},
+			want: nil,
+		},
+		{
+			name: "IPv6 with trailing dot",
+			input: DestinationEndpoint{
+				Host: "2001:db8::1.",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+		{
+			name: "trailing whitespace",
+			input: DestinationEndpoint{
+				Host: "example.com ",
+				Port: 8080,
+			},
+			want: ErrDestEndpointHostInvalid,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			originalHost := test.input.Host
+			if test.want == nil {
+				require.NoError(t, (&test.input).Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+			require.Equal(t, originalHost, test.input.Host)
+		})
+	}
+}
+
 func TestValidateRouteDestination(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -2372,4 +2456,100 @@ func TestHTTP3Incompatibilities(t *testing.T) {
 			require.Len(t, HTTP3Incompatibilities(tc.settings, false, false), tc.wantReasons)
 		})
 	}
+}
+
+func TestRouteDestination_HasPriorityFailover(t *testing.T) {
+	endpoints := []*DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}}
+	tests := []struct {
+		name     string
+		settings []*DestinationSetting
+		expected bool
+	}{
+		{
+			name: "same priority",
+			settings: []*DestinationSetting{
+				{Endpoints: endpoints},
+				{Endpoints: endpoints, Priority: new(uint32(0))},
+			},
+			expected: false,
+		},
+		{
+			name: "different priorities",
+			settings: []*DestinationSetting{
+				{Endpoints: endpoints},
+				{Endpoints: endpoints, Priority: new(uint32(1))},
+			},
+			expected: true,
+		},
+		{
+			name: "only the lower priority setting is invalid",
+			settings: []*DestinationSetting{
+				{Endpoints: endpoints},
+				{Invalid: true, Priority: new(uint32(1))},
+			},
+			expected: false,
+		},
+		{
+			name: "only the lower priority setting has no endpoints",
+			settings: []*DestinationSetting{
+				{Endpoints: endpoints},
+				{Priority: new(uint32(1))},
+			},
+			expected: false,
+		},
+		{
+			name: "only the lower priority setting has zero weight",
+			settings: []*DestinationSetting{
+				{Endpoints: endpoints},
+				{Endpoints: endpoints, Priority: new(uint32(1)), Weight: new(uint32(0))},
+			},
+			expected: false,
+		},
+		{
+			name: "custom backend at a different priority",
+			settings: []*DestinationSetting{
+				{IsCustomBackend: true},
+				{Endpoints: endpoints, Priority: new(uint32(1))},
+			},
+			expected: true,
+		},
+		{
+			name: "dynamic resolver at a different priority",
+			settings: []*DestinationSetting{
+				{IsDynamicResolver: true},
+				{Endpoints: endpoints, Priority: new(uint32(1))},
+			},
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rd := RouteDestination{Settings: test.settings}
+			assert.Equal(t, test.expected, rd.HasPriorityFailover())
+		})
+	}
+}
+
+func TestHTTPRoute_ClusterPerSettingReasons(t *testing.T) {
+	endpoints := []*DestinationEndpoint{{Host: "1.2.3.4", Port: 8080}}
+	route := HTTPRoute{
+		Traffic: &TrafficFeatures{LoadBalancer: &LoadBalancer{PreferLocal: &PreferLocalZone{}}},
+		Destination: &RouteDestination{
+			Settings: []*DestinationSetting{
+				{Endpoints: endpoints, Weight: new(uint32(1))},
+				{Endpoints: endpoints, Weight: new(uint32(1)), Filters: &DestinationFilters{}},
+			},
+		},
+	}
+	assert.Equal(t, []string{
+		"the load balancer uses preferLocal or weightedZones",
+		"backendRefs have filters other than backendPriority",
+	}, route.ClusterPerSettingReasons())
+	assert.True(t, route.NeedsClusterPerSetting())
+
+	route.Traffic = nil
+	route.Destination.Settings[1].Filters = nil
+	assert.Empty(t, route.ClusterPerSettingReasons())
+	assert.False(t, route.NeedsClusterPerSetting())
 }

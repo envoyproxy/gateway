@@ -6,14 +6,18 @@
 package gatewayapi
 
 import (
+	"path"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -137,13 +141,12 @@ func TestExtensionCertificateRefAdmission(t *testing.T) {
 			}
 
 			listener := listenerWithExtensionCertRef(t, "default")
-			secrets, extCerts, _, ok := translator.validateTerminateModeAndGetTLSSecrets(listener, res)
+			secrets, _, ok := translator.validateTerminateModeAndGetTLSSecrets(listener, res)
 
 			require.Equal(t, tc.wantOK, ok)
-			require.Empty(t, secrets, "an extension certificate must not appear as a Secret")
 
 			if !tc.wantOK {
-				require.Empty(t, extCerts)
+				require.Empty(t, secrets)
 				reasons := make([]string, 0, len(listener.GetConditions()))
 				for _, c := range listener.GetConditions() {
 					reasons = append(reasons, c.Reason)
@@ -152,8 +155,10 @@ func TestExtensionCertificateRefAdmission(t *testing.T) {
 				return
 			}
 
-			require.Len(t, extCerts, 1)
-			listener.SetTLSExtensionCertificates(extCerts)
+			require.Len(t, secrets, 1)
+			require.NotNil(t, secrets[0].extensionSecret)
+			require.Nil(t, secrets[0].kubernetesSecret, "an extension certificate must not appear as a Secret")
+			listener.SetTLSSecrets(secrets)
 
 			// The IR must carry a reference, never key material.
 			irTLS := translator.irTLSConfigs(&listener.tls, nil, nil)
@@ -186,9 +191,129 @@ func TestUnregisteredCertificateKindStillRejected(t *testing.T) {
 		},
 	}
 
-	_, extCerts, _, ok := translator.validateTerminateModeAndGetTLSSecrets(listener, res)
+	secrets, _, ok := translator.validateTerminateModeAndGetTLSSecrets(listener, res)
 	require.False(t, ok)
-	require.Empty(t, extCerts)
+	require.Empty(t, secrets)
+}
+
+// Extension certificates keep their configured position among secrets in the IR certificate list.
+func TestExtensionCertificateOrder(t *testing.T) {
+	sdsSecret := func(name string) *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "default"},
+			Type:       egv1a1.SDSSecretType,
+			Data: map[string][]byte{
+				"secretName": []byte(name),
+				"url":        []byte("unix:///var/run/sds/" + name + ".sock"),
+			},
+		}
+	}
+	tlsSecret := func(name string, cert, key []byte) *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "default"},
+			Type:       corev1.SecretTypeTLS,
+			Data:       map[string][]byte{corev1.TLSCertKey: cert, corev1.TLSPrivateKeyKey: key},
+		}
+	}
+	chain, key := buildServingChain(t, time.Now().Add(24*time.Hour), time.Now().Add(24*time.Hour))
+	otherCert := extensionCertificate(nil, "")
+	otherCert.SetName("other-cert")
+
+	group := gwapiv1.Group(testCertGroup)
+	kind := gwapiv1.Kind(testCertKind)
+	extensionRef := func(name gwapiv1.ObjectName) gwapiv1.SecretObjectReference {
+		return gwapiv1.SecretObjectReference{Group: &group, Kind: &kind, Name: name}
+	}
+
+	tests := []struct {
+		name string
+		refs []gwapiv1.SecretObjectReference
+		want []string
+	}{
+		{
+			name: "extension certificate first",
+			refs: []gwapiv1.SecretObjectReference{extensionRef("app-cert"), {Name: "sds-one"}},
+			want: []string{"app-cert", "sds-one"},
+		},
+		{
+			name: "extension certificate between secrets",
+			refs: []gwapiv1.SecretObjectReference{{Name: "sds-one"}, extensionRef("app-cert"), {Name: "sds-two"}},
+			want: []string{"sds-one", "app-cert", "sds-two"},
+		},
+		{
+			name: "extension certificate last",
+			refs: []gwapiv1.SecretObjectReference{{Name: "sds-one"}, {Name: "sds-two"}, extensionRef("app-cert")},
+			want: []string{"sds-one", "sds-two", "app-cert"},
+		},
+		{
+			name: "extension certificate before a TLS secret",
+			refs: []gwapiv1.SecretObjectReference{extensionRef("app-cert"), {Name: "tls-one"}},
+			want: []string{"app-cert", "tls-one"},
+		},
+		{
+			name: "several extension certificates interleaved with secrets",
+			refs: []gwapiv1.SecretObjectReference{
+				extensionRef("app-cert"), {Name: "tls-one"}, extensionRef("other-cert"), {Name: "sds-one"},
+			},
+			want: []string{"app-cert", "tls-one", "other-cert", "sds-one"},
+		},
+		{
+			name: "missing secret before an extension certificate",
+			refs: []gwapiv1.SecretObjectReference{{Name: "missing"}, extensionRef("app-cert"), {Name: "sds-one"}},
+			want: []string{"app-cert", "sds-one"},
+		},
+		{
+			name: "invalid TLS secret before an extension certificate",
+			refs: []gwapiv1.SecretObjectReference{{Name: "tls-invalid"}, extensionRef("app-cert"), {Name: "tls-one"}},
+			want: []string{"app-cert", "tls-one"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mode := gwapiv1.TLSModeTerminate
+			gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "default"},
+				Spec: gwapiv1.GatewaySpec{Listeners: []gwapiv1.Listener{{
+					Name:     "https",
+					Protocol: gwapiv1.HTTPSProtocolType,
+					Port:     443,
+					TLS:      &gwapiv1.ListenerTLSConfig{Mode: &mode, CertificateRefs: tc.refs},
+				}}},
+			}}
+			gwCtx.ResetListeners()
+			listener := gwCtx.listeners[0]
+
+			translator := &Translator{
+				TranslatorContext:   &TranslatorContext{},
+				SDSSecretRefEnabled: true,
+				ExtensionSecretGroupKinds: []schema.GroupKind{
+					{Group: testCertGroup, Kind: testCertKind},
+				},
+			}
+			translator.SetSecrets([]*corev1.Secret{
+				sdsSecret("sds-one"),
+				sdsSecret("sds-two"),
+				tlsSecret("tls-one", chain, key),
+				tlsSecret("tls-invalid", []byte("not a certificate"), []byte("not a key")),
+			})
+			res := &resource.Resources{
+				ExtensionSecrets: []unstructured.Unstructured{*extensionCertificate(nil, ""), *otherCert},
+			}
+
+			secrets, _, ok := translator.validateTerminateModeAndGetTLSSecrets(listener, res)
+			require.True(t, ok)
+			listener.SetTLSSecrets(secrets)
+
+			irTLS := translator.irTLSConfigs(&listener.tls, &ir.Xds{}, gwCtx)
+			require.NotNil(t, irTLS)
+			got := make([]string, 0, len(irTLS.Certificates))
+			for _, cert := range irTLS.Certificates {
+				got = append(got, path.Base(cert.Name))
+			}
+			require.Equal(t, tc.want, got)
+		})
+	}
 }
 
 // Extension-resolved certificates are stored once in the gateway's IR registry and referenced by
@@ -200,7 +325,7 @@ func TestExtensionCertificatesInRegistry(t *testing.T) {
 	cert := extensionCertificate(nil, "")
 
 	listenerTLS := func() *ir.TLSConfig {
-		return translator.irTLSConfigs(&ListenerTLSConfig{extensionCertificates: []unstructured.Unstructured{*cert}}, gwIR, gwCtx)
+		return translator.irTLSConfigs(&ListenerTLSConfig{secrets: []listenerSecret{{extensionSecret: cert}}}, gwIR, gwCtx)
 	}
 	first, second := listenerTLS(), listenerTLS()
 

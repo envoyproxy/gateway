@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
@@ -178,6 +179,8 @@ type Xds struct {
 	Metrics *Metrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
 	// HealthCheckLog holds gateway-level HC event logging config.
 	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty" yaml:"healthCheckLog,omitempty"`
+	// DrainStrategy is the drain strategy configured in the EnvoyProxy shutdown settings.
+	DrainStrategy egv1a1.DrainStrategy `json:"drainStrategy,omitempty" yaml:"drainStrategy,omitempty"`
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.
@@ -1215,17 +1218,24 @@ func (h *HTTPRoute) GetRetry() *Retry {
 }
 
 func (h *HTTPRoute) NeedsClusterPerSetting() bool {
+	return len(h.ClusterPerSettingReasons()) > 0
+}
+
+// ClusterPerSettingReasons returns why each of HTTPRoute's destination settings needs its own cluster,
+// or nil when they can share one.
+func (h *HTTPRoute) ClusterPerSettingReasons() []string {
+	var reasons []string
 	if h.Traffic != nil &&
 		h.Traffic.LoadBalancer != nil &&
 		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
-		return true
+		reasons = append(reasons, "the load balancer uses preferLocal or weightedZones")
 	}
 	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
 	// valid backends and the `invalid-backend-cluster` for 500/503 responses according to their configured weights.
-	if h.Destination.ToBackendWeights().Invalid > 0 || h.Destination.ToBackendWeights().NoEndpoints > 0 {
-		return true
+	if weights := h.Destination.ToBackendWeights(); weights.Invalid > 0 || weights.NoEndpoints > 0 {
+		reasons = append(reasons, "some backendRefs are invalid or have no endpoints")
 	}
-	return h.Destination.NeedsClusterPerSetting()
+	return append(reasons, h.Destination.ClusterPerSettingReasons()...)
 }
 
 // IsDynamicResolverRoute reports whether h's destination is a dynamic resolver.
@@ -1554,6 +1564,10 @@ type JWT struct {
 
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+
+	// Name is a unique name for this JWT configuration. The xds translator uses
+	// it as the jwt_authn requirement name, so JWTs that share a name must be equal.
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // JWTProvider defines the schema for the JWT Provider.
@@ -2301,11 +2315,46 @@ func (r *RouteDestination) Validate() error {
 }
 
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
-	return r.HasMixedEndpoints() ||
-		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
-		r.HasMixedUpstreamProtocolRequirements() ||
-		r.HasMixedAutoSNISettings()
+	return len(r.ClusterPerSettingReasons()) > 0
+}
+
+// ClusterPerSettingReasons returns why each of RouteDestination's settings needs its own cluster, or nil when
+// they can share one.
+func (r *RouteDestination) ClusterPerSettingReasons() []string {
+	var reasons []string
+	if r.HasMixedEndpoints() {
+		reasons = append(reasons, "FQDN endpoints are mixed with IP or UDS endpoints")
+	}
+	if r.HasFiltersInSettings() {
+		reasons = append(reasons, "backendRefs have filters other than backendPriority")
+	}
+	if len(r.Settings) > 1 && r.HasPreferLocalZone() {
+		reasons = append(reasons, "backends use preferLocal")
+	}
+	if r.HasCustomBackend() {
+		reasons = append(reasons, "backendRefs have custom backend kind")
+	}
+	if r.HasMixedUpstreamProtocolRequirements() {
+		reasons = append(reasons, "backends require different upstream protocols")
+	}
+	if r.HasMixedAutoSNISettings() {
+		reasons = append(reasons, "only some backends use autoSNI from the endpoint hostname")
+	}
+	return reasons
+}
+
+// HasPriorityFailover reports whether RouteDestination's usable settings span more than one locality priority,
+// i.e. traffic is expected to fail over between them.
+func (r *RouteDestination) HasPriorityFailover() bool {
+	priorities := sets.New[uint32]()
+	for _, s := range r.Settings {
+		if s == nil || s.Invalid || (s.Weight != nil && *s.Weight == 0) ||
+			(len(s.Endpoints) == 0 && !s.IsDynamicResolver && !s.IsCustomBackend) {
+			continue
+		}
+		priorities.Insert(ptr.Deref(s.Priority, 0))
+	}
+	return priorities.Len() > 1
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -2495,6 +2544,15 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	return w
 }
 
+func (r *RouteDestination) HasCustomBackend() bool {
+	for _, s := range r.Settings {
+		if s.IsCustomBackend {
+			return true
+		}
+	}
+	return false
+}
+
 // BackendCluster is a shared, identity-deduplicated backend: exactly one backend identity, one
 // setting. Only ever constructed for genuinely merged backends.
 // +kubebuilder:object:generate=true
@@ -2506,6 +2564,9 @@ type BackendCluster struct {
 	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
 	// Metadata describes the backend resource (Service, Backend, etc.)
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// StatName is the cluster's alt_stat_name. It is named after the backend, not a route,
+	// since the cluster is shared by every route that references the backend.
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// Traffic holds the cluster-scoped settings from the accepted whole-gateway
 	// BackendTrafficPolicy, if any - gateway level is the only one guaranteed uniform across a
 	// merged cluster's routes.
@@ -2562,6 +2623,12 @@ type DestinationSetting struct {
 
 	// IsCustomBackend specifies whether the destination is a custom backend.
 	IsCustomBackend bool `json:"isCustomBackend,omitempty" yaml:"isCustomBackend,omitempty"`
+	// TODO: we might want to merge IsDynamicResolver and IsCustomBackend into a single field indicating the type of destination.
+
+	// CustomBackendRef is the custom backend resource this destination was built from.
+	// It is only set when IsCustomBackend is true, and is passed to the extension's cluster hook
+	// only for the cluster built from this destination.
+	CustomBackendRef *UnstructuredRef `json:"customBackendRef,omitempty" yaml:"customBackendRef,omitempty"`
 
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a
@@ -2651,7 +2718,8 @@ func (d DestinationEndpoint) Validate() error {
 			errs = errors.Join(errs, ErrDestEndpointUDSHostInvalid)
 		}
 	} else { // IP or FQDN
-		err := validation.IsDNS1123Subdomain(d.Host)
+		hostnameToValidate := strings.TrimSuffix(d.Host, ".")
+		err := validation.IsDNS1123Subdomain(hostnameToValidate)
 		_, pErr := netip.ParseAddr(d.Host)
 
 		if err != nil && pErr != nil {

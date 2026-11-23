@@ -116,7 +116,7 @@
                     timeout: 10s
                     uri: http://two.example.com/jwt/public-key/jwks.json
             requirementMap:
-              example1-or-example2_73a070ef6c8ee8ea:
+              default/policy:
                 requiresAny:
                   requirements:
                   - providerName: example1_324018c9eaae726a

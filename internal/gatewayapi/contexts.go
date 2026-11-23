@@ -6,7 +6,7 @@
 package gatewayapi
 
 import (
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,11 +18,11 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/validation"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -178,11 +178,17 @@ type ListenerContext struct {
 }
 
 type ListenerTLSConfig struct {
-	secrets               []*corev1.Secret
+	// secrets are the listener's secrets in the configured order.
+	secrets               []listenerSecret
 	certDNSNames          []string
 	frontendTLSValidation *ListenerFrontendTLSValidation
-	// extensionCertificates are certificate resources of a kind registered in ExtensionManager.SecretResources.
-	extensionCertificates []unstructured.Unstructured
+}
+
+// listenerSecret is a listener secret from a Kubernetes Secret, or from a resource of a kind
+// registered in ExtensionManager.SecretResources. Exactly one field is set.
+type listenerSecret struct {
+	kubernetesSecret *corev1.Secret
+	extensionSecret  *unstructured.Unstructured
 }
 
 type ListenerFrontendTLSValidation struct {
@@ -343,12 +349,8 @@ func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionTy
 	}
 }
 
-func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
-	l.tls.secrets = tlsSecrets
-}
-
-func (l *ListenerContext) SetTLSExtensionCertificates(certs []unstructured.Unstructured) {
-	l.tls.extensionCertificates = certs
+func (l *ListenerContext) SetTLSSecrets(secrets []listenerSecret) {
+	l.tls.secrets = secrets
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
@@ -985,7 +987,7 @@ type TranslatorContext struct {
 	BackendMap              map[types.NamespacedName]*egv1a1.Backend
 	SecretMap               map[types.NamespacedName]*corev1.Secret
 	ConfigMapMap            map[types.NamespacedName]*corev1.ConfigMap
-	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
+	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 	ExtensionBackendMap     map[ExtensionBackendKey]*ir.ExtensionBackend
@@ -1094,15 +1096,15 @@ func (t *TranslatorContext) SetConfigMaps(configMaps []*corev1.ConfigMap) {
 	t.ConfigMapMap = configMapMap
 }
 
-func (t *TranslatorContext) GetClusterTrustBundle(name string) *certificatesv1b1.ClusterTrustBundle {
+func (t *TranslatorContext) GetClusterTrustBundle(name string) *certificatesv1.ClusterTrustBundle {
 	if ctb, ok := t.ClusterTrustBundleMap[types.NamespacedName{Name: name}]; ok {
 		return ctb
 	}
 	return nil
 }
 
-func (t *TranslatorContext) SetClusterTrustBundles(ctbs []*certificatesv1b1.ClusterTrustBundle) {
-	ctbMap := make(map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle, len(ctbs))
+func (t *TranslatorContext) SetClusterTrustBundles(ctbs []*certificatesv1.ClusterTrustBundle) {
+	ctbMap := make(map[types.NamespacedName]*certificatesv1.ClusterTrustBundle, len(ctbs))
 	for _, ctb := range ctbs {
 		ctbMap[types.NamespacedName{Name: ctb.Name}] = ctb
 	}
