@@ -1068,6 +1068,18 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
+// buildEndpointHostname derives the hostname Envoy uses for automatic Host rewriting
+// and SNI without modifying the DNS address or creating a health-check override.
+func buildEndpointHostname(ep *ir.DestinationEndpoint) string {
+	if ep.Hostname != nil {
+		return *ep.Hostname
+	}
+	if strings.HasSuffix(ep.Host, ".") {
+		return strings.TrimSuffix(ep.Host, ".")
+	}
+	return ""
+}
+
 func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, hc *ir.HealthCheck) []*endpointv3.LocalityLbEndpoints {
 	zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
 	for _, irEp := range ds.Endpoints {
@@ -1079,7 +1091,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, 
 			Metadata: metadata,
 			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 				Endpoint: &endpointv3.Endpoint{
-					Hostname:          ptr.Deref(irEp.Hostname, ""),
+					Hostname:          buildEndpointHostname(irEp),
 					Address:           buildAddress(irEp),
 					HealthCheckConfig: buildHealthCheckConfig(hc, irEp),
 				},
@@ -1130,7 +1142,7 @@ func buildWeightedZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationS
 			Metadata: metadata,
 			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 				Endpoint: &endpointv3.Endpoint{
-					Hostname:          ptr.Deref(irEp.Hostname, ""),
+					Hostname:          buildEndpointHostname(irEp),
 					Address:           buildAddress(irEp),
 					HealthCheckConfig: buildHealthCheckConfig(hc, irEp),
 				},
@@ -1181,7 +1193,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 			Metadata: metadata,
 			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 				Endpoint: &endpointv3.Endpoint{
-					Hostname:          ptr.Deref(irEp.Hostname, ""),
+					Hostname:          buildEndpointHostname(irEp),
 					Address:           buildAddress(irEp),
 					HealthCheckConfig: buildHealthCheckConfig(hc, irEp),
 				},
