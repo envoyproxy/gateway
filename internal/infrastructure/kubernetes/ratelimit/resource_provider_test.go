@@ -177,6 +177,24 @@ func TestConfigmap(t *testing.T) {
 	cm, err := r.ConfigMap("")
 	require.NoError(t, err)
 	requireObject[corev1.ConfigMap](t, cm, "testdata/envoy-ratelimit-configmap.yaml")
+
+	// The rate limit service emits response times in milliseconds. Verify that
+	// the rendered mapping converts them to seconds before histogram observation.
+	var mapping struct {
+		Mappings []struct {
+			Match string  `json:"match"`
+			Scale float64 `json:"scale"`
+		} `json:"mappings"`
+	}
+	require.NoError(t, yaml.Unmarshal([]byte(cm.Data["conf.yaml"]), &mapping))
+	for _, metric := range mapping.Mappings {
+		if metric.Match == "ratelimit_server.*.response_time" {
+			require.InDelta(t, 0.002, 2*metric.Scale, 0.000001,
+				"a 2ms response time must be observed as 0.002 seconds")
+			return
+		}
+	}
+	t.Fatal("response time mapping not found")
 }
 
 func TestPDB(t *testing.T) {
@@ -849,6 +867,37 @@ func TestDeployment(t *testing.T) {
 			requireObject[appsv1.Deployment](t, dp, fmt.Sprintf("testdata/deployments/%s.yaml", tc.caseName))
 		})
 	}
+}
+
+func TestDeploymentConfigHash(t *testing.T) {
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
+		Backend: egv1a1.RateLimitDatabaseBackend{
+			Type: egv1a1.RedisBackendType,
+			Redis: &egv1a1.RateLimitRedisSettings{
+				URL: new("redis.redis.svc:6379"),
+			},
+		},
+	}
+	r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
+
+	deployment, err := r.Deployment()
+	require.NoError(t, err)
+	const annotation = "gateway.envoyproxy.io/ratelimit-config-hash"
+	hash := deployment.Spec.Template.Annotations[annotation]
+	require.NotEmpty(t, hash)
+
+	unchanged, err := r.Deployment()
+	require.NoError(t, err)
+	require.Equal(t, hash, unchanged.Spec.Template.Annotations[annotation])
+
+	original := statsConf
+	t.Cleanup(func() { statsConf = original })
+	statsConf += "\n# changed mapping\n"
+	changed, err := r.Deployment()
+	require.NoError(t, err)
+	require.NotEqual(t, hash, changed.Spec.Template.Annotations[annotation])
 }
 
 func TestHorizontalPodAutoscaler(t *testing.T) {

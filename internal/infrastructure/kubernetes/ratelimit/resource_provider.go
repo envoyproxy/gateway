@@ -6,7 +6,9 @@
 package ratelimit
 
 import (
+	"crypto/sha256"
 	_ "embed"
+	"fmt"
 	"maps"
 	"strconv"
 
@@ -233,6 +235,11 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		} else {
 			podAnnotations = r.rateLimitDeployment.Pod.Annotations
 		}
+	}
+
+	if enablePrometheus(r.rateLimit) {
+		// The mapper is loaded at startup, so config changes must roll the pods.
+		podAnnotations["gateway.envoyproxy.io/ratelimit-config-hash"] = fmt.Sprintf("%x", sha256.Sum256([]byte(statsConf)))
 	}
 
 	// When an HPA is configured, the replica count is owned by the HPA, so the replicas
