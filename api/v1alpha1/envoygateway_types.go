@@ -170,7 +170,7 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch;ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly;OIDCTokenCookieChunking
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;EndpointSliceIndex;PerResourceSystemCASecret;EnvoyProxyPatch;ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly;OIDCTokenCookieChunking;DropBackendRefsWithoutEndpoints
 type RuntimeFlag string
 
 const (
@@ -218,6 +218,14 @@ const (
 	// Disable this flag while proxies of an earlier Envoy Gateway release serve the same
 	// hostnames, for example during an upgrade.
 	OIDCTokenCookieChunking RuntimeFlag = "OIDCTokenCookieChunking"
+
+	// DropBackendRefsWithoutEndpoints excludes backendRefs without ready endpoints from an HTTPRoute
+	// or GRPCRoute rule when at least one other backendRef in the same rule is available, so the
+	// remaining backends receive all the traffic per their relative weights instead of returning 503
+	// for the share of the excluded backendRefs.
+	// Rules that also have invalid backendRefs are unchanged.
+	// Disabled by default.
+	DropBackendRefsWithoutEndpoints RuntimeFlag = "DropBackendRefsWithoutEndpoints"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.

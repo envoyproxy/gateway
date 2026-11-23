@@ -48,3 +48,17 @@ http:
         invalid: true
       - weight: 1
         name: "third-route-dest/backend/2"        #  clusterNotFoundResponseCode should be 503 for mixed empty and invalid cluster
+  - name: "fourth-route"
+    hostname: "*"
+    isHTTP2: true
+    destination:
+      name: "fourth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        weight: 1
+        name: "fourth-route-dest/backend/0"
+      - weight: 1
+        name: "fourth-route-dest/backend/1"
+        invalid: true                              #  clusterNotFoundResponseCode should be 503 for invalid cluster of GRPCRoute
