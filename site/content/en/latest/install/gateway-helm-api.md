@@ -99,6 +99,7 @@ The Helm chart for Envoy Gateway
 | deployment.ports[3].targetPort | int | `19001` |  |
 | deployment.priorityClassName | string | `nil` |  |
 | deployment.replicas | int | `1` |  |
+| extensionManagersMap | object | `{}` | Extension managers keyed by name, rendered into `config.envoyGateway.extensionManagers`. Each entry takes the ExtensionManager fields (https://gateway.envoyproxy.io/docs/api/extension_types/#extensionmanager) except `name`, which comes from the key, plus `order` (non-negative integer sort key, default 0; ties sort by name) and `enabled` (default true; a bool, or a template string such as "{{ .Values.global.myExtension.enabled }}" that renders to true or false). Can't be combined with `config.envoyGateway.extensionManagers` or `config.envoyGateway.extensionManager`. |
 | global.imagePullSecrets | list | `[]` | Global override for image pull secrets |
 | global.imageRegistry | string | `""` | Global override for image registry |
 | global.images.envoyGateway.image | string | `nil` | Full image for the Envoy Gateway control plane Deployment installed by this chart. |
