@@ -7,7 +7,7 @@ backends:
   spec:
     endpoints:
     - fqdn:
-        hostname: fqdn-mirror.example.internal
+        hostname: fqdn-mirror.example.internal.
         port: 8080
   status:
     conditions:
@@ -650,7 +650,7 @@ xdsIR:
             settings:
             - addressType: FQDN
               endpoints:
-              - host: fqdn-mirror.example.internal
+              - host: fqdn-mirror.example.internal.
                 port: 8080
               metadata:
                 kind: Backend

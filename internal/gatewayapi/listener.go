@@ -1044,7 +1044,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
 					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
-					al.Authority = host
+					al.Authority = strings.TrimSuffix(host, ".")
 				}
 
 				// For OpenTelemetry, text (body) and attributes can be used together.
@@ -1098,7 +1098,7 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
 		}
 		ds = destinationSettingFromHostAndPort(settingName, host, port)
-		authority = host
+		authority = strings.TrimSuffix(host, ".")
 	}
 
 	gw := gwCtx.Gateway
@@ -1176,7 +1176,7 @@ func getAuthorityFromDestination(ds []*ir.DestinationSetting) string {
 		host := dest.Endpoints[0].Host
 		if _, err := netip.ParseAddr(host); err != nil {
 			// Not an IP - use as authority
-			return host
+			return strings.TrimSuffix(host, ".")
 		}
 
 		// Priority 3: Derive from metadata when endpoint is an IP
@@ -1292,7 +1292,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		// Fallback to deprecated host/port
 		if len(ds) == 0 && sink.OpenTelemetry.Host != nil {
 			ds = destinationSettingFromHostAndPort(settingName, *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port))
-			authority = *sink.OpenTelemetry.Host
+			authority = strings.TrimSuffix(*sink.OpenTelemetry.Host, ".")
 		}
 
 		if len(ds) > 0 && len(ds[0].Endpoints) > 0 {
@@ -1403,7 +1403,8 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 		if ds.TLS != nil && ds.TLS.SNI == nil && kind == resource.KindBackend {
 			backend := t.GetBackend(ns, string(ref.Name))
 			if len(backend.Spec.Endpoints) == 1 && backend.Spec.Endpoints[0].FQDN != nil {
-				ds.TLS.SNI = &backend.Spec.Endpoints[0].FQDN.Hostname
+				sni := strings.TrimSuffix(backend.Spec.Endpoints[0].FQDN.Hostname, ".")
+				ds.TLS.SNI = &sni
 			}
 		}
 
