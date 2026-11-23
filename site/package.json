@@ -54,6 +54,6 @@
     "singleQuote": true
   },
   "dependencies": {
-    "bootstrap": "^5.3.0"
+    "bootstrap": "^5.3.9"
   }
 }
