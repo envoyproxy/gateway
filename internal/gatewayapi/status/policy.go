@@ -369,7 +369,18 @@ func ancestorRefsEqual(a, b *gwapiv1.ParentReference) bool {
 // The first 15 ancestors are shown as is.
 // The last 16th ancestor is shown as is and add Aggregated condition.
 func TruncatePolicyAncestors(policyStatus *gwapiv1.PolicyStatus, controllerName string, generation int64) {
-	if len(policyStatus.Ancestors) <= maxPolicyAncestors {
+	TruncatePolicyAncestorsTo(policyStatus, maxPolicyAncestors, controllerName, generation)
+}
+
+// TruncatePolicyAncestorsTo trims PolicyStatus.Ancestors down to at most limit entries, keeping
+// the most important ones in the same order as TruncatePolicyAncestors. The last kept ancestor
+// gets the Aggregated condition. A limit of zero or less removes all ancestors.
+func TruncatePolicyAncestorsTo(policyStatus *gwapiv1.PolicyStatus, limit int, controllerName string, generation int64) {
+	if len(policyStatus.Ancestors) <= limit {
+		return
+	}
+	if limit <= 0 {
+		policyStatus.Ancestors = policyStatus.Ancestors[:0]
 		return
 	}
 
@@ -382,9 +393,9 @@ func TruncatePolicyAncestors(policyStatus *gwapiv1.PolicyStatus, controllerName 
 
 	aggregatedMessage := "Ancestors have been truncated because the number of policy ancestors exceeds 16."
 
-	policyStatus.Ancestors = policyStatus.Ancestors[:maxPolicyAncestors]
+	policyStatus.Ancestors = policyStatus.Ancestors[:limit]
 	SetConditionForPolicyAncestor(policyStatus,
-		&policyStatus.Ancestors[maxPolicyAncestors-1].AncestorRef,
+		&policyStatus.Ancestors[limit-1].AncestorRef,
 		controllerName,
 		egv1a1.PolicyConditionAggregated,
 		metav1.ConditionTrue,
