@@ -26,12 +26,6 @@ const (
 )
 
 type PolicyTargetReferences struct {
-	// TargetRef is the name of the resource this policy is being attached to.
-	// This policy and the TargetRef MUST be in the same namespace for this
-	// Policy to have effect
-	//
-	// Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11.
-	TargetRef *gwapiv1.LocalPolicyTargetReferenceWithSectionName `json:"targetRef,omitempty"`
 
 	// TargetRefs are the names of the Gateway resources this policy
 	// is being attached to.
@@ -107,8 +101,5 @@ type TargetSelectorNamespaces struct {
 }
 
 func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
-	if p.TargetRef != nil {
-		return []gwapiv1.LocalPolicyTargetReferenceWithSectionName{*p.TargetRef}
-	}
 	return p.TargetRefs
 }

@@ -258,7 +258,6 @@ func TestExtensionBackendRegistryOnlyIncludesAttachedPolicies(t *testing.T) {
 		t.Run(failure, func(t *testing.T) {
 			resources := extensionBackendResources(t)
 			parent, child := resources.EnvoyExtensionPolicies[0], resources.EnvoyExtensionPolicies[1]
-			child.Spec.TargetRef = nil
 			child.Spec.TargetRefs = nil
 			for _, route := range resources.HTTPRoutes {
 				child.Spec.TargetRefs = append(child.Spec.TargetRefs, gwapiv1.LocalPolicyTargetReferenceWithSectionName{
@@ -475,7 +474,6 @@ func TestExtensionBackendMergedGatewayTLS(t *testing.T) {
 		gateway.Spec.TLS.Backend.ClientCertificateRef.Name = gwapiv1.ObjectName(secret.Name)
 	}
 	policy := resources.EnvoyExtensionPolicies[1]
-	policy.Spec.TargetRef = nil
 	policy.Spec.TargetRefs = []gwapiv1.LocalPolicyTargetReferenceWithSectionName{}
 	for _, route := range resources.HTTPRoutes {
 		policy.Spec.TargetRefs = append(policy.Spec.TargetRefs, gwapiv1.LocalPolicyTargetReferenceWithSectionName{

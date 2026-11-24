@@ -1484,58 +1484,6 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 			shouldBeAdded: true,
 		},
 		{
-			name: "valid security policy with extAuth grpc proper ref grant to backend (deprecated field)",
-			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
-				Spec: egv1a1.SecurityPolicySpec{
-					ExtAuth: &egv1a1.ExtAuth{
-						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRef: &gwapiv1.BackendObjectReference{
-									Namespace: gatewayapi.NamespacePtr("ns-2"),
-									Name:      "test-backend",
-									Kind:      gatewayapi.KindPtr(resource.KindBackend),
-									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
-								},
-							},
-						},
-					},
-				},
-			},
-			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
-			},
-			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
-				Spec: gwapiv1b1.ReferenceGrantSpec{
-					From: []gwapiv1b1.ReferenceGrantFrom{
-						{
-							Namespace: gwapiv1.Namespace("ns-1"),
-							Kind:      gwapiv1.Kind(resource.KindSecurityPolicy),
-							Group:     gwapiv1.Group(egv1a1.GroupName),
-						},
-					},
-					To: []gwapiv1b1.ReferenceGrantTo{
-						{
-							Name:  gatewayapi.ObjectNamePtr("test-backend"),
-							Kind:  gwapiv1.Kind(resource.KindBackend),
-							Group: gwapiv1.Group(egv1a1.GroupName),
-						},
-					},
-				},
-			},
-			shouldBeAdded: true,
-		},
-		{
 			name: "valid security policy with extAuth grpc wrong namespace ref grant to backend",
 			securityPolicy: &egv1a1.SecurityPolicy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1611,58 +1559,6 @@ func TestProcessSecurityPolicyObjectRefs(t *testing.T) {
 											Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 										},
 									},
-								},
-							},
-						},
-					},
-				},
-			},
-			backend: &egv1a1.Backend{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-backend",
-				},
-			},
-			referenceGrant: &gwapiv1b1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-2",
-					Name:      "test-grant",
-				},
-				Spec: gwapiv1b1.ReferenceGrantSpec{
-					From: []gwapiv1b1.ReferenceGrantFrom{
-						{
-							Namespace: gwapiv1.Namespace("ns-1"),
-							Kind:      gwapiv1.Kind(resource.KindSecurityPolicy),
-							Group:     gwapiv1.Group(egv1a1.GroupName),
-						},
-					},
-					To: []gwapiv1b1.ReferenceGrantTo{
-						{
-							Name:  gatewayapi.ObjectNamePtr("test-backend"),
-							Kind:  gwapiv1.Kind(resource.KindBackend),
-							Group: gwapiv1.Group(egv1a1.GroupName),
-						},
-					},
-				},
-			},
-			shouldBeAdded: true,
-		},
-		{
-			name: "valid security policy with extAuth http proper ref grant to backend (deprecated field)",
-			securityPolicy: &egv1a1.SecurityPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns-1",
-					Name:      "test-policy",
-				},
-				Spec: egv1a1.SecurityPolicySpec{
-					ExtAuth: &egv1a1.ExtAuth{
-						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRef: &gwapiv1.BackendObjectReference{
-									Namespace: gatewayapi.NamespacePtr("ns-2"),
-									Name:      "test-backend",
-									Kind:      gatewayapi.KindPtr(resource.KindBackend),
-									Group:     gatewayapi.GroupPtr(egv1a1.GroupName),
 								},
 							},
 						},

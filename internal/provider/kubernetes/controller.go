@@ -1248,12 +1248,7 @@ func (r *gatewayAPIReconciler) processSecurityPolicyObjectRefs(
 }
 
 func getBackendRefs(backendCluster egv1a1.BackendCluster) []gwapiv1.BackendObjectReference {
-	backendRefs := make([]gwapiv1.BackendObjectReference, 0, 1+len(backendCluster.BackendRefs))
-	if backendCluster.BackendRef != nil {
-		backendRefs = append(backendRefs, *backendCluster.BackendRef)
-	}
-	// There is a CEL validation rule to ensure that backendRefs and backendRef
-	// cannot both be set at the same time.
+	backendRefs := make([]gwapiv1.BackendObjectReference, 0, len(backendCluster.BackendRefs))
 	for _, ref := range backendCluster.BackendRefs {
 		backendRefs = append(backendRefs, ref.BackendObjectReference)
 	}
@@ -3572,7 +3567,7 @@ func (r *gatewayAPIReconciler) processExtensionServerPolicies(
 			_, foundTargetRefs := policySpec["targetRefs"]
 			_, foundTargetSelectors := policySpec["targetSelectors"]
 			if !foundTargetRef && !foundTargetRefs && !foundTargetSelectors {
-				return fmt.Errorf("not a policy object - no targetRef or targetRefs or targetSelectors found in %s.%s %s",
+				return fmt.Errorf("not a policy object - no targetRefs or targetSelectors found in %s.%s %s",
 					policy.GetAPIVersion(), policy.GetKind(), policy.GetName())
 			}
 

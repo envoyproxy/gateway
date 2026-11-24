@@ -281,8 +281,18 @@ func resolveGatewayClassTargetsFromSelectors(
 	return nil
 }
 
+// extensionPolicyTargetReferences is the target of an extension server policy. Extension policies
+// are defined by the extension, so the singular targetRef, removed from the Envoy Gateway policies,
+// is still read here.
+type extensionPolicyTargetReferences struct {
+	egv1a1.PolicyTargetReferences `json:",inline"`
+
+	TargetRef *gwapiv1.LocalPolicyTargetReferenceWithSectionName `json:"targetRef,omitempty"`
+}
+
 func extractTargetRefs(policy *unstructured.Unstructured) (egv1a1.PolicyTargetReferences, error) {
-	var targetRefs egv1a1.PolicyTargetReferences
+	var ext extensionPolicyTargetReferences
+	targetRefs := ext.PolicyTargetReferences
 	spec, found := policy.Object["spec"].(map[string]any)
 	if !found {
 		return targetRefs, fmt.Errorf("no targets found for the policy")
@@ -291,14 +301,15 @@ func extractTargetRefs(policy *unstructured.Unstructured) (egv1a1.PolicyTargetRe
 	if err != nil {
 		return targetRefs, fmt.Errorf("no targets found for the policy")
 	}
-	if err := json.Unmarshal(specAsJSON, &targetRefs); err != nil {
+	if err := json.Unmarshal(specAsJSON, &ext); err != nil {
 		return targetRefs, fmt.Errorf("no targets found for the policy")
 	}
-	if (targetRefs.TargetRef == nil ||
-		targetRefs.TargetRef.Group == "" ||
-		targetRefs.TargetRef.Kind == "" ||
-		targetRefs.TargetRef.Name == "") &&
-		len(targetRefs.TargetRefs) < 1 &&
+	targetRefs = ext.PolicyTargetReferences
+	// targetRef takes precedence over targetRefs, as it did before it was removed from the API.
+	if ref := ext.TargetRef; ref != nil && ref.Group != "" && ref.Kind != "" && ref.Name != "" {
+		targetRefs.TargetRefs = []gwapiv1.LocalPolicyTargetReferenceWithSectionName{*ref}
+	}
+	if len(targetRefs.TargetRefs) < 1 &&
 		len(targetRefs.TargetSelectors) < 1 {
 		return targetRefs, fmt.Errorf("no targets found for the policy")
 	}

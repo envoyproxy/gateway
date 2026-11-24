@@ -63,7 +63,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": either targetRef or targetRefs must be used",
+				": either targetRefs or targetSelectors must be used",
 			},
 		},
 		{

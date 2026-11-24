@@ -1048,22 +1048,6 @@ type ExtensionService struct {
 	// BackendEndpoint points to where the extension server can be found.
 	BackendEndpoint `json:",inline"`
 
-	// Host define the extension service hostname.
-	//
-	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix). This field will be removed in v1.11.
-	//
-	// +optional
-	Host string `json:"host,omitempty"`
-
-	// Port defines the port the extension service is exposed on.
-	//
-	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix). This field will be removed in v1.11.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=80
-	Port int32 `json:"port,omitempty"`
-
 	// TLS defines TLS configuration for communication between Envoy Gateway and
 	// the extension service.
 	//

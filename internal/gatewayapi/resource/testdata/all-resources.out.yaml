@@ -385,8 +385,8 @@ securityPolicies:
         remoteJWKS:
           cacheDuration: 300s
           uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: backend
   status:

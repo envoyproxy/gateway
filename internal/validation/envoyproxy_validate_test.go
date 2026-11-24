@@ -16,6 +16,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -444,8 +445,14 @@ func TestValidateEnvoyProxy(t *testing.T) {
 								{
 									Type: egv1a1.MetricSinkTypeOpenTelemetry,
 									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-										Host: new("0.0.0.0"),
-										Port: 3217,
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{{
+												BackendObjectReference: gwapiv1.BackendObjectReference{
+													Name: "otel-collector",
+													Port: new(gwapiv1.PortNumber(4317)),
+												},
+											}},
+										},
 									},
 								},
 							},

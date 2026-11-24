@@ -99,26 +99,18 @@ const (
 // load balancer policy.
 // +union
 //
-// +kubebuilder:validation:XValidation:rule="self.type == 'Header' ? has(self.header) : !has(self.header)",message="If consistent hash type is header, the header field must be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Headers' ? has(self.headers) : !has(self.headers)",message="If consistent hash type is headers, the headers field must be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Cookie' ? has(self.cookie) : !has(self.cookie)",message="If consistent hash type is cookie, the cookie field must be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'QueryParams' ? has(self.queryParams) : !has(self.queryParams)",message="If consistent hash type is queryParams, the queryParams field must be set."
 type ConsistentHash struct {
 	// ConsistentHashType defines the type of input to hash on. Valid Type values are
 	// "SourceIP",
-	// "Header",
 	// "Headers",
 	// "Cookie".
 	// "QueryParams".
 	//
 	// +unionDiscriminator
 	Type ConsistentHashType `json:"type"`
-
-	// Header configures the header hash policy when the consistent hash type is set to Header.
-	//
-	// Deprecated: use Headers instead. This field will be removed in v1.11.
-	// +optional
-	Header *Header `json:"header,omitempty"`
 
 	// Headers configures the header hash policy for each header, when the consistent hash type is set to Headers.
 	//
@@ -306,16 +298,12 @@ type DynamicModuleLBPolicy struct {
 }
 
 // ConsistentHashType defines the type of input to hash on.
-// +kubebuilder:validation:Enum=SourceIP;Header;Headers;Cookie;QueryParams
+// +kubebuilder:validation:Enum=SourceIP;Headers;Cookie;QueryParams
 type ConsistentHashType string
 
 const (
 	// SourceIPConsistentHashType hashes based on the source IP address.
 	SourceIPConsistentHashType ConsistentHashType = "SourceIP"
-	// HeaderConsistentHashType hashes based on a request header.
-	//
-	// Deprecated: use HeadersConsistentHashType instead. This value will be removed in v1.11.
-	HeaderConsistentHashType ConsistentHashType = "Header"
 	// HeadersConsistentHashType hashes based on multiple request headers.
 	HeadersConsistentHashType ConsistentHashType = "Headers"
 	// CookieConsistentHashType hashes based on a cookie.

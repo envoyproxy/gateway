@@ -38,9 +38,7 @@ type ClientTrafficPolicy struct {
 
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'ListenerSet'] : true", message="this policy can only have a targetRef.kind of Gateway or ListenerSet"
+// +kubebuilder:validation:XValidation:rule="(has(self.targetRefs) && self.targetRefs.size() > 0) || (has(self.targetSelectors) && self.targetSelectors.size() > 0)", message="either targetRefs or targetSelectors must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet']) : true", message="this policy can only have a targetRefs[*].kind of Gateway or ListenerSet"
 type ClientTrafficPolicySpec struct {
@@ -52,19 +50,9 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
-	// EnableProxyProtocol interprets the ProxyProtocol header and adds the
-	// Client Address into the X-Forwarded-For header.
-	// Note Proxy Protocol must be present when this field is set, else the connection
-	// is closed.
-	//
-	// Deprecated: Use ProxyProtocol instead. This field will be removed in v1.11.
-	//
-	// +optional
-	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
 	// ProxyProtocol configures the Proxy Protocol settings. When configured,
 	// the Proxy Protocol header will be interpreted and the Client Address
 	// will be added into the X-Forwarded-For header.
-	// If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
 	//
 	// +optional
 	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty"`
@@ -128,7 +116,6 @@ type ClientTrafficPolicySpec struct {
 
 // HeaderSettings provides configuration options for headers on the listener.
 //
-// +kubebuilder:validation:XValidation:rule="!(has(self.preserveXRequestID) && has(self.requestID))",message="preserveXRequestID and requestID cannot both be set."
 type HeaderSettings struct {
 	// EnableEnvoyHeaders configures Envoy Proxy to add the "X-Envoy-" headers to requests
 	// and responses.
@@ -161,15 +148,6 @@ type HeaderSettings struct {
 	// is encountered. The default action is to reject the request.
 	// +optional
 	WithUnderscoresAction *WithUnderscoresAction `json:"withUnderscoresAction,omitempty"`
-
-	// PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
-	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
-	// Defaults to false and cannot be combined with RequestID.
-	//
-	// Deprecated: use RequestID=PreserveOrGenerate instead. This field will be removed in v1.11.
-	//
-	// +optional
-	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
 
 	// RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
 	// When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request

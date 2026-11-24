@@ -366,8 +366,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 80,
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "foo.extension",
+									Port:     80,
+								},
+							},
 						},
 					},
 				},
@@ -396,8 +400,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 80,
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "foo.extension",
+									Port:     80,
+								},
+							},
 						},
 					},
 				},
@@ -426,8 +434,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 80,
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "foo.extension",
+									Port:     80,
+								},
+							},
 						},
 					},
 				},
@@ -460,8 +472,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 443,
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "foo.extension",
+									Port:     443,
+								},
+							},
 							TLS: &egv1a1.ExtensionTLS{
 								CertificateRef: gwapiv1.SecretObjectReference{
 									Kind: &TLSSecretKind,
@@ -497,8 +513,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 443,
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "foo.extension",
+									Port:     443,
+								},
+							},
 							TLS: &egv1a1.ExtensionTLS{
 								CertificateRef: gwapiv1.SecretObjectReference{
 									Kind: &TLSSecretKind,
@@ -541,8 +561,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 8080,
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "foo.extension",
+									Port:     8080,
+								},
+							},
 							TLS: &egv1a1.ExtensionTLS{
 								CertificateRef: gwapiv1.SecretObjectReference{
 									Kind: &TLSUnrecognizedKind,
@@ -604,8 +628,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 							},
 						},
 						Service: &egv1a1.ExtensionService{
-							Host: "foo.extension",
-							Port: 8080,
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "foo.extension",
+									Port:     8080,
+								},
+							},
 						},
 					},
 				},
@@ -882,39 +910,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								Kind:    "Foo",
 							},
 						},
-						Service: &egv1a1.ExtensionService{
-							Port: 8080,
-						},
-					},
-				},
-			},
-			expect: false,
-		},
-		{
-			name: "both host and path targets are set for extension server",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
-							},
-						},
-						Service: &egv1a1.ExtensionService{
-							BackendEndpoint: egv1a1.BackendEndpoint{
-								FQDN: &egv1a1.FQDNEndpoint{
-									Hostname: "foo.example.com",
-									Port:     8080,
-								},
-								Unix: &egv1a1.UnixSocket{
-									Path: "/some/path",
-								},
-							},
-						},
+						Service: &egv1a1.ExtensionService{},
 					},
 				},
 			},
@@ -952,35 +948,6 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "both host and path targets are set for extension server",
-			eg: &egv1a1.EnvoyGateway{
-				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
-					ExtensionManager: &egv1a1.ExtensionManager{
-						Resources: []egv1a1.GroupVersionKind{
-							{
-								Group:   "foo.example.io",
-								Version: "v1alpha1",
-								Kind:    "Foo",
-							},
-						},
-						Service: &egv1a1.ExtensionService{
-							Host: "foo.example.com",
-							Port: 8080,
-							BackendEndpoint: egv1a1.BackendEndpoint{
-								FQDN: &egv1a1.FQDNEndpoint{
-									Hostname: "foo.example.com",
-									Port:     8080,
-								},
-							},
-						},
-					},
-				},
-			},
-			expect: false,
-		},
-		{
 			name: "both extensionManager and extensionManagers set",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -992,7 +959,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 							},
 						},
-						Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "foo.extension", Port: 80}}},
 					},
 					ExtensionManagers: []egv1a1.ExtensionManager{
 						{
@@ -1002,7 +969,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "bar.extension", Port: 80}}},
 						},
 					},
 				},
@@ -1034,7 +1001,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "foo.extension", Port: 80}}},
 						},
 						{
 							Name: "ext1",
@@ -1043,7 +1010,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "bar.extension", Port: 80}}},
 						},
 					},
 				},
@@ -1065,7 +1032,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "foo.extension", Port: 80}}},
 						},
 						{
 							Name: "ext2",
@@ -1076,7 +1043,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "bar.extension", Port: 80}}},
 						},
 					},
 				},
@@ -1098,7 +1065,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "foo.extension", Port: 80}}},
 						},
 						{
 							Name:            "ext2",
@@ -1108,7 +1075,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSSecret},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "bar.extension", Port: 80}}},
 						},
 					},
 				},
@@ -1128,7 +1095,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "foo.extension", Port: 80}}},
 						},
 					},
 				},
@@ -1149,12 +1116,12 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "good.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "good.extension", Port: 80}}},
 						},
 						{
 							Name: "bad-ext",
 							// Missing hooks → should fail individual validation
-							Service: &egv1a1.ExtensionService{Host: "bad.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "bad.extension", Port: 80}}},
 						},
 					},
 				},
@@ -1175,7 +1142,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute, egv1a1.XDSTranslation},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "ai-gw.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "ai-gw.extension", Port: 80}}},
 						},
 						{
 							Name: "observability",
@@ -1184,7 +1151,7 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSHTTPListener},
 								},
 							},
-							Service: &egv1a1.ExtensionService{Host: "obs.extension", Port: 80},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "obs.extension", Port: 80}}},
 						},
 					},
 				},

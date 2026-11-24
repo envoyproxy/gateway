@@ -240,15 +240,6 @@ spec:
                       Note that when the suffix is not provided, the value is interpreted as bytes.
                     x-kubernetes-int-or-string: true
                 type: object
-              enableProxyProtocol:
-                description: |-
-                  EnableProxyProtocol interprets the ProxyProtocol header and adds the
-                  Client Address into the X-Forwarded-For header.
-                  Note Proxy Protocol must be present when this field is set, else the connection
-                  is closed.
-
-                  Deprecated: Use ProxyProtocol instead. This field will be removed in v1.11.
-                type: boolean
               grpc:
                 description: GRPC provides gRPC configuration on the listener.
                 properties:
@@ -1016,14 +1007,6 @@ spec:
                       Note that when the suffix is not provided, the value is interpreted as bytes.
                       Default: 60Ki bytes.
                     x-kubernetes-int-or-string: true
-                  preserveXRequestID:
-                    description: |-
-                      PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
-                      (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
-                      Defaults to false and cannot be combined with RequestID.
-
-                      Deprecated: use RequestID=PreserveOrGenerate instead. This field will be removed in v1.11.
-                    type: boolean
                   requestID:
                     description: |-
                       RequestID configures Envoy's behavior for handling the `X-Request-ID` header.
@@ -1098,9 +1081,6 @@ spec:
                         > 0) ? (self.mode == ''AppendForward'' || self.mode == ''SanitizeSet'')
                         : true'
                 type: object
-                x-kubernetes-validations:
-                - message: preserveXRequestID and requestID cannot both be set.
-                  rule: '!(has(self.preserveXRequestID) && has(self.requestID))'
               healthCheck:
                 description: HealthCheck provides configuration for determining whether
                   the HTTP/HTTPS listener is healthy.
@@ -1321,7 +1301,6 @@ spec:
                   ProxyProtocol configures the Proxy Protocol settings. When configured,
                   the Proxy Protocol header will be interpreted and the Client Address
                   will be added into the X-Forwarded-For header.
-                  If both EnableProxyProtocol and ProxyProtocol are set, ProxyProtocol takes precedence.
                 minProperties: 0
                 properties:
                   forwardProtoConfig:
@@ -1399,52 +1378,6 @@ spec:
                 - Preserve
                 - MatchBackend
                 type: string
-              targetRef:
-                description: |-
-                  TargetRef is the name of the resource this policy is being attached to.
-                  This policy and the TargetRef MUST be in the same namespace for this
-                  Policy to have effect
-
-                  Deprecated: use targetRefs/targetSelectors instead. This field will be removed in v1.11.
-                properties:
-                  group:
-                    description: Group is the group of the target resource.
-                    maxLength: 253
-                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                    type: string
-                  kind:
-                    description: Kind is kind of the target resource.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                    type: string
-                  name:
-                    description: Name is the name of the target resource.
-                    maxLength: 253
-                    minLength: 1
-                    type: string
-                  sectionName:
-                    description: |-
-                      SectionName is the name of a section within the target resource. When
-                      unspecified, this targetRef targets the entire resource. In the following
-                      resources, SectionName is interpreted as the following:
-
-                      * Gateway: Listener name
-                      * HTTPRoute: HTTPRouteRule name
-                      * Service: Port name
-
-                      If a SectionName is specified, but does not exist on the targeted object,
-                      the Policy must fail to attach, and the policy implementation should record
-                      a `ResolvedRefs` or similar Condition in the Policy's status.
-                    maxLength: 253
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                    type: string
-                required:
-                - group
-                - kind
-                - name
-                type: object
               targetRefs:
                 description: |-
                   TargetRefs are the names of the Gateway resources this policy
@@ -2251,16 +2184,9 @@ spec:
                     : true'
             type: object
             x-kubernetes-validations:
-            - message: either targetRef or targetRefs must be used
-              rule: '(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
-                && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size()
-                > 0) '
-            - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
-              rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
-                : true'
-            - message: this policy can only have a targetRef.kind of Gateway or ListenerSet
-              rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'']
-                : true'
+            - message: either targetRefs or targetSelectors must be used
+              rule: (has(self.targetRefs) && self.targetRefs.size() > 0) || (has(self.targetSelectors)
+                && self.targetSelectors.size() > 0)
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true'

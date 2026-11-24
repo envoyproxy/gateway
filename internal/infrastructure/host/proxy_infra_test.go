@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	func_e_api "github.com/tetratelabs/func-e/api"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -631,8 +632,14 @@ func TestUserConfiguredMetricSinksPreserved(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: new("otel-collector.example.com"),
-								Port: 4317,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "otel-collector",
+											Port: new(gwapiv1.PortNumber(4317)),
+										},
+									}},
+								},
 							},
 						},
 					},

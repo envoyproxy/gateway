@@ -36,12 +36,10 @@ type EnvoyExtensionPolicy struct {
 
 // EnvoyExtensionPolicySpec defines the desired state of EnvoyExtensionPolicy.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
-// +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'] : true", message="this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
+// +kubebuilder:validation:XValidation:rule="(has(self.targetRefs) && self.targetRefs.size() > 0) || (has(self.targetSelectors) && self.targetSelectors.size() > 0)", message="either targetRefs or targetSelectors must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true ", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'ListenerSet', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
-// +kubebuilder:validation:XValidation:rule="!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'])))", message="mergeType can only be used with xRoute targets"
+// +kubebuilder:validation:XValidation:rule="!has(self.mergeType) || ((!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute'])))", message="mergeType can only be used with xRoute targets"
 type EnvoyExtensionPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 

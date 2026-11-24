@@ -59,10 +59,10 @@ securityPolicies:
     namespace: default
     name: sp-tlsroute-a
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: TLSRoute
-      name: tlsroute-a
+    targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+        name: tlsroute-a
     authorization:
       defaultAction: Deny
       rules:
@@ -77,10 +77,10 @@ securityPolicies:
     namespace: default
     name: sp-tlsroute-b
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: TLSRoute
-      name: tlsroute-b
+    targetRefs:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+        name: tlsroute-b
     authorization:
       defaultAction: Deny
       rules:

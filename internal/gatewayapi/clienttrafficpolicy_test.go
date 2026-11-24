@@ -334,21 +334,20 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 // ctpSpecHasClusterScopedFields, so a new field must be explicitly classified here too.
 func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 	expected := map[string]bool{
-		"TCPKeepalive":        false,
-		"EnableProxyProtocol": false,
-		"ProxyProtocol":       false,
-		"ClientIPDetection":   false,
-		"TLS":                 false,
-		"Path":                false,
-		"Headers":             false,
-		"Timeout":             false,
-		"Connection":          false,
-		"HTTP1":               true, // any http1 block on a listener-level CTP masks whatever a gateway-wide CTP set
-		"HTTP2":               false,
-		"HTTP3":               false,
-		"GRPC":                false,
-		"HealthCheck":         false,
-		"Scheme":              false,
+		"TCPKeepalive":      false,
+		"ProxyProtocol":     false,
+		"ClientIPDetection": false,
+		"TLS":               false,
+		"Path":              false,
+		"Headers":           false,
+		"Timeout":           false,
+		"Connection":        false,
+		"HTTP1":             true, // any http1 block on a listener-level CTP masks whatever a gateway-wide CTP set
+		"HTTP2":             false,
+		"HTTP3":             false,
+		"GRPC":              false,
+		"HealthCheck":       false,
+		"Scheme":            false,
 	}
 
 	actualFields := structFieldNames(reflect.TypeOf(egv1a1.ClientTrafficPolicySpec{}), map[string]bool{"PolicyTargetReferences": true})

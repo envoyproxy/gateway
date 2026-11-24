@@ -25,7 +25,6 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/luavalidator"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
@@ -488,10 +487,6 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
-		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -585,11 +580,6 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
-	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
-
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	// If policy target is route rule, we can skip the check
 	if currTarget.SectionName != nil {
@@ -659,10 +649,6 @@ func (t *Translator) processEnvoyExtensionPolicyForListenerSet(
 			policy.Generation,
 			resolveErr,
 		)
-		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -687,11 +673,6 @@ func (t *Translator) processEnvoyExtensionPolicyForListenerSet(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
-
-	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
 
 	// Determine this policy's own scope so we can look up overriding child scopes from the relation maps.
 	var lsParentScope policyScope
@@ -765,10 +746,6 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
-		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -790,11 +767,6 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
-
-	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
 
 	// Determine this policy's own scope so we can look up overriding child scopes from the relation maps.
 	var parentScope policyScope

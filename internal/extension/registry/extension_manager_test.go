@@ -69,7 +69,7 @@ func TestNewManager(t *testing.T) {
 						Resources: []egv1a1.GroupVersionKind{
 							{Group: "foo.io", Version: "v1", Kind: "Foo"},
 						},
-						Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
+						Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "foo.svc", Port: 8080}}},
 					},
 				},
 			},
@@ -102,7 +102,7 @@ func TestNewManager(t *testing.T) {
 							BackendResources: []egv1a1.GroupVersionKind{
 								{Group: "foo.io", Version: "v1", Kind: "FooBackend"},
 							},
-							Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "foo.svc", Port: 8080}}},
 						},
 						{
 							Name: "ext2",
@@ -115,7 +115,7 @@ func TestNewManager(t *testing.T) {
 							BackendResources: []egv1a1.GroupVersionKind{
 								{Group: "bar.io", Version: "v1", Kind: "BarBackend"},
 							},
-							Service: &egv1a1.ExtensionService{Host: "bar.svc", Port: 8080},
+							Service: &egv1a1.ExtensionService{BackendEndpoint: egv1a1.BackendEndpoint{FQDN: &egv1a1.FQDNEndpoint{Hostname: "bar.svc", Port: 8080}}},
 						},
 					},
 				},

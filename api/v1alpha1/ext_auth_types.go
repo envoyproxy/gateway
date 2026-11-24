@@ -159,7 +159,7 @@ type ContextExtension struct {
 // GRPCExtAuthService defines the gRPC External Authorization service
 // The authorization request message is defined in
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
-// +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="backendRefs needs to be set",rule="has(self.backendRefs) && self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service, ServiceImport, and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'ServiceImport' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'multicluster.x-k8s.io' || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:message="http1 is not supported for gRPC ExtAuth backends, which always use gRPC.",rule="!has(self.backendSettings) || !has(self.backendSettings.http1)"
@@ -170,7 +170,7 @@ type GRPCExtAuthService struct {
 
 // HTTPExtAuthService defines the HTTP External Authorization service
 //
-// +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
+// +kubebuilder:validation:XValidation:message="backendRefs needs to be set",rule="has(self.backendRefs) && self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service, ServiceImport, and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'ServiceImport' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'multicluster.x-k8s.io' || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:message="only one of path or pathOverride can be specified",rule="!(has(self.path) && has(self.pathOverride))"

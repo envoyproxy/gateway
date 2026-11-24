@@ -36,8 +36,7 @@ const (
 
 // TracingProvider defines the tracing provider configuration.
 //
-// +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
-// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="backendRefs needs to be set",rule="has(self.backendRefs) && self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:message="openTelemetry can only be used with type OpenTelemetry",rule="has(self.openTelemetry) ? self.type == 'OpenTelemetry' : true"
@@ -48,20 +47,6 @@ type TracingProvider struct {
 	// +kubebuilder:validation:Enum=OpenTelemetry;Zipkin;Datadog
 	// +kubebuilder:default=OpenTelemetry
 	Type TracingProviderType `json:"type"`
-	// Host define the provider service hostname.
-	//
-	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-	//
-	// +optional
-	Host *string `json:"host,omitempty"`
-	// Port defines the port the provider service is exposed on.
-	//
-	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=4317
-	Port int32 `json:"port,omitempty"`
 	// ServiceName defines the service name to use in tracing configuration.
 	// If not set, Envoy Gateway will use a default service name set as
 	// "name.namespace" (e.g., "my-gateway.default").

@@ -771,16 +771,10 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 
 	// Translate Proxy Protocol
 	if policy.Spec.ProxyProtocol != nil {
-		// ProxyProtocol field takes precedence when configured
 		// Even if it's an empty object {}, we should enable proxy protocol with default settings
 		proxyProtocol = &ir.ProxyProtocolSettings{
 			Optional:     ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
 			ForwardProto: buildIRForwardProtoConfig(policy.Spec.ProxyProtocol.ForwardProto),
-		}
-	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
-		// Fallback to legacy EnableProxyProtocol field
-		proxyProtocol = &ir.ProxyProtocolSettings{
-			Optional: false, // Default behavior for legacy field
 		}
 	}
 
@@ -1083,8 +1077,6 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	}
 	if headerSettings.RequestID != nil {
 		httpIR.Headers.RequestID = (*ir.RequestIDAction)(headerSettings.RequestID)
-	} else if headerSettings.PreserveXRequestID != nil && *headerSettings.PreserveXRequestID {
-		httpIR.Headers.RequestID = new(ir.RequestIDActionPreserveOrGenerate)
 	}
 
 	if headerSettings.XForwardedClientCert != nil {

@@ -639,12 +639,6 @@ type BackendRef struct {
 //
 // +kubebuilder:validation:XValidation:rule="!has(self.backendSettings) || !has(self.backendSettings.http3)",message="http3 is only supported for route backends"
 type BackendCluster struct {
-	// BackendRef references a Kubernetes object that represents the
-	// backend server to which the authorization request will be sent.
-	//
-	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-	// +optional
-	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
 
 	// BackendRefs references a Kubernetes object that represents the
 	// backend server to which the authorization request will be sent.
@@ -722,8 +716,6 @@ type ClusterSettings struct {
 	HTTP3 *BackendHTTP3Settings `json:"http3,omitempty"`
 
 	// HTTP1 provides HTTP/1 configuration for backend connections.
-	// When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
-	// this field takes precedence for backend (upstream) traffic.
 	//
 	// Behavior when targeting route kinds that do not use HTTP/1:
 	//   - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds

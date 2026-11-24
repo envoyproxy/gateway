@@ -926,29 +926,6 @@ func TestResolvePolicyTargetsFromReferences(t *testing.T) {
 		expected        []policyTargetReferenceWithSectionName
 	}{
 		{
-			name: "target ref",
-			targetRefs: egv1a1.PolicyTargetReferences{
-				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "gateway.networking.k8s.io",
-						Kind:  "Gateway",
-						Name:  "eg",
-					},
-					SectionName: SectionNamePtr("http"),
-				},
-			},
-			policyNamespace: "default",
-			expected: []policyTargetReferenceWithSectionName{
-				{
-					Group:       "gateway.networking.k8s.io",
-					Kind:        "Gateway",
-					Name:        "eg",
-					Namespace:   "default",
-					SectionName: SectionNamePtr("http"),
-				},
-			},
-		},
-		{
 			name: "target refs",
 			targetRefs: egv1a1.PolicyTargetReferences{
 				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{

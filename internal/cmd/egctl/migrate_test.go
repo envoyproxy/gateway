@@ -19,13 +19,14 @@ import (
 	"go.yaml.in/yaml/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/egctl/migrate"
-	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/utils/test"
 )
 
@@ -107,7 +108,7 @@ func TestMigrateDeprecatedUntouchedIsByteForByte(t *testing.T) {
 // TestMigrateDeprecatedTranslateEquivalence checks that the migrated resources translate to the
 // same xDS as the original ones. The telemetry host rule isn't covered: a Service backendRef is
 // resolved through EDS rather than DNS, which is intended.
-func TestMigrateDeprecatedTranslateEquivalence(t *testing.T) {
+func TestMigrateDeprecatedTranslates(t *testing.T) {
 	in := filepath.Join(migrateTestData, "translate-equivalence.in.yaml")
 	migrated, _, err := runMigrate(t, "-f", in)
 	require.NoError(t, err)
@@ -120,10 +121,11 @@ func TestMigrateDeprecatedTranslateEquivalence(t *testing.T) {
 			string(AllEnvoyConfigType), false, "envoy-gateway-system", "cluster.local"))
 		return b.String()
 	}
-	before := translateXds(in)
-	require.Contains(t, before, "proxy_protocol")
-	require.Contains(t, before, "brotli")
-	require.Equal(t, before, translateXds(out))
+	// The deprecated fields are removed from the API, so only the migrated manifest translates,
+	// and it keeps the settings of the deprecated fields.
+	after := translateXds(out)
+	require.Contains(t, after, "proxy_protocol")
+	require.Contains(t, after, "brotli")
 }
 
 func TestMigrateDeprecatedModes(t *testing.T) {
@@ -204,7 +206,7 @@ func TestMigrateDeprecatedFromCluster(t *testing.T) {
 			},
 		},
 		Spec: egv1a1.ClientTrafficPolicySpec{
-			PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRef: gatewayTarget},
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{*gatewayTarget}},
 		},
 		Status: gwapiv1.PolicyStatus{Ancestors: []gwapiv1.PolicyAncestorStatus{{ControllerName: "x"}}},
 	}
@@ -214,7 +216,7 @@ func TestMigrateDeprecatedFromCluster(t *testing.T) {
 			Labels: map[string]string{"app.kubernetes.io/managed-by": "Helm"},
 		},
 		Spec: egv1a1.ClientTrafficPolicySpec{
-			PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRef: gatewayTarget},
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{*gatewayTarget}},
 		},
 	}
 	argo := &egv1a1.BackendTrafficPolicy{
@@ -223,7 +225,7 @@ func TestMigrateDeprecatedFromCluster(t *testing.T) {
 			Annotations: map[string]string{"argocd.argoproj.io/tracking-id": "app:gateway.envoyproxy.io/BackendTrafficPolicy:apps/argo"},
 		},
 		Spec: egv1a1.BackendTrafficPolicySpec{
-			PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRef: gatewayTarget},
+			PolicyTargetReferences: egv1a1.PolicyTargetReferences{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{*gatewayTarget}},
 		},
 	}
 	config := &corev1.ConfigMap{
@@ -232,8 +234,28 @@ func TestMigrateDeprecatedFromCluster(t *testing.T) {
 			"kind: EnvoyGateway\nextensionApis:\n  disableLua: true\n"},
 	}
 
-	cli := fake.NewClientBuilder().WithScheme(envoygateway.GetScheme()).
-		WithObjects(plain, helm, argo, config).Build()
+	// Preserve fields from the old API that the current typed structs no longer expose.
+	legacy := func(obj client.Object, kind string) *unstructured.Unstructured {
+		raw, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		require.NoError(t, err)
+		u := &unstructured.Unstructured{Object: raw}
+		u.SetAPIVersion(egv1a1.GroupVersion.String())
+		u.SetKind(kind)
+		refs, _, err := unstructured.NestedSlice(raw, "spec", "targetRefs")
+		require.NoError(t, err)
+		unstructured.RemoveNestedField(raw, "spec", "targetRefs")
+		require.NoError(t, unstructured.SetNestedField(raw, refs[0], "spec", "targetRef"))
+		return u
+	}
+	// Use an unstructured scheme to model an older API server without pruning removed fields.
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	for _, kind := range []string{"ClientTrafficPolicy", "BackendTrafficPolicy", "SecurityPolicy", "EnvoyExtensionPolicy", "EnvoyProxy"} {
+		scheme.AddKnownTypeWithName(egv1a1.GroupVersion.WithKind(kind), &unstructured.Unstructured{})
+		scheme.AddKnownTypeWithName(egv1a1.GroupVersion.WithKind(kind+"List"), &unstructured.UnstructuredList{})
+	}
+	cli := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(legacy(plain, "ClientTrafficPolicy"), legacy(helm, "ClientTrafficPolicy"), legacy(argo, "BackendTrafficPolicy"), config).Build()
 	orig := newK8sClientFunc
 	newK8sClientFunc = func() (client.Client, error) { return cli, nil }
 	t.Cleanup(func() { newK8sClientFunc = orig })

@@ -44,7 +44,6 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -509,9 +508,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -537,9 +533,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 			policy.Generation,
 			status.Error2ConditionMsg(fmt.Errorf("%s: %w", errMsg, err)),
 		)
-		if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -639,9 +632,6 @@ func (t *Translator) processSecurityPolicyForRoute(
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
 
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	// If policy target is route rule, we can skip the check
@@ -718,9 +708,6 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -784,9 +771,6 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 	}
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
 }
 
 func (t *Translator) processSecurityPolicyForGateway(
@@ -826,9 +810,6 @@ func (t *Translator) processSecurityPolicyForGateway(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -889,9 +870,6 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
 }
 
 // validateSecurityPolicy validates the SecurityPolicy.
@@ -3256,12 +3234,6 @@ func (t *Translator) buildExtAuth(
 		switch {
 		case len(http.BackendRefs) > 0:
 			backendRefs = http.BackendRefs
-		case http.BackendRef != nil:
-			backendRefs = []egv1a1.BackendRef{
-				{
-					BackendObjectReference: *http.BackendRef,
-				},
-			}
 		default:
 			// This is a sanity check, it should never happen because the API server should have caught it
 			return nil, errors.New("http backend refs must be specified")
@@ -3272,12 +3244,6 @@ func (t *Translator) buildExtAuth(
 		switch {
 		case len(grpc.BackendRefs) > 0:
 			backendRefs = grpc.BackendRefs
-		case grpc.BackendRef != nil:
-			backendRefs = []egv1a1.BackendRef{
-				{
-					BackendObjectReference: *grpc.BackendRef,
-				},
-			}
 		default:
 			// This is a sanity check, it should never happen because the API server should have caught it
 			return nil, errors.New("grpc backend refs must be specified")
@@ -3724,13 +3690,8 @@ func buildSecurityPolicyOwners(route, parent *egv1a1.SecurityPolicy) *securityPo
 			if ea == nil {
 				return false
 			}
-			if ea.HTTP != nil && (len(ea.HTTP.BackendRefs) > 0 || ea.HTTP.BackendRef != nil) {
-				return true
-			}
-			if ea.GRPC != nil && (len(ea.GRPC.BackendRefs) > 0 || ea.GRPC.BackendRef != nil) {
-				return true
-			}
-			return false
+			return (ea.HTTP != nil && len(ea.HTTP.BackendRefs) > 0) ||
+				(ea.GRPC != nil && len(ea.GRPC.BackendRefs) > 0)
 		}),
 		extAuthContextExtensions: buildExtAuthContextExtensionOwners(route, parent),
 		oidc: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
