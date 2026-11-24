@@ -2218,6 +2218,8 @@ spec:
                                     each descriptor, which can be used to limit concurrency.
 
                                     This is only supported for a Number request cost and HTTP Global Rate Limits.
+
+                                    It requires Envoy Proxy 1.38 or later and a rate limit service that supports negative hits.
                                   type: boolean
                                 request:
                                   description: |-
@@ -2642,6 +2644,8 @@ spec:
                                     each descriptor, which can be used to limit concurrency.
 
                                     This is only supported for a Number request cost and HTTP Global Rate Limits.
+
+                                    It requires Envoy Proxy 1.38 or later and a rate limit service that supports negative hits.
                                   type: boolean
                                 request:
                                   description: |-
