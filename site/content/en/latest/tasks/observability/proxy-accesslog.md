@@ -54,7 +54,14 @@ If custom format string is not specified, Envoy Gateway uses the following defau
 }
 ```
 
-> Note: Envoy Gateway disable envoy headers by default, you can enable it by setting `EnableEnvoyHeaders` to `true` in the [ClientTrafficPolicy](../../api/extension_types#backendtrafficpolicy) CRD.
+> Note: Envoy Gateway disables the `x-envoy-*` headers by default, and two fields of the default format depend on them:
+>
+> - `x-envoy-origin-path` falls back to `:PATH`, so it logs the rewritten path instead of the original one for routes
+>   that use a URL rewrite filter.
+> - `x-envoy-upstream-service-time` is empty.
+>
+> To log these values, set [`headers.enableEnvoyHeaders`](../../../api/extension_types#headersettings) to `true` in a
+> ClientTrafficPolicy that targets the Gateway. This also adds the `x-envoy-*` headers to requests and responses.
 
 
 Verify logs from loki:
