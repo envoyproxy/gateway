@@ -1690,6 +1690,13 @@ Keep the following in mind when using this pattern:
   `Hour`, makes this less frequent.
 * The decrease is sent to the rate limit service when the stream is closed and is not retried. If that call fails, the
   counter stays higher than the real number of requests in flight until the window ends.
+* The descriptor is built again when the stream is closed, from the request headers as they are at that point. If the
+  route changes a header used by a `clientSelectors` entry, for example with a `RequestHeaderModifier` filter, the cost can
+  be given back to a different counter than the one that was increased.
+* The cost is given back even if the request was not counted when it started. By default, requests are let through when
+  the rate limit service can't be reached, so a request that starts during an outage and ends after it lowers the counter
+  without having increased it. Setting `failClosed: true` in the `rateLimit` configuration of the `EnvoyGateway` resource
+  avoids this, at the cost of rejecting requests while the service is unavailable.
 
 ## Rate Limit Policy Merging
 
