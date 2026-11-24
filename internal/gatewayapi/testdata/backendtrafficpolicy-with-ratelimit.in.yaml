@@ -183,10 +183,7 @@ backendTrafficPolicies:
             request:
               from: Number
               number: 1
-            response:
-              from: Number
-              number: 1
-              negative: true
+            refundOnResponse: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:

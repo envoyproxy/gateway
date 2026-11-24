@@ -2744,7 +2744,10 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		if cost.Request != nil {
 			irRule.RequestCost = translateRateLimitCost(cost.Request)
 		}
-		if cost.Response != nil {
+		if ptr.Deref(cost.RefundOnResponse, false) && cost.Request != nil {
+			irRule.ResponseCost = translateRateLimitCost(cost.Request)
+			irRule.ResponseCost.Negative = true
+		} else if cost.Response != nil {
 			irRule.ResponseCost = translateRateLimitCost(cost.Response)
 		}
 	}
@@ -2760,7 +2763,6 @@ func translateRateLimitCost(cost *egv1a1.RateLimitCostSpecifier) *ir.RateLimitCo
 		ret.Format = new(fmt.Sprintf("%%DYNAMIC_METADATA(%s:%s)%%",
 			cost.Metadata.Namespace, cost.Metadata.Key))
 	}
-	ret.Negative = ptr.Deref(cost.Negative, false)
 	return ret
 }
 

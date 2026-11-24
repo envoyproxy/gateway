@@ -35,12 +35,9 @@ backendTrafficPolicies:
             - name: x-tenant-id
               type: Distinct
           cost:
+            refundOnResponse: true
             request:
               from: Number
-              number: 1
-            response:
-              from: Number
-              negative: true
               number: 1
           limit:
             requests: 8

@@ -1574,7 +1574,7 @@ server: envoy
 ## Limit Concurrent Requests per User
 
 A rate limit counts requests per time window, so it doesn't stop a client from keeping many slow requests open at the same time.
-To limit the number of requests in flight instead, set a request cost and a negative response cost on the same rule.
+To limit the number of requests in flight instead, set a request cost and `refundOnResponse: true` on the same rule.
 The counter is increased when a request starts and decreased again when the stream is closed, so it tracks the requests
 that are currently open for each descriptor, and new requests are rate limited once it reaches the limit.
 
@@ -1610,10 +1610,7 @@ spec:
           request:
             from: Number
             number: 1
-          response:
-            from: Number
-            number: 1
-            negative: true
+          refundOnResponse: true
 EOF
 ```
 
@@ -1646,10 +1643,7 @@ spec:
           request:
             from: Number
             number: 1
-          response:
-            from: Number
-            number: 1
-            negative: true
+          refundOnResponse: true
 ```
 
 {{% /tab %}}
