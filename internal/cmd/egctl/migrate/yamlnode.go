@@ -16,22 +16,50 @@ import (
 
 // Get returns the value of key in the mapping node m, or nil if m isn't a mapping or has no key.
 func Get(m *yaml.Node, key string) *yaml.Node {
+	m = Resolve(m)
 	if i := keyIndex(m, key); i >= 0 {
 		return m.Content[i+1]
 	}
 	return nil
 }
 
-// GetMapping returns the value of key in m if it is a mapping node, otherwise nil.
+// GetMapping returns the value of key in m if it is a mapping node, following an alias, otherwise
+// nil.
 func GetMapping(m *yaml.Node, key string) *yaml.Node {
-	if v := Get(m, key); v != nil && v.Kind == yaml.MappingNode {
+	if v := Resolve(Get(m, key)); v != nil && v.Kind == yaml.MappingNode {
 		return v
 	}
 	return nil
 }
 
+// Resolve returns the node an alias node refers to, or n itself if it isn't an alias.
+//
+// Get returns alias nodes as they are, so that a value moved to another key stays an alias of its
+// anchor. Resolve the value before reading its kind or content.
+func Resolve(n *yaml.Node) *yaml.Node {
+	for n != nil && n.Kind == yaml.AliasNode {
+		n = n.Alias
+	}
+	return n
+}
+
+// Scalar returns the value of the scalar node n, following an alias, or "" if n isn't a scalar.
+func Scalar(n *yaml.Node) string {
+	if n = Resolve(n); n != nil && n.Kind == yaml.ScalarNode {
+		return n.Value
+	}
+	return ""
+}
+
+// IsSet reports whether key is set to a non-null value in the mapping node m.
+func IsSet(m *yaml.Node, key string) bool {
+	v := Resolve(Get(m, key))
+	return v != nil && (v.Kind != yaml.ScalarNode || v.Tag != "!!null")
+}
+
 // Delete removes key from the mapping node m. It reports whether the key was present.
 func Delete(m *yaml.Node, key string) bool {
+	m = Resolve(m)
 	i := keyIndex(m, key)
 	if i < 0 {
 		return false
@@ -43,6 +71,7 @@ func Delete(m *yaml.Node, key string) bool {
 // Replace renames key in the mapping node m to newKey and sets its value to value, keeping its
 // position and the comments of the key. It reports whether the key was present.
 func Replace(m *yaml.Node, key, newKey string, value *yaml.Node) bool {
+	m = Resolve(m)
 	i := keyIndex(m, key)
 	if i < 0 {
 		return false
@@ -59,6 +88,7 @@ func Replace(m *yaml.Node, key, newKey string, value *yaml.Node) bool {
 
 // Set sets key in the mapping node m to value, appending the key if it isn't present.
 func Set(m *yaml.Node, key string, value *yaml.Node) {
+	m = Resolve(m)
 	if i := keyIndex(m, key); i >= 0 {
 		m.Content[i+1] = value
 		return
@@ -68,6 +98,7 @@ func Set(m *yaml.Node, key string, value *yaml.Node) {
 
 // IsEmpty reports whether n is nil, null or an empty mapping or sequence.
 func IsEmpty(n *yaml.Node) bool {
+	n = Resolve(n)
 	if n == nil {
 		return true
 	}
@@ -126,11 +157,11 @@ func Equal(a, b *yaml.Node) bool {
 
 var pathSegment = regexp.MustCompile(`^([^\[\]]+)((?:\[\d+\])*)$`)
 
-// Lookup walks root along a field path like "spec.extProc[1].backendSettings" and returns the node
-// it ends on, or nil if the path doesn't exist.
+// Lookup walks root along a field path like "spec.extProc[1].backendSettings", following aliases,
+// and returns the node it ends on, or nil if the path doesn't exist.
 func Lookup(root *yaml.Node, path string) *yaml.Node {
-	n := root
-	if path == "" {
+	n := Resolve(root)
+	if n == nil || path == "" {
 		return n
 	}
 	for seg := range strings.SplitSeq(path, ".") {
@@ -146,13 +177,13 @@ func Lookup(root *yaml.Node, path string) *yaml.Node {
 				continue
 			}
 			i, _ := strconv.Atoi(idx)
-			if n.Kind != yaml.SequenceNode || i >= len(n.Content) {
+			if n = Resolve(n); n.Kind != yaml.SequenceNode || i >= len(n.Content) {
 				return nil
 			}
 			n = n.Content[i]
 		}
 	}
-	return n
+	return Resolve(n)
 }
 
 // Clone returns a deep copy of n, preserving shared nodes and cycles in aliases.

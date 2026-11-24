@@ -47,7 +47,7 @@ spec:
     consistentHash:
       type: Header
       header:
-        name: x-user # tenant id
+        name: x-user  # tenant id
       tableSize: 524287
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1

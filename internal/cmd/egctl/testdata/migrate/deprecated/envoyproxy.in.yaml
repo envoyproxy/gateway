@@ -62,3 +62,23 @@ spec:
     strictValidation:
       allowedEnvVars:
       - HOME
+---
+# The port of the second sink is an alias of the first one.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: aliases
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      provider:
+        type: OpenTelemetry
+        host: otel-collector.monitoring.svc.cluster.local
+        port: &otel 4318
+    metrics:
+      sinks:
+      - type: OpenTelemetry
+        openTelemetry:
+          host: otel-collector.monitoring.svc.cluster.local
+          port: *otel

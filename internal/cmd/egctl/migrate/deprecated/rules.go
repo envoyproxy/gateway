@@ -8,7 +8,6 @@ package deprecated
 import (
 	"net"
 	"regexp"
-	"strconv"
 
 	"go.yaml.in/yaml/v3"
 
@@ -36,12 +35,18 @@ func migrateTargetRef(spec *yaml.Node, base string) migrate.Finding {
 		migrate.Delete(spec, "targetRefs")
 		migrate.Replace(spec, "targetRef", "targetRefs", migrate.Sequence(ref))
 		return migrated(field, "moved to %s.targetRefs", base)
-	case refs.Kind == yaml.SequenceNode && len(refs.Content) == 1 && migrate.Equal(refs.Content[0], ref):
+	case sameRef(refs, ref):
 		migrate.Delete(spec, "targetRef")
 		return migrated(field, "removed, %s.targetRefs already holds the same reference", base)
 	}
 	return errorf(field, "both targetRef and targetRefs are set: only targetRef is used today, "+
 		"move it into targetRefs and decide which references to keep")
+}
+
+// sameRef reports whether refs is a sequence that holds only ref.
+func sameRef(refs, ref *yaml.Node) bool {
+	refs = migrate.Resolve(refs)
+	return refs.Kind == yaml.SequenceNode && len(refs.Content) == 1 && migrate.Equal(refs.Content[0], ref)
 }
 
 // migrateBackendRef rewrites backendRef to backendRefs. When backendRefs is already set, backendRef
@@ -65,10 +70,12 @@ func migrateProxyProtocol(spec *yaml.Node, base string) migrate.Finding {
 	field := base + ".enableProxyProtocol"
 	enable := migrate.Get(spec, "enableProxyProtocol")
 	switch {
-	case migrate.Get(spec, "proxyProtocol") != nil:
+	case migrate.IsSet(spec, "proxyProtocol"):
 		migrate.Delete(spec, "enableProxyProtocol")
 		return migrated(field, "removed, it was ignored because %s.proxyProtocol is set", base)
 	case migrate.IsTrue(enable):
+		// A null proxyProtocol is unset, and the translator uses enableProxyProtocol.
+		migrate.Delete(spec, "proxyProtocol")
 		migrate.Replace(spec, "enableProxyProtocol", "proxyProtocol", migrate.Mapping())
 		return migrated(field, "replaced with %s.proxyProtocol: {}", base)
 	}
@@ -81,10 +88,11 @@ func migrateXRequestID(headers *yaml.Node, base string) migrate.Finding {
 	field := base + ".preserveXRequestID"
 	preserve := migrate.Get(headers, "preserveXRequestID")
 	switch {
-	case migrate.Get(headers, "requestID") != nil:
+	case migrate.IsSet(headers, "requestID"):
 		migrate.Delete(headers, "preserveXRequestID")
 		return migrated(field, "removed, it was ignored because %s.requestID is set", base)
 	case migrate.IsTrue(preserve):
+		migrate.Delete(headers, "requestID")
 		migrate.Replace(headers, "preserveXRequestID", "requestID", migrate.String(string(egv1a1.RequestIDActionPreserveOrGenerate)))
 		return migrated(field, "replaced with %s.requestID: PreserveOrGenerate", base)
 	}
@@ -104,21 +112,18 @@ var compressorBlocks = map[string]string{
 // empty block is added where it is missing.
 func migrateCompression(spec *yaml.Node, base string) migrate.Finding {
 	field := base + ".compression"
-	if compressor := migrate.Get(spec, "compressor"); compressor != nil && compressor.Kind == yaml.SequenceNode && len(compressor.Content) > 0 {
+	if compressor := migrate.Resolve(migrate.Get(spec, "compressor")); compressor != nil && compressor.Kind == yaml.SequenceNode && len(compressor.Content) > 0 {
 		migrate.Delete(spec, "compression")
 		return migrated(field, "removed, it was ignored because %s.compressor is set", base)
 	}
 	compression := migrate.Get(spec, "compression")
-	if compression.Kind != yaml.SequenceNode {
+	entries := migrate.Resolve(compression)
+	if entries.Kind != yaml.SequenceNode {
 		return errorf(field, "unexpected shape, not migrated")
 	}
 	added := 0
-	for _, entry := range compression.Content {
-		typ := migrate.Get(entry, "type")
-		if typ == nil {
-			continue
-		}
-		block, ok := compressorBlocks[typ.Value]
+	for _, entry := range entries.Content {
+		block, ok := compressorBlocks[migrate.Scalar(migrate.Get(entry, "type"))]
 		if ok && migrate.Get(entry, block) == nil {
 			migrate.Set(entry, block, migrate.Mapping())
 			added++
@@ -135,28 +140,34 @@ func migrateCompression(spec *yaml.Node, base string) migrate.Finding {
 // migrateClientValidation rewrites clientValidation.optional: true to mode: VerifyIfGiven.
 func migrateClientValidation(cv *yaml.Node, base string) migrate.Finding {
 	field := base + ".optional"
-	if migrate.Get(cv, "mode") != nil {
+	switch {
+	case migrate.IsSet(cv, "mode"):
 		migrate.Delete(cv, "optional")
 		return migrated(field, "removed, it was ignored because %s.mode is set", base)
+	case migrate.IsTrue(migrate.Get(cv, "optional")):
+		migrate.Delete(cv, "mode")
+		migrate.Replace(cv, "optional", "mode", migrate.String(string(egv1a1.ClientValidationVerifyIfGiven)))
+		return migrated(field, "replaced with %s.mode: VerifyIfGiven", base)
 	}
-	migrate.Replace(cv, "optional", "mode", migrate.String(string(egv1a1.ClientValidationVerifyIfGiven)))
-	return migrated(field, "replaced with %s.mode: VerifyIfGiven", base)
+	migrate.Delete(cv, "optional")
+	return migrated(field, "removed, false is the default")
 }
 
 // migrateLuaValidation rewrites spec.luaValidation to spec.lua.validationType.
 func migrateLuaValidation(spec *yaml.Node, base string) migrate.Finding {
 	field := base + ".luaValidation"
 	value := migrate.Get(spec, "luaValidation")
-	lua := migrate.Get(spec, "lua")
+	lua := migrate.Resolve(migrate.Get(spec, "lua"))
 	switch {
-	case lua != nil && migrate.Get(lua, "validationType") != nil:
+	case migrate.IsSet(lua, "validationType"):
 		migrate.Delete(spec, "luaValidation")
 		return migrated(field, "removed, it was ignored because %s.lua.validationType is set", base)
-	case lua == nil:
+	case !migrate.IsSet(spec, "lua"):
+		migrate.Delete(spec, "lua")
 		migrate.Replace(spec, "luaValidation", "lua", migrate.Mapping("validationType", value))
 	case lua.Kind != yaml.MappingNode:
 		return errorf(field, "unexpected shape of %s.lua, not migrated", base)
-	case value.Value == string(egv1a1.LuaValidationStrict):
+	case migrate.Scalar(value) == string(egv1a1.LuaValidationStrict):
 		// lua.validationType defaults to Strict, so the result is the same either way.
 		migrate.Delete(spec, "luaValidation")
 		return migrated(field, "removed, %s.lua.validationType defaults to Strict", base)
@@ -165,7 +176,7 @@ func migrateLuaValidation(spec *yaml.Node, base string) migrate.Finding {
 		// precedence, so luaValidation is already ignored in a cluster but not in standalone mode.
 		return errorf(field, "%s.lua is set without validationType, which defaults to Strict and overrides "+
 			"luaValidation: %s; set %s.lua.validationType to the mode you want and remove luaValidation",
-			base, value.Value, base)
+			base, migrate.Scalar(value), base)
 	}
 	return migrated(field, "moved to %s.lua.validationType", base)
 }
@@ -179,20 +190,21 @@ func migrateConsistentHash(ch *yaml.Node, base string) migrate.Finding {
 	if typ == nil {
 		return errorf(base+".type", "unexpected shape, consistentHash has no type, not migrated")
 	}
-	if typ.Value != consistentHashTypeHeader {
+	if t := migrate.Scalar(typ); t != consistentHashTypeHeader {
 		// Only header is set, with another type: it is unused.
 		migrate.Delete(ch, "header")
-		return migrated(base+".header", "removed, it is unused with type %s", typ.Value)
+		return migrated(base+".header", "removed, it is unused with type %s", t)
 	}
-	if header == nil {
+	if !migrate.IsSet(ch, "header") {
 		return errorf(base+".type", "type Header is set without header, set type Headers and headers instead")
 	}
-	typ.Value = string(egv1a1.HeadersConsistentHashType)
+	// Replace the node rather than its value, which may be an anchor shared with other fields.
+	migrate.Replace(ch, "type", "type", migrate.String(string(egv1a1.HeadersConsistentHashType)))
 	switch {
 	case migrate.IsEmpty(headers):
 		migrate.Delete(ch, "headers")
 		migrate.Replace(ch, "header", "headers", migrate.Sequence(header))
-	case headers.Kind == yaml.SequenceNode:
+	case migrate.Resolve(headers).Kind == yaml.SequenceNode:
 		// Headers is unused with type Header; only header is hashed today.
 		migrate.Delete(ch, "headers")
 		migrate.Replace(ch, "header", "headers", migrate.Sequence(header))
@@ -220,14 +232,14 @@ func migrateTelemetryHost(sink *yaml.Node, base string) migrate.Finding {
 		return migrated(field, "removed host and port, they were ignored because %s.backendRefs is set", base)
 	}
 
-	m := serviceHost.FindStringSubmatch(host.Value)
+	m := serviceHost.FindStringSubmatch(migrate.Scalar(host))
 	if m == nil {
 		kind := "fqdn"
-		if net.ParseIP(host.Value) != nil {
+		if net.ParseIP(migrate.Scalar(host)) != nil {
 			kind = "ip"
 		}
 		return errorf(field, "host %s:%d is not a Service DNS name, not migrated: set backendRefs to a Service, "+
-			"or to a Backend with an %s endpoint (requires extensionApis.enableBackend)", host.Value, port, kind)
+			"or to a Backend with an %s endpoint (requires extensionApis.enableBackend)", migrate.Scalar(host), port, kind)
 	}
 
 	ref := migrate.Mapping("name", migrate.String(m[1]), "namespace", migrate.String(m[3]), "port", migrate.Int(int64(port)))
@@ -248,11 +260,12 @@ func migrateTelemetryPort(sink *yaml.Node, base string) migrate.Finding {
 	return migrated(field, "removed, it was ignored because %s.backendRefs is set", base)
 }
 
+// telemetryPort returns the port of the telemetry sink, or the CRD default if it isn't set. It
+// decodes the node, so that an alias resolves to the port of its anchor.
 func telemetryPort(sink *yaml.Node) int {
-	if p := migrate.Get(sink, "port"); p != nil {
-		if v, err := strconv.Atoi(p.Value); err == nil {
-			return v
-		}
+	var v int
+	if p := migrate.Get(sink, "port"); migrate.IsSet(sink, "port") && p.Decode(&v) == nil {
+		return v
 	}
 	return defaultTelemetryPort
 }

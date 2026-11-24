@@ -50,7 +50,17 @@ tls:
 			},
 		},
 		{
-			name: "ClientTrafficPolicy without deprecated fields",
+			name: "ClientTrafficPolicy with optional false",
+			kind: "ClientTrafficPolicy",
+			spec: `
+tls:
+  clientValidation:
+    optional: false
+`,
+			want: []string{"spec.tls.clientValidation.optional"},
+		},
+		{
+			name: "ClientTrafficPolicy with null fields",
 			kind: "ClientTrafficPolicy",
 			spec: `
 targetRefs:
@@ -58,37 +68,37 @@ targetRefs:
 enableProxyProtocol: null
 tls:
   clientValidation:
-    optional: false
+    optional: null
 `,
 		},
 		{
-			name: "BackendTrafficPolicy",
-			kind: "BackendTrafficPolicy",
+			name: "aliases",
+			kind: "EnvoyExtensionPolicy",
 			spec: `
-targetRef:
+targetRefs:
+- &target
   name: eg
-compression:
-- type: Gzip
-loadBalancer:
-  type: ConsistentHash
-  consistentHash:
-    type: Header
-    header:
-      name: x-user
+targetRef: *target
+backends:
+- name: a
+  backendSettings:
+    loadBalancer: &lb
+      type: ConsistentHash
+      consistentHash:
+        type: Header
+        header:
+          name: x-user
+- name: b
+  backendSettings:
+    loadBalancer: *lb
 `,
 			want: []string{
-				"spec.compression",
-				"spec.loadBalancer.consistentHash.header",
-				"spec.loadBalancer.consistentHash.type: Header",
+				"spec.backends[0].backendSettings.loadBalancer.consistentHash.header",
+				"spec.backends[0].backendSettings.loadBalancer.consistentHash.type: Header",
+				"spec.backends[1].backendSettings.loadBalancer.consistentHash.header",
+				"spec.backends[1].backendSettings.loadBalancer.consistentHash.type: Header",
 				"spec.targetRef",
 			},
-		},
-		{
-			name: "BackendTrafficPolicy with empty compression",
-			kind: "BackendTrafficPolicy",
-			spec: `
-compression: []
-`,
 		},
 		{
 			name: "SecurityPolicy",
@@ -194,6 +204,8 @@ telemetry:
 				"spec.telemetry.accessLog.settings[0].sinks[0].als.backendRef",
 				"spec.telemetry.accessLog.settings[0].sinks[1].openTelemetry.backendRef",
 				"spec.telemetry.metrics.sinks[0].openTelemetry.port",
+				"spec.telemetry.metrics.sinks[1].openTelemetry.port",
+				"spec.telemetry.metrics.sinks[2].openTelemetry.port",
 				"spec.telemetry.tracing.provider.host",
 			},
 		},
@@ -259,6 +271,7 @@ envoyProxy:
 		"extensionApis.disableLua",
 		"extensionManager.service.host",
 		"extensionManagers[1].service.port",
+		"provider.custom.infrastructure.remote.service.port",
 		"envoyProxy.luaValidation",
 		"envoyProxy.telemetry.tracing.provider.port",
 	}, got)

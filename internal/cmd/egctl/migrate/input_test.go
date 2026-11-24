@@ -101,3 +101,18 @@ func TestCloneAliases(t *testing.T) {
 	Set(cloned, "extra", Bool(true))
 	require.Nil(t, Get(original, "extra"))
 }
+
+func TestYAMLFilesSymlinkedDir(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "manifests")
+	require.NoError(t, os.MkdirAll(filepath.Join(target, "sub"), 0o750))
+	for _, f := range []string{"a.yaml", "sub/b.yml", "c.txt"} {
+		require.NoError(t, os.WriteFile(filepath.Join(target, f), []byte("kind: A\n"), 0o600))
+	}
+	link := filepath.Join(dir, "link")
+	require.NoError(t, os.Symlink(target, link))
+
+	files, err := yamlFiles(link)
+	require.NoError(t, err)
+	require.Equal(t, []string{filepath.Join(link, "a.yaml"), filepath.Join(link, "sub", "b.yml")}, files)
+}

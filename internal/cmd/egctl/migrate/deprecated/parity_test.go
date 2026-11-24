@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,8 +24,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/deprecation"
 )
 
-// TestDetectParity checks that the YAML detection finds the same deprecated fields as
-// internal/deprecation, which sets the DeprecatedField status condition, on every golden input.
+// TestDetectParity checks that the YAML detection finds the deprecated fields that
+// internal/deprecation, which sets the DeprecatedField status condition, finds on every golden input.
+// The YAML detection also reports fields set to a value the status ignores, see presenceOnly.
 // Remove it together with the deprecated fields.
 func TestDetectParity(t *testing.T) {
 	inputs, err := filepath.Glob("../../testdata/migrate/deprecated/*.in.yaml")
@@ -48,10 +50,24 @@ func TestDetectParity(t *testing.T) {
 			if typed == nil {
 				continue
 			}
-			got := slices.Sorted(maps.Keys(detect(kind, root)))
-			require.Equal(t, typed, got, "%s: document %d (%s)", in, i+1, kind)
+			got := detect(kind, root)
+			for _, path := range typed {
+				require.Contains(t, got, path, "%s: document %d (%s)", in, i+1, kind)
+			}
+			for path := range got {
+				if !slices.Contains(typed, path) {
+					require.True(t, presenceOnly(path), "%s: document %d (%s): unexpected %s", in, i+1, kind, path)
+				}
+			}
 		}
 	}
+}
+
+// presenceOnly reports whether path is a field the YAML detection reports whenever it is set, and
+// the status only for some values: clientValidation.optional (only true), and the telemetry port
+// (not 4317, its CRD default).
+func presenceOnly(path string) bool {
+	return strings.HasSuffix(path, ".clientValidation.optional") || strings.HasSuffix(path, ".port")
 }
 
 func migrateKind(root *yaml.Node) string {

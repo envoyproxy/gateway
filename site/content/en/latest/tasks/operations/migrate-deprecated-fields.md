@@ -34,7 +34,7 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-  enableProxyProtocol: true # behind an NLB
+  enableProxyProtocol: true  # behind an NLB
   headers:
     preserveXRequestID: true
 ```
@@ -53,7 +53,7 @@ spec:
   - group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-  proxyProtocol: {} # behind an NLB
+  proxyProtocol: {}  # behind an NLB
   headers:
     requestID: PreserveOrGenerate
 ```

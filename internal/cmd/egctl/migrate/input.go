@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -133,7 +134,47 @@ func (d *document) text() ([]byte, error) {
 	if err := enc.Close(); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	return padLineComments(buf.Bytes(), d.node), nil
+}
+
+// padLineComments puts two spaces before each trailing comment of the encoded node n. The encoder
+// writes one, which yamllint and most YAML style guides reject.
+//
+// The comments are matched to output lines in document order, so a block scalar line that happens
+// to end with the same text isn't changed.
+func padLineComments(data []byte, n *yaml.Node) []byte {
+	var comments []string
+	var walk func(*yaml.Node)
+	walk = func(n *yaml.Node) {
+		if n.LineComment != "" {
+			comments = append(comments, n.LineComment)
+		}
+		for _, c := range n.Content {
+			walk(c)
+		}
+	}
+	walk(n)
+	if len(comments) == 0 {
+		return data
+	}
+
+	lines := bytes.SplitAfter(data, []byte("\n"))
+	for i, line := range lines {
+		if len(comments) == 0 {
+			break
+		}
+		body := bytes.TrimRight(line, "\n")
+		suffix := " " + comments[0]
+		if !bytes.HasSuffix(body, []byte(suffix)) || len(body) == len(suffix) {
+			continue
+		}
+		code := body[:len(body)-len(suffix)]
+		if !bytes.HasSuffix(code, []byte(" ")) {
+			lines[i] = slices.Concat(code, []byte("  "+comments[0]), line[len(body):])
+		}
+		comments = comments[1:]
+	}
+	return bytes.Join(lines, nil)
 }
 
 var (
@@ -268,13 +309,23 @@ func yamlFiles(p string) ([]string, error) {
 	if !info.IsDir() {
 		return []string{p}, nil
 	}
+	// WalkDir doesn't follow a symlink at its root, so walk its target, and report the files under
+	// the path as given.
+	root, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		return nil, err
+	}
 	var files []string
-	err = filepath.WalkDir(p, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if !d.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
-			files = append(files, path)
+			rel, err := filepath.Rel(root, path)
+			if err != nil {
+				return err
+			}
+			files = append(files, filepath.Join(p, rel))
 		}
 		return nil
 	})
