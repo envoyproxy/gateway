@@ -51,6 +51,11 @@ func Scalar(n *yaml.Node) string {
 	return ""
 }
 
+// Has reports whether key is present, including when its value is null.
+func Has(m *yaml.Node, key string) bool {
+	return Get(m, key) != nil
+}
+
 // IsSet reports whether key is set to a non-null value in the mapping node m.
 func IsSet(m *yaml.Node, key string) bool {
 	v := Resolve(Get(m, key))

@@ -70,6 +70,7 @@ tls:
   clientValidation:
     optional: null
 `,
+			want: []string{"spec.enableProxyProtocol", "spec.tls.clientValidation.optional"},
 		},
 		{
 			name: "aliases",

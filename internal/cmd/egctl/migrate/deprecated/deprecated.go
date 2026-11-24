@@ -108,8 +108,30 @@ func migrateEnvoyGatewayResource(obj *migrate.Object) ([]migrate.Finding, error)
 		return nil, nil
 	}
 
+	// Null deprecated keys have no value to transfer. Remove them before applying rules,
+	// keeping replacement values intact. Repeat because a host finding can hide its port.
+	var findings []migrate.Finding
+	for {
+		removed := false
+		for _, path := range slices.Sorted(maps.Keys(detect(obj.Kind, obj.Root))) {
+			i := strings.LastIndex(path, ".")
+			parent, key := path[:i], path[i+1:]
+			n := migrate.Lookup(obj.Root, parent)
+			if migrate.Has(n, key) && !migrate.IsSet(n, key) {
+				migrate.Delete(n, key)
+				findings = append(findings, migrated(path, "removed null deprecated field"))
+				removed = true
+			}
+		}
+		if !removed {
+			break
+		}
+	}
 	fields := detect(obj.Kind, obj.Root)
-	findings, unmigrated := rewrite(obj.Root, slices.Collect(maps.Keys(fields)))
+	rewritten, unmigrated := rewrite(obj.Root, slices.Collect(maps.Keys(fields)))
+
+	findings = append(findings, rewritten...)
+	slices.SortStableFunc(findings, func(a, b migrate.Finding) int { return cmp.Compare(a.Field, b.Field) })
 
 	// Safety net: every field that was reported as migrated must be gone.
 	after := detect(obj.Kind, obj.Root)

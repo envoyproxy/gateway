@@ -133,7 +133,7 @@ The `host` and `port` of the tracing provider, the OpenTelemetry metrics sink an
 access log sink in EnvoyProxy are replaced by `backendRefs`.
 
 If `host` is the DNS name of a Service (`<service>.<namespace>.svc` or
-`<service>.<namespace>.svc.cluster.local`), it is migrated to a `backendRefs` entry for that Service.
+`<service>.<namespace>.svc.<cluster-domain>`, including custom cluster domains), it is migrated to a `backendRefs` entry for that Service.
 Envoy then sends to the Service endpoints instead of resolving its DNS name. A reference to a
 Service in another namespace needs a [ReferenceGrant][] that allows the EnvoyProxy to reference it.
 

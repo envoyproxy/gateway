@@ -239,22 +239,14 @@ func seqStyle(data []byte) (compact, ok bool) {
 }
 
 func newObject(root *yaml.Node, source string) *Object {
-	obj := &Object{Root: root, Source: source}
-	if v := Get(root, "apiVersion"); v != nil {
-		obj.APIVersion = v.Value
+	md := GetMapping(root, "metadata")
+	return &Object{
+		Root: root, Source: source,
+		APIVersion: Scalar(Get(root, "apiVersion")),
+		Kind:       Scalar(Get(root, "kind")),
+		Name:       Scalar(Get(md, "name")),
+		Namespace:  Scalar(Get(md, "namespace")),
 	}
-	if v := Get(root, "kind"); v != nil {
-		obj.Kind = v.Value
-	}
-	if md := GetMapping(root, "metadata"); md != nil {
-		if v := Get(md, "name"); v != nil {
-			obj.Name = v.Value
-		}
-		if v := Get(md, "namespace"); v != nil {
-			obj.Namespace = v.Value
-		}
-	}
-	return obj
 }
 
 func loadFiles(paths []string) ([]*input, error) {

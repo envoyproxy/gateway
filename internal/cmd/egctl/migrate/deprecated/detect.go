@@ -69,7 +69,7 @@ func detect(kind string, root *yaml.Node) fields {
 		detectClientTrafficPolicy(fs, spec)
 	case egv1a1.KindBackendTrafficPolicy:
 		detectTargetRef(fs, spec)
-		if c := migrate.Resolve(migrate.Get(spec, "compression")); c != nil && c.Kind == yaml.SequenceNode && len(c.Content) > 0 {
+		if migrate.Has(spec, "compression") {
 			fs.scheduled("spec.compression", "spec.compressor")
 		}
 		detectLoadBalancer(fs, spec, "spec")
@@ -90,23 +90,23 @@ func detect(kind string, root *yaml.Node) fields {
 }
 
 func detectTargetRef(fs fields, spec *yaml.Node) {
-	if migrate.IsSet(spec, "targetRef") {
+	if migrate.Has(spec, "targetRef") {
 		fs.scheduled("spec.targetRef", "spec.targetRefs")
 	}
 }
 
 func detectClientTrafficPolicy(fs fields, spec *yaml.Node) {
 	detectTargetRef(fs, spec)
-	if migrate.IsSet(spec, "enableProxyProtocol") {
+	if migrate.Has(spec, "enableProxyProtocol") {
 		fs.scheduled("spec.enableProxyProtocol", "spec.proxyProtocol")
 	}
-	if migrate.IsSet(migrate.GetMapping(spec, "headers"), "preserveXRequestID") {
+	if migrate.Has(migrate.GetMapping(spec, "headers"), "preserveXRequestID") {
 		fs.scheduled("spec.headers.preserveXRequestID", "spec.headers.requestID")
 	}
 	// optional is reported even when false, which is the default: it is removed from the API, so a
 	// manifest that still sets it fails strict field validation. The status condition only reports
 	// true, since false isn't serialized and has no effect.
-	if migrate.IsSet(migrate.Lookup(spec, "tls.clientValidation"), "optional") {
+	if migrate.Has(migrate.Lookup(spec, "tls.clientValidation"), "optional") {
 		fs["spec.tls.clientValidation.optional"] = field{replacement: "spec.tls.clientValidation.mode"}
 	}
 }
@@ -136,14 +136,14 @@ func detectBackendCluster(fs fields, cluster *yaml.Node, path string, isSink boo
 	}
 	if isSink {
 		switch {
-		case migrate.IsSet(cluster, "host"):
+		case migrate.Has(cluster, "host"):
 			fs.scheduled(path+".host", path+".backendRefs")
-		case migrate.IsSet(cluster, "port"):
+		case migrate.Has(cluster, "port"):
 			// The host warning covers the port when both are set.
 			fs.scheduled(path+".port", path+".backendRefs")
 		}
 	}
-	if migrate.IsSet(cluster, "backendRef") {
+	if migrate.Has(cluster, "backendRef") {
 		fs.scheduled(path+".backendRef", path+".backendRefs")
 	}
 	detectLoadBalancer(fs, migrate.GetMapping(cluster, "backendSettings"), path+".backendSettings")
@@ -160,7 +160,7 @@ func detectLoadBalancer(fs fields, settings *yaml.Node, path string) {
 	if migrate.Scalar(migrate.Get(ch, "type")) == consistentHashTypeHeader {
 		fs.scheduled(path+".type: Header", path+".type: Headers")
 	}
-	if migrate.IsSet(ch, "header") {
+	if migrate.Has(ch, "header") {
 		fs.scheduled(path+".header", path+".headers")
 	}
 }
@@ -168,7 +168,7 @@ func detectLoadBalancer(fs fields, settings *yaml.Node, path string) {
 // detectEnvoyProxySpec records the deprecated fields of the EnvoyProxy spec at path, which is
 // "spec" for an EnvoyProxy resource and "envoyProxy" for the EnvoyGateway default.
 func detectEnvoyProxySpec(fs fields, spec *yaml.Node, path string) {
-	if migrate.IsSet(spec, "luaValidation") {
+	if migrate.Has(spec, "luaValidation") {
 		fs[path+".luaValidation"] = field{replacement: path + ".lua.validationType"}
 	}
 	telemetry := migrate.GetMapping(spec, "telemetry")
@@ -196,7 +196,7 @@ type warning struct {
 // detectEnvoyGateway returns the deprecated fields used in the EnvoyGateway configuration eg.
 func detectEnvoyGateway(eg *yaml.Node) []warning {
 	var warnings []warning
-	if migrate.IsSet(migrate.GetMapping(eg, "extensionApis"), "disableLua") {
+	if migrate.Has(migrate.GetMapping(eg, "extensionApis"), "disableLua") {
 		warnings = append(warnings, warning{"extensionApis.disableLua", "disableLua is deprecated, use enableLua instead"})
 	}
 	warnings = append(warnings, detectExtensionService(migrate.Lookup(eg, "extensionManager.service"), "extensionManager.service")...)
@@ -226,11 +226,11 @@ func detectExtensionService(svc *yaml.Node, path string) []warning {
 	if svc == nil || svc.Kind != yaml.MappingNode {
 		return nil
 	}
-	if migrate.IsSet(svc, "host") {
+	if migrate.Has(svc, "host") {
 		return []warning{{path + ".host", fmt.Sprintf("%[1]s.host and %[1]s.port are deprecated and will be removed in %[2]s, "+
 			"use %[1]s.fqdn, %[1]s.ip or %[1]s.unix instead", path, removalRelease)}}
 	}
-	if migrate.IsSet(svc, "port") {
+	if migrate.Has(svc, "port") {
 		return []warning{{path + ".port", fmt.Sprintf("%[1]s.port is deprecated and will be removed in %[2]s, "+
 			"use the port of %[1]s.fqdn or %[1]s.ip instead", path, removalRelease)}}
 	}

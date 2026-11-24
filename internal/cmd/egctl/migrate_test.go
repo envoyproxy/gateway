@@ -325,3 +325,151 @@ func TestMigrateDeprecatedFileBoundary(t *testing.T) {
 		})
 	}
 }
+
+// These inputs previously passed check-only without migrating deprecated fields.
+func TestMigrateDeprecatedReviewRegressions(t *testing.T) {
+	tests := []struct {
+		name, input, field string
+		want               any
+	}{
+		{
+			name: "nested typed list",
+			input: `apiVersion: v1
+kind: List
+items:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicyList
+  items:
+  - metadata:
+      name: policy
+    spec:
+      targetRef: {name: eg}
+`,
+			field: "items[0].items[0].spec.targetRefs[0].name",
+			want:  "eg",
+		},
+		{
+			name: "aliased identity",
+			input: `metadata:
+  annotations:
+    version: &version gateway.envoyproxy.io/v1alpha1
+    kind: &kind ClientTrafficPolicy
+    name: &name policy
+    namespace: &namespace default
+  name: *name
+  namespace: *namespace
+apiVersion: *version
+kind: *kind
+spec:
+  targetRef: {name: eg}
+`,
+			field: "spec.targetRefs[0].name",
+			want:  "eg",
+		},
+		{
+			name: "null policy fields",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+spec:
+  targetRef: null
+  targetRefs: [{name: eg}]
+  enableProxyProtocol: null
+  headers:
+    preserveXRequestID: null
+    requestID: PreserveOrGenerate
+  tls:
+    clientValidation:
+      optional: null
+      mode: RequireAndVerify
+`,
+			field: "spec",
+			want: map[string]any{
+				"targetRefs": []any{map[string]any{"name": "eg"}},
+				"headers":    map[string]any{"requestID": "PreserveOrGenerate"},
+				"tls":        map[string]any{"clientValidation": map[string]any{"mode": "RequireAndVerify"}},
+			},
+		},
+		{
+			name: "null proxy fields",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+spec:
+  luaValidation: null
+  telemetry:
+    tracing:
+      provider:
+        host: null
+        port: null
+        backendRef: null
+`,
+			field: "spec",
+			want: map[string]any{"telemetry": map[string]any{
+				"tracing": map[string]any{"provider": map[string]any{}},
+			}},
+		},
+		{
+			name: "null compression and header",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+spec:
+  compression: null
+  loadBalancer:
+    consistentHash:
+      type: SourceIP
+      header: null
+`,
+			field: "spec",
+			want: map[string]any{"loadBalancer": map[string]any{
+				"consistentHash": map[string]any{"type": "SourceIP"},
+			}},
+		},
+		{
+			name: "custom cluster domain",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+spec:
+  telemetry:
+    tracing:
+      provider:
+        host: otel.monitoring.svc.corp.internal.
+        port: 4318
+`,
+			field: "spec.telemetry.tracing.provider.backendRefs",
+			want:  []any{map[string]any{"name": "otel", "namespace": "monitoring", "port": 4318}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			file := filepath.Join(t.TempDir(), "input.yaml")
+			require.NoError(t, os.WriteFile(file, []byte(tt.input), 0o600))
+			out, _, err := runMigrate(t, "-f", file, "--mode", "check-only")
+			require.Equal(t, migrate.ExitCodeWouldChange, exitCode(err), "%v", err)
+			require.Empty(t, out)
+			original, err := os.ReadFile(file)
+			require.NoError(t, err)
+			require.Equal(t, tt.input, string(original))
+
+			out, report, err := runMigrate(t, "-f", file)
+			require.NoError(t, err)
+			if tt.name == "aliased identity" {
+				require.Contains(t, report, "policy")
+				require.NotContains(t, report, "*kind")
+			}
+			var doc yaml.Node
+			require.NoError(t, yaml.Unmarshal([]byte(out), &doc))
+			got := migrate.Lookup(doc.Content[0], tt.field)
+			require.NotNil(t, got)
+			var value any
+			require.NoError(t, got.Decode(&value))
+			require.Equal(t, tt.want, value)
+
+			_, _, err = runMigrate(t, "-f", file, "--mode", "in-place")
+			require.NoError(t, err)
+			data, err := os.ReadFile(file)
+			require.NoError(t, err)
+			require.Equal(t, out, string(data))
+			_, _, err = runMigrate(t, "-f", file, "--mode", "check-only")
+			require.NoError(t, err)
+		})
+	}
+}

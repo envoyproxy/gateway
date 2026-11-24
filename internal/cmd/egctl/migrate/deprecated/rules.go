@@ -215,7 +215,7 @@ func migrateConsistentHash(ch *yaml.Node, base string) migrate.Finding {
 }
 
 // serviceHost matches the in-cluster DNS name of a Service.
-var serviceHost = regexp.MustCompile(`^([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.svc(\.cluster\.local)?\.?$`)
+var serviceHost = regexp.MustCompile(`^([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.svc(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\.?$`)
 
 // migrateTelemetryHost rewrites the deprecated host and port of a telemetry sink to backendRefs, if
 // host is the DNS name of a Service. Other hosts need a Backend resource or a Service, which is up
