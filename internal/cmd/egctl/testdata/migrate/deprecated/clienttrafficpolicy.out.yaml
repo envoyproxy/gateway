@@ -1,0 +1,68 @@
+# Every deprecated ClientTrafficPolicy field.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: all-deprecated
+  namespace: default
+spec:
+  # Attach to the edge gateway.
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  proxyProtocol: {} # behind an NLB
+  headers:
+    requestID: PreserveOrGenerate
+  tls:
+    clientValidation:
+      mode: VerifyIfGiven
+      caCertificateRefs:
+      - name: ca
+---
+# False values are the defaults, so they're just dropped.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: false-values
+  namespace: default
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  headers: {}
+---
+# The new fields take precedence, so the old ones are dropped.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: new-fields-set
+  namespace: default
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  proxyProtocol:
+    optional: true
+  headers:
+    requestID: Generate
+  tls:
+    clientValidation:
+      mode: RequireAndVerify
+---
+# targetRef and targetRefs disagree: only targetRef is used today, so it's an error.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: target-conflict
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: other

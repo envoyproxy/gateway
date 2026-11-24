@@ -1,0 +1,66 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: compression
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  # compressor skips an entry without its settings block, so an empty one is added.
+  compressor:
+    - type: Gzip
+      gzip: {}
+    - type: Brotli
+      brotli:
+        quality: 5
+    - type: Zstd
+      zstd: {}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: compressor-set
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  compressor:
+    - type: Brotli
+      brotli: {}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: consistent-hash
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  loadBalancer:
+    type: ConsistentHash
+    consistentHash:
+      type: Headers
+      headers:
+        - name: x-user # tenant id
+      tableSize: 524287
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: unused-header
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  loadBalancer:
+    type: ConsistentHash
+    consistentHash:
+      type: SourceIP

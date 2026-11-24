@@ -41,25 +41,6 @@ const (
 	LuaConfigMapKey = "lua"
 )
 
-// deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]status.DeprecatedField {
-	deprecatedFields := make(map[string]status.DeprecatedField)
-	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
-	}
-	for i := range policy.Spec.ExtProc {
-		deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, fmt.Sprintf("spec.extProc[%d]", i),
-			&policy.Spec.ExtProc[i].BackendCluster, nil)
-	}
-	for i, backend := range policy.Spec.Backends {
-		if backend.BackendSettings != nil {
-			deprecation.AddDeprecatedLoadBalancerFields(deprecatedFields,
-				fmt.Sprintf("spec.backends[%d].backendSettings.loadBalancer", i), backend.BackendSettings.LoadBalancer)
-		}
-	}
-	return deprecatedFields
-}
-
 func validateDynamicModuleRemoteURL(rawURL string) error {
 	parsedURL, err := url.ParseRequestURI(rawURL)
 	if err != nil {
@@ -508,7 +489,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -605,7 +586,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 
@@ -679,7 +660,7 @@ func (t *Translator) processEnvoyExtensionPolicyForListenerSet(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -708,7 +689,7 @@ func (t *Translator) processEnvoyExtensionPolicyForListenerSet(
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 
@@ -785,7 +766,7 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -811,7 +792,7 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInEnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.EnvoyExtensionPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 

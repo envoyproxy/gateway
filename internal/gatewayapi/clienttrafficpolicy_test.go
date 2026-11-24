@@ -47,36 +47,6 @@ func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 	}
 }
 
-func TestDeprecatedFieldsUsedInClientTrafficPolicy(t *testing.T) {
-	trueVal := new(bool)
-	*trueVal = true
-
-	tests := []struct {
-		name         string
-		policy       *egv1a1.ClientTrafficPolicy
-		wantKeys     []string
-		wantContains map[string]string // substring checks on values
-	}{
-		{
-			name:     "no deprecated fields",
-			policy:   &egv1a1.ClientTrafficPolicy{},
-			wantKeys: nil,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := deprecatedFieldsUsedInClientTrafficPolicy(tc.policy)
-			require.Len(t, got, len(tc.wantKeys))
-			for _, k := range tc.wantKeys {
-				require.Contains(t, got, k)
-			}
-			for k, substr := range tc.wantContains {
-				require.Contains(t, got[k], substr)
-			}
-		})
-	}
-}
-
 func TestHttp1BehaviorChangeWarningMessage(t *testing.T) {
 	trueVal := new(bool)
 	*trueVal = true

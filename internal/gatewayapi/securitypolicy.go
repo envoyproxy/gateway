@@ -74,33 +74,6 @@ const (
 
 var newOIDCDiscoveryHTTPClient = newGuardedOIDCDiscoveryHTTPClient
 
-// deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]status.DeprecatedField {
-	deprecatedFields := make(map[string]status.DeprecatedField)
-	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
-	}
-	if policy.Spec.ExtAuth != nil {
-		if policy.Spec.ExtAuth.GRPC != nil {
-			deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, "spec.extAuth.grpc", &policy.Spec.ExtAuth.GRPC.BackendCluster, nil)
-		}
-		if policy.Spec.ExtAuth.HTTP != nil {
-			deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, "spec.extAuth.http", &policy.Spec.ExtAuth.HTTP.BackendCluster, nil)
-		}
-	}
-	if policy.Spec.JWT != nil {
-		for i := range policy.Spec.JWT.Providers {
-			if jwks := policy.Spec.JWT.Providers[i].RemoteJWKS; jwks != nil {
-				deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, fmt.Sprintf("spec.jwt.providers[%d].remoteJWKS", i), &jwks.BackendCluster, nil)
-			}
-		}
-	}
-	if policy.Spec.OIDC != nil {
-		deprecation.AddDeprecatedBackendClusterFields(deprecatedFields, "spec.oidc.provider", &policy.Spec.OIDC.Provider.BackendCluster, nil)
-	}
-	return deprecatedFields
-}
-
 func (t *Translator) ProcessSecurityPolicies(
 	securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
@@ -536,7 +509,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -564,7 +537,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 			policy.Generation,
 			status.Error2ConditionMsg(fmt.Errorf("%s: %w", errMsg, err)),
 		)
-		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -666,7 +639,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 
@@ -745,7 +718,7 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -811,7 +784,7 @@ func (t *Translator) processSecurityPolicyForListenerSet(
 	}
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 }
@@ -853,7 +826,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -916,7 +889,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 	}
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInSecurityPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.SecurityPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 }
