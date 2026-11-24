@@ -118,10 +118,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-gateway
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       responseOverride:
         - match:
             statusCodes:
@@ -161,10 +161,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route-1
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       responseOverride:
         - match:
             statusCodes:
@@ -194,10 +194,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route-2
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-2
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-2
       responseOverride:
         - match:
             statusCodes:
@@ -230,16 +230,47 @@ backendTrafficPolicies:
             contentType: application/json
             body:
               inline: '{"error":"combined match"}'
+        - match:
+            requestHeaders:
+              - name: X-Client-Type
+                value:
+                  type: Exact
+                  value: browser
+          response:
+            contentType: text/plain
+            body:
+              inline: "matched request header"
+        - match:
+            statusCodes:
+              - value: 502
+            requestHeaders:
+              - name: X-Client-Type
+                value:
+                  type: Prefix
+                  value: "mobile-"
+              - name: X-Tenant
+                value:
+                  type: RegularExpression
+                  value: "^acme-.*$"
+            responseHeaders:
+              - name: X-Error-Type
+                value:
+                  type: Exact
+                  value: upstream-timeout
+          response:
+            contentType: application/json
+            body:
+              inline: '{"error":"combined request and response match"}'
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
     metadata:
       namespace: default
       name: policy-for-route-3
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-3
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-3
       responseOverride:
         - match:
             statusCodes:

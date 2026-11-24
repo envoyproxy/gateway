@@ -116,6 +116,13 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 
 	logger.Info("received shutdown ready request")
 
+	// Allow the readiness wait and final response to outlast the server write timeout.
+	if err := http.NewResponseController(w).SetWriteDeadline(startTime.Add(readyTimeout + 5*time.Second)); err != nil {
+		logger.Error(err, "error setting shutdown readiness write deadline")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	// Poll for shutdown readiness
 	for {
 		// Check if ready timeout is exceeded
@@ -155,14 +162,17 @@ func Shutdown(healthCheckFailureDelay, drainTimeout, minDrainDuration time.Durat
 	logger.Info(fmt.Sprintf("initiating drain with %.0f second minimum drain period and %.0f second timeout",
 		minDrainDuration.Seconds(), drainTimeout.Seconds()))
 
+	// Start the listener drain sequence, which honors the Envoy --drain-strategy. With the gradual
+	// strategy, listeners use the MODIFY_ONLY drain type, so failing health checks does not
+	// override the drain strategy.
+	if err := postEnvoyAdminAPI("drain_listeners?graceful&skip_exit"); err != nil {
+		logger.Error(err, "error starting listener drain")
+	}
+
 	if healthCheckFailureDelay > 0 {
-		if err := postEnvoyAdminAPI("drain_listeners?graceful&skip_exit"); err != nil {
-			logger.Error(err, "error starting listener drain")
-		}
 		logger.Info(fmt.Sprintf("delaying health check failure by %.0f seconds", healthCheckFailureDelay.Seconds()))
 		healthCheckFailurePending = true
 	} else {
-		// Failing active health checks also starts Envoy listener drain.
 		failActiveHealthChecks(postEnvoyAdminAPI)
 	}
 

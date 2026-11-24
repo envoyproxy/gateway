@@ -1,0 +1,70 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+  ai:
+    enabled: true
+  disabledExtension:
+    enabled: false
+extensionManagersMap:
+  # Renders second: higher order.
+  ai-extension:
+    order: 20
+    enabled: "{{ .Values.global.ai.enabled }}"
+    hooks:
+      xdsTranslator:
+        post:
+          - Translation
+    service:
+      fqdn:
+        hostname: ai-extension.ai-system.svc.cluster.local
+        port: 1063
+  # Renders first.
+  waf-extension:
+    order: 10
+    policyResources:
+      - group: example.io
+        version: v1alpha1
+        kind: WAFPolicy
+    hooks:
+      xdsTranslator:
+        post:
+          - Translation
+    service:
+      fqdn:
+        hostname: waf-extension
+        port: 18001
+  # Left out: its template renders false.
+  templated-off:
+    enabled: "{{ .Values.global.disabledExtension.enabled }}"
+    hooks:
+      xdsTranslator:
+        post:
+          - Route
+    service:
+      fqdn:
+        hostname: templated-off
+        port: 5005
+  # Left out: disabled with a bool.
+  bool-off:
+    enabled: false
+    hooks:
+      xdsTranslator:
+        post:
+          - Route
+    service:
+      fqdn:
+        hostname: bool-off
+        port: 5005
+  # Renders first: lowest order. Names may contain "/".
+  team/ext:
+    order: 5
+    hooks:
+      xdsTranslator:
+        post:
+          - Route
+    service:
+      fqdn:
+        hostname: team-ext
+        port: 5005

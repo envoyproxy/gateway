@@ -488,10 +488,10 @@ metadata:
   name: enable-late-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     lateResponseHeaders:
       add:
@@ -548,10 +548,10 @@ metadata:
   name: enable-late-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     lateResponseHeaders:
       add:
@@ -634,10 +634,10 @@ metadata:
   name: default-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     lateResponseHeaders:
       addIfAbsent:
@@ -681,10 +681,10 @@ metadata:
   name: default-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     lateResponseHeaders:
       addIfAbsent:
@@ -743,6 +743,6 @@ $ curl -vvv "http://${GATEWAY_HOST}/get" \
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[req_filter]: https://gateway-api.sigs.k8s.io/reference/api-spec/1.4/spec/#httpheaderfilter
+[req_filter]: {{<gateway-api-spec>}}#httpheaderfilter
 [Gateway]: https://gateway-api.sigs.k8s.io/reference/api-types/gateway/
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy

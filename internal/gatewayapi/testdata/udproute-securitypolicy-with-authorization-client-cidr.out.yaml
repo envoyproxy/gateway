@@ -263,8 +263,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 10.10.6.0/24
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: UDPRoute
       name: udpr-app-baz
       sectionName: rule-baz
@@ -282,11 +282,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -302,8 +297,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 10.10.2.0/24
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: UDPRoute
       name: udpr-app-bar
   status:
@@ -320,11 +315,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -340,8 +330,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 10.10.3.0/24
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: UDPRoute
       name: udpr-app-bar
   status:
@@ -374,8 +364,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 10.10.1.0/24
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-udp
       sectionName: foo
@@ -393,11 +383,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -413,8 +398,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 10.10.4.0/24
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-udp
       sectionName: bogus
@@ -447,8 +432,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 10.10.0.0/24
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-udp
   status:
@@ -471,11 +456,6 @@ securityPolicies:
         reason: Overridden
         status: "True"
         type: Overridden
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy

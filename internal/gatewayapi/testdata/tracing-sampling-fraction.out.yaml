@@ -201,8 +201,10 @@ infraIR:
                 denominator: 100
                 numerator: 30
               provider:
-                host: otel-collector.monitoring.svc.cluster.local
-                port: 4317
+                backendRefs:
+                - name: otel-collector
+                  namespace: monitoring
+                  port: 4317
                 type: OpenTelemetry
               samplingFraction:
                 denominator: 100
@@ -366,7 +368,7 @@ xdsIR:
       path: /ready
       port: 19003
     tracing:
-      authority: otel-collector.monitoring.svc.cluster.local
+      authority: otel-collector.monitoring.svc
       clientSamplingRate: 20
       destination:
         metadata:
@@ -375,17 +377,23 @@ xdsIR:
           namespace: envoy-gateway
         name: tracing
         settings:
-        - addressType: FQDN
+        - addressType: IP
           endpoints:
-          - host: otel-collector.monitoring.svc.cluster.local
+          - host: 8.7.6.5
             port: 4317
+          metadata:
+            kind: Service
+            name: otel-collector
+            namespace: monitoring
+            sectionName: "4317"
           name: tracing/backend/-1
           protocol: GRPC
-          weight: 1
       overallSamplingRate: 30
       provider:
-        host: otel-collector.monitoring.svc.cluster.local
-        port: 4317
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
         type: OpenTelemetry
       samplingRate: 1
       serviceName: envoy-gateway-class

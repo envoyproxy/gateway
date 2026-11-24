@@ -1,0 +1,39 @@
+xds:
+  envoy-gateway-system/eg:
+    '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+    dynamicRouteConfigs:
+    - routeConfig:
+        '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+        ignorePortInHostMatching: true
+        name: envoy-gateway-system/eg/http
+    - routeConfig:
+        '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+        ignorePortInHostMatching: true
+        name: envoy-gateway-system/eg/apps/apps/app
+        virtualHosts:
+        - domains:
+          - app.example.com
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: Gateway
+                  name: eg
+                  namespace: envoy-gateway-system
+                  sectionName: app
+          name: envoy-gateway-system/eg/apps/apps/app/app_example_com
+          routes:
+          - match:
+              prefix: /
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: HTTPRoute
+                    name: app
+                    namespace: apps
+            name: httproute/apps/app/rule/0/match/0/app_example_com
+            route:
+              cluster: httproute/apps/app/rule/0
+              upgradeConfigs:
+              - upgradeType: websocket

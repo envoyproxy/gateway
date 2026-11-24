@@ -8,8 +8,8 @@ backendTrafficPolicies:
     loadBalancer:
       type: LeastRequest
     mergeType: StrategicMerge
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: TCPRoute
       name: tcp-app-1
   status:
@@ -25,11 +25,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - ancestorRef:
         group: gateway.networking.k8s.io
@@ -43,11 +38,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1

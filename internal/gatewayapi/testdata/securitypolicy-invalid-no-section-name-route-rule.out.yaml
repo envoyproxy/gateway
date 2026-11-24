@@ -106,8 +106,8 @@ securityPolicies:
     cors:
       allowHeaders:
       - x-httproute-1
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: not-found-section-name

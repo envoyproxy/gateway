@@ -43,7 +43,7 @@
                     timeout: 10s
                     uri: https://localhost/jwt/public-key/jwks.json
             requirementMap:
-              example_94e1b42a04d0a923:
+              default/policy:
                 providerName: example_ca5e5bd0966b6a1e
         - name: envoy.filters.http.router
           typedConfig:

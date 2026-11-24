@@ -9,8 +9,8 @@ backendTrafficPolicies:
       dnsRefreshRate: 5s
       lookupFamily: IPv6
       respectDnsTtl: false
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
   status:
@@ -27,11 +27,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -101,8 +96,8 @@ envoyExtensionPolicies:
         dns:
           dnsRefreshRate: 5s
           lookupFamily: IPv4AndIPv6
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -119,11 +114,6 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -311,8 +301,8 @@ securityPolicies:
           dns:
             dnsRefreshRate: 30s
             lookupFamily: IPv4Preferred
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -328,11 +318,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:

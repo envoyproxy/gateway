@@ -51,8 +51,6 @@ tracing:
       tcp:
         connectTimeout: 15s
   provider:
-    host: otel-collector.monitoring.svc.cluster.local
-    port: 4317
     type: OpenTelemetry
 http:
   - name: "first-listener"

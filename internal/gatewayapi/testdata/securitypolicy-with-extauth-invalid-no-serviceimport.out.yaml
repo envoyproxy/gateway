@@ -158,8 +158,8 @@ securityPolicies:
         - header1
         - header2
         path: /auth
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -175,11 +175,6 @@ securityPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:

@@ -8,8 +8,8 @@ backendTrafficPolicies:
     dns:
       dnsRefreshRate: 1s
       lookupFamily: IPv4AndIPv6
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
   status:
@@ -26,11 +26,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1

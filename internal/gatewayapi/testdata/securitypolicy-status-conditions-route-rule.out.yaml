@@ -114,8 +114,8 @@ securityPolicies:
     cors:
       allowHeaders:
       - x-httproute-1-rule-1
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-1
@@ -133,11 +133,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -148,8 +143,8 @@ securityPolicies:
     cors:
       allowHeaders:
       - x-httproute-1-rule-1
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-1
@@ -178,8 +173,8 @@ securityPolicies:
     cors:
       allowHeaders:
       - x-httproute-1
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -197,11 +192,6 @@ securityPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other securityPolicies for these
           route rules: [rule-1]'
         reason: Overridden
@@ -217,8 +207,8 @@ securityPolicies:
     cors:
       allowHeaders:
       - x-httproute-1
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:

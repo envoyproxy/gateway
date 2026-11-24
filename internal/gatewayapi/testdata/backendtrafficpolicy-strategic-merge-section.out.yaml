@@ -7,8 +7,8 @@ backendTrafficPolicies:
   spec:
     connection:
       bufferLimit: 200M
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-2
@@ -26,11 +26,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -43,8 +38,8 @@ backendTrafficPolicies:
     httpUpgrade:
     - type: spdy/3.1
     mergeType: StrategicMerge
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     timeout:
@@ -70,11 +65,6 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicy for
           these route rules: [rule-2]'
         reason: Overridden
@@ -90,8 +80,8 @@ backendTrafficPolicies:
     httpUpgrade:
     - type: spdy/3.1
     mergeType: StrategicMerge
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
   status:
@@ -112,11 +102,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -127,8 +112,8 @@ backendTrafficPolicies:
     connection:
       bufferLimit: 100M
     mergeType: StrategicMerge
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
   status:
@@ -150,11 +135,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -162,8 +142,8 @@ backendTrafficPolicies:
     name: policy-for-gateway-1-listener-2
     namespace: envoy-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: listener-2
@@ -188,11 +168,6 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: 'This policy is being merged by other backendTrafficPolicies for
           these routes: [default/grpcroute-1 default/httproute-2]'
         reason: Merged
@@ -205,8 +180,8 @@ backendTrafficPolicies:
     name: policy-for-gateway-1
     namespace: envoy-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     timeout:
@@ -228,11 +203,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being merged by other backendTrafficPolicies for
           these routes: [default/httproute-1 default/httproute-2]'

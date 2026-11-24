@@ -5,8 +5,8 @@ backendTrafficPolicies:
     name: policy-for-route-1-rule-1
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-1
@@ -29,11 +29,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -41,8 +36,8 @@ backendTrafficPolicies:
     name: policy-for-route-1
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     timeout:
@@ -66,11 +61,6 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicy for
           these route rules: [rule-1]'
         reason: Overridden
@@ -85,8 +75,8 @@ backendTrafficPolicies:
   spec:
     httpUpgrade:
     - type: websocket
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: listener-2
@@ -107,11 +97,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -119,8 +104,8 @@ backendTrafficPolicies:
     name: policy-for-gateway-1
     namespace: envoy-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     timeout:
@@ -139,11 +124,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being overridden by other backendTrafficPolicies
           for these gateway listeners: [envoy-gateway/gateway-1/listener-2] and these

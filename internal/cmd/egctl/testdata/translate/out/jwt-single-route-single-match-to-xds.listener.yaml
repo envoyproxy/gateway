@@ -145,7 +145,7 @@ xds:
                             timeout: 10s
                             uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
                     requirementMap:
-                      example_610fd14578c340be:
+                      envoy-gateway-system/jwt-example:
                         providerName: example_7815c684b265ae47
                 - name: envoy.filters.http.router
                   typedConfig:

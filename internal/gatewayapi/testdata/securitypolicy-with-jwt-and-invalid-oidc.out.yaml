@@ -155,9 +155,11 @@ securityPolicies:
       clientSecret:
         name: client2-secret
       provider:
+        authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
         issuer: https://accounts.google.com
-    targetRef:
-      group: gateway.networking.k8s.io
+        tokenEndpoint: https://oauth2.googleapis.com/token
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
   status:
@@ -174,11 +176,6 @@ securityPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -203,8 +200,8 @@ securityPolicies:
         name: client1-secret
       provider:
         issuer: https://accounts.google.com
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -226,11 +223,6 @@ securityPolicies:
         reason: Overridden
         status: "True"
         type: Overridden
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
@@ -308,6 +300,7 @@ xdsIR:
           prefix: /foo
         security:
           jwt:
+            name: envoy-gateway/policy-for-gateway
             providers:
             - audiences:
               - one.foo.com
@@ -352,6 +345,7 @@ xdsIR:
           prefix: /bar
         security:
           jwt:
+            name: default/policy-for-http-route
             providers:
             - audiences:
               - two.foo.com

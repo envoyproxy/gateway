@@ -5,8 +5,8 @@ backendTrafficPolicies:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     timeout:
@@ -28,11 +28,6 @@ backendTrafficPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1

@@ -170,8 +170,10 @@ infraIR:
                     type: TCP
                   type: ALS
                 - openTelemetry:
-                    host: otel-collector.monitoring.svc.cluster.local
-                    port: 4317
+                    backendRefs:
+                    - name: otel-collector
+                      namespace: monitoring
+                      port: 4317
                     resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
@@ -207,8 +209,10 @@ infraIR:
                     type: TCP
                   type: ALS
                 - openTelemetry:
-                    host: otel-collector.monitoring.svc.cluster.local
-                    port: 4317
+                    backendRefs:
+                    - name: otel-collector
+                      namespace: monitoring
+                      port: 4317
                     resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
@@ -244,8 +248,10 @@ infraIR:
                     type: TCP
                   type: ALS
                 - openTelemetry:
-                    host: otel-collector.monitoring.svc.cluster.local
-                    port: 4317
+                    backendRefs:
+                    - name: otel-collector
+                      namespace: monitoring
+                      port: 4317
                     resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
@@ -433,7 +439,7 @@ xdsIR:
       - logType: Listener
         path: /dev/stdout
       openTelemetry:
-      - authority: otel-collector.monitoring.svc.cluster.local
+      - authority: otel-collector.monitoring.svc
         destination:
           metadata:
             kind: EnvoyProxy
@@ -441,20 +447,24 @@ xdsIR:
             namespace: envoy-gateway-system
           name: accesslog_otel_2_3
           settings:
-          - addressType: FQDN
+          - addressType: IP
             endpoints:
-            - host: otel-collector.monitoring.svc.cluster.local
+            - host: 8.7.6.5
               port: 4317
+            metadata:
+              kind: Service
+              name: otel-collector
+              namespace: monitoring
+              sectionName: "4317"
             name: accesslog_otel_2_3/backend/-1
             protocol: GRPC
-            weight: 1
         logType: Route
         resourceAttributes:
         - key: k8s.cluster.name
           value: cluster-1
         text: |
           this is a route log
-      - authority: otel-collector.monitoring.svc.cluster.local
+      - authority: otel-collector.monitoring.svc
         destination:
           metadata:
             kind: EnvoyProxy
@@ -462,20 +472,24 @@ xdsIR:
             namespace: envoy-gateway-system
           name: accesslog_otel_3_3
           settings:
-          - addressType: FQDN
+          - addressType: IP
             endpoints:
-            - host: otel-collector.monitoring.svc.cluster.local
+            - host: 8.7.6.5
               port: 4317
+            metadata:
+              kind: Service
+              name: otel-collector
+              namespace: monitoring
+              sectionName: "4317"
             name: accesslog_otel_3_3/backend/-1
             protocol: GRPC
-            weight: 1
         logType: Listener
         resourceAttributes:
         - key: k8s.cluster.name
           value: cluster-1
         text: |
           this is a listener log
-      - authority: otel-collector.monitoring.svc.cluster.local
+      - authority: otel-collector.monitoring.svc
         destination:
           metadata:
             kind: EnvoyProxy
@@ -483,13 +497,17 @@ xdsIR:
             namespace: envoy-gateway-system
           name: accesslog_otel_4_3
           settings:
-          - addressType: FQDN
+          - addressType: IP
             endpoints:
-            - host: otel-collector.monitoring.svc.cluster.local
+            - host: 8.7.6.5
               port: 4317
+            metadata:
+              kind: Service
+              name: otel-collector
+              namespace: monitoring
+              sectionName: "4317"
             name: accesslog_otel_4_3/backend/-1
             protocol: GRPC
-            weight: 1
         resourceAttributes:
         - key: k8s.cluster.name
           value: cluster-1

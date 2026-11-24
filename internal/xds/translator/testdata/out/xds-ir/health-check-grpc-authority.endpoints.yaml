@@ -1,0 +1,37 @@
+- clusterName: route-default-authority-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: route-default-authority-dest/backend/0
+- clusterName: route-explicit-authority-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+        hostname: endpoint.example.com
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: route-explicit-authority-dest/backend/0
+- clusterName: route-wildcard-hostname-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: route-wildcard-hostname-dest/backend/0

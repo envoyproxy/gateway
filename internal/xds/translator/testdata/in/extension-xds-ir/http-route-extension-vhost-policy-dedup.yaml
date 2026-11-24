@@ -1,0 +1,36 @@
+extensionResources:
+- name: bar.example.io/extensionpolicy/envoy-gateway/policy-foo
+  object:
+    apiVersion: bar.example.io/v1alpha1
+    kind: ExtensionPolicy
+    metadata:
+      name: policy-foo
+      namespace: envoy-gateway
+    spec:
+      data: from-foo-policy
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+http:
+- name: "listener-foo"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "foo.example.io"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  extensionRefs:
+  - name: bar.example.io/extensionpolicy/envoy-gateway/policy-foo
+  - name: bar.example.io/extensionpolicy/envoy-gateway/policy-foo
+  routes:
+  - name: "foo-route"
+    hostname: "foo.example.io"
+    destination:
+      name: "foo-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "foo-route-dest/backend/0"

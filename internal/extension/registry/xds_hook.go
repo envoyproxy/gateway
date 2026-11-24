@@ -7,6 +7,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -113,13 +114,19 @@ func (h *XDSHook) PostEndpointsModifyHook(loadAssignment *endpoint.ClusterLoadAs
 	return resp.LoadAssignment, nil
 }
 
-func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, types.HookResult, error) {
+func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost, extensionResources []*unstructured.Unstructured) (*route.VirtualHost, types.HookResult, error) {
+	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
+	if err != nil {
+		return vh, types.HookResult{}, err
+	}
 	// Make the request to the extension server
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostVirtualHostModify(ctx,
 		&extension.PostVirtualHostModifyRequest{
-			VirtualHost:            vh,
-			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{},
+			VirtualHost: vh,
+			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{
+				ExtensionResources: extensionResourceBytes,
+			},
 		})
 	// The RPC was attempted; count it regardless of whether the server returned an error.
 	if err != nil {
@@ -181,4 +188,40 @@ func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets [
 	}
 
 	return resp.Clusters, resp.Secrets, resp.Listeners, resp.Routes, nil
+}
+
+func (h *XDSHook) ResolveSecretHook(secretCtx *types.SecretContext) (*types.SecretResolution, error) {
+	if secretCtx == nil || secretCtx.Secret == nil {
+		return nil, fmt.Errorf("a secret resource is required to resolve a secret")
+	}
+
+	secretBytes, err := translateUnstructuredToUnstructuredBytes([]*unstructured.Unstructured{secretCtx.Secret})
+	if err != nil {
+		return nil, err
+	}
+	if len(secretBytes) != 1 {
+		return nil, fmt.Errorf("failed to marshal secret resource %s/%s",
+			secretCtx.Secret.GetNamespace(), secretCtx.Secret.GetName())
+	}
+
+	ctx := context.Background()
+	resp, err := h.grpcClient.ResolveSecret(ctx,
+		&extension.ResolveSecretRequest{
+			SecretContext: &extension.SecretExtensionContext{
+				SecretResource: secretBytes[0],
+				Proxy: &extension.ProxyInfra{
+					Name:      secretCtx.ProxyInfraName,
+					Namespace: secretCtx.ProxyInfraNamespace,
+				},
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.SecretResolution{
+		SdsSecretConfig: resp.SdsSecretConfig,
+		FailureReason:   resp.FailureReason,
+		FailureMessage:  resp.FailureMessage,
+	}, nil
 }

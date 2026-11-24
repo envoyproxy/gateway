@@ -11,7 +11,7 @@ package resource
 
 import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -283,6 +283,13 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.ExtensionSecrets != nil {
+		in, out := &in.ExtensionSecrets, &out.ExtensionSecrets
+		*out = make([]unstructured.Unstructured, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Backends != nil {
 		in, out := &in.Backends, &out.Backends
 		*out = make([]*v1alpha1.Backend, len(*in))
@@ -307,11 +314,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 	}
 	if in.ClusterTrustBundles != nil {
 		in, out := &in.ClusterTrustBundles, &out.ClusterTrustBundles
-		*out = make([]*certificatesv1beta1.ClusterTrustBundle, len(*in))
+		*out = make([]*certificatesv1.ClusterTrustBundle, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(certificatesv1beta1.ClusterTrustBundle)
+				*out = new(certificatesv1.ClusterTrustBundle)
 				(*in).DeepCopyInto(*out)
 			}
 		}

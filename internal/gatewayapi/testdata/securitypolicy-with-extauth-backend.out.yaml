@@ -7,7 +7,7 @@ backends:
   spec:
     endpoints:
     - fqdn:
-        hostname: primary.foo.com
+        hostname: primary.foo.com.
         port: 3000
     tls:
       caCertificateRefs:
@@ -276,8 +276,8 @@ securityPolicies:
       - header1
       - header2
       statusOnError: 500
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -294,11 +294,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -309,15 +304,15 @@ securityPolicies:
     extAuth:
       failOpen: true
       grpc:
-        backendRef:
-          kind: Service
+        backendRefs:
+        - kind: Service
           name: service-2
           port: 8080
       headersToExtAuth:
       - header3
       - header4
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
   status:
@@ -334,12 +329,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.extAuth.grpc.backendRef is deprecated, use spec.extAuth.grpc.backendRefs
-          instead; spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -349,12 +338,12 @@ securityPolicies:
   spec:
     extAuth:
       http:
-        backendRef:
-          group: gateway.envoyproxy.io
+        backendRefs:
+        - group: gateway.envoyproxy.io
           kind: Backend
           name: backend-uds
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-4
   status:
@@ -371,12 +360,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.extAuth.http.backendRef is deprecated, use spec.extAuth.http.backendRefs
-          instead; spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
@@ -464,7 +447,7 @@ xdsIR:
                 settings:
                 - addressType: FQDN
                   endpoints:
-                  - host: primary.foo.com
+                  - host: primary.foo.com.
                     port: 3000
                   metadata:
                     kind: Backend
@@ -534,7 +517,7 @@ xdsIR:
                 settings:
                 - addressType: FQDN
                   endpoints:
-                  - host: primary.foo.com
+                  - host: primary.foo.com.
                     port: 3000
                   metadata:
                     kind: Backend

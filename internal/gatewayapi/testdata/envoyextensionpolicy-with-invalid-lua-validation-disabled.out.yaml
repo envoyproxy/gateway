@@ -14,8 +14,8 @@ envoyExtensionPolicies:
           end
         end
       type: Inline
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -32,11 +32,6 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 envoyProxyForGatewayClass:
   apiVersion: gateway.envoyproxy.io/v1alpha1

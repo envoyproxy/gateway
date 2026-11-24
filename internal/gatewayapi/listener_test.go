@@ -683,7 +683,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-2", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("sds.example.com"))},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 				{
@@ -710,7 +710,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443, Hostname: new(gwapiv1.Hostname("*.example.com"))},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 				{
@@ -744,7 +744,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 				{
@@ -761,7 +761,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 				{
@@ -802,7 +802,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				{
 					Listener: &gwapiv1.Listener{Name: "listener-1", Protocol: gwapiv1.HTTPSProtocolType, Port: 443},
 					tls: ListenerTLSConfig{
-						secrets: []*corev1.Secret{{Type: egv1a1.SDSSecretType}},
+						secrets: []listenerSecret{{kubernetesSecret: &corev1.Secret{Type: egv1a1.SDSSecretType}}},
 					},
 				},
 			},
@@ -1318,6 +1318,71 @@ func TestProcessAccessLog(t *testing.T) {
 	}
 }
 
+func TestProcessTelemetryWithAbsoluteHostname(t *testing.T) {
+	for _, name := range []string{"access log", "tracing", "metrics"} {
+		t.Run(name, func(t *testing.T) {
+			envoyProxy := &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{{
+								Sinks: []egv1a1.ProxyAccessLogSink{{
+									Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+										Host: new("otel.example.com."), Port: 4317,
+									},
+								}},
+							}},
+						},
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								Host: new("otel.example.com."), Port: 4317,
+							},
+						},
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{{
+								Type: egv1a1.MetricSinkTypeOpenTelemetry,
+								OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+									Host: new("otel.example.com."), Port: 4317,
+								},
+							}},
+						},
+					},
+				},
+			}
+			translator := &Translator{}
+			gwCtx := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+			resources := &resource.Resources{}
+			var authority string
+			var settings []*ir.DestinationSetting
+			switch name {
+			case "access log":
+				actual, err := translator.processAccessLog(gwCtx, envoyProxy, resources)
+				require.NoError(t, err)
+				require.Len(t, actual.OpenTelemetry, 1)
+				authority = actual.OpenTelemetry[0].Authority
+				settings = actual.OpenTelemetry[0].Destination.Settings
+			case "tracing":
+				actual, err := translator.processTracing(gwCtx, envoyProxy, false, resources)
+				require.NoError(t, err)
+				authority = actual.Authority
+				settings = actual.Destination.Settings
+			case "metrics":
+				_, actual, err := translator.processMetrics(gwCtx, envoyProxy, resources)
+				require.NoError(t, err)
+				require.Len(t, actual, 1)
+				authority = actual[0].Authority
+				settings = actual[0].Destination.Settings
+			}
+			require.Equal(t, "otel.example.com", authority)
+			require.Len(t, settings, 1)
+			require.Len(t, settings[0].Endpoints, 1)
+			require.Equal(t, "otel.example.com.", settings[0].Endpoints[0].Host)
+		})
+	}
+}
+
 func TestGetAuthorityFromDestination(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -1345,6 +1410,13 @@ func TestGetAuthorityFromDestination(t *testing.T) {
 			name: "hostname endpoint uses host",
 			input: []*ir.DestinationSetting{{
 				Endpoints: []*ir.DestinationEndpoint{{Host: "backend.local"}},
+			}},
+			expected: "backend.local",
+		},
+		{
+			name: "hostname endpoint with trailing dot",
+			input: []*ir.DestinationSetting{{
+				Endpoints: []*ir.DestinationEndpoint{{Host: "backend.local."}},
 			}},
 			expected: "backend.local",
 		},

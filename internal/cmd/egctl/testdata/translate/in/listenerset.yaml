@@ -1,0 +1,61 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: envoy-gateway-system
+spec:
+  gatewayClassName: eg
+  allowedListeners:
+    namespaces:
+      from: All
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: apps
+  namespace: apps
+spec:
+  parentRef:
+    name: eg
+    namespace: envoy-gateway-system
+  listeners:
+    - name: app
+      protocol: HTTP
+      port: 8080
+      hostname: app.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app
+  namespace: apps
+spec:
+  parentRefs:
+    - kind: ListenerSet
+      name: apps
+      sectionName: app
+  rules:
+    - backendRefs:
+        - name: app
+          port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: apps
+spec:
+  clusterIP: 10.0.0.1
+  ports:
+    - port: 80

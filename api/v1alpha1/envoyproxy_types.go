@@ -167,6 +167,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.grpc_web
 	//
+	// - envoy.filters.http.grpc_json_transcoder
+	//
 	// - envoy.filters.http.grpc_stats
 	//
 	// - envoy.filters.http.credential_injector
@@ -416,7 +418,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy;envoy.filters.http.alternate_protocols_cache
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.csrf;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.bandwidth_limit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_json_transcoder;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy;envoy.filters.http.alternate_protocols_cache
 type EnvoyFilter string
 
 const (
@@ -489,6 +491,9 @@ const (
 
 	// EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.
 	EnvoyFilterGRPCWeb EnvoyFilter = "envoy.filters.http.grpc_web"
+
+	// EnvoyFilterGRPCJSONTranscoder defines the Envoy HTTP gRPC-JSON transcoder filter.
+	EnvoyFilterGRPCJSONTranscoder EnvoyFilter = "envoy.filters.http.grpc_json_transcoder"
 
 	// EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.
 	EnvoyFilterGRPCStats EnvoyFilter = "envoy.filters.http.grpc_stats"
@@ -642,7 +647,28 @@ type ShutdownConfig struct {
 	//
 	// +optional
 	MinDrainDuration *gwapiv1.Duration `json:"minDrainDuration,omitempty"`
+	// DrainStrategy defines how Envoy drains HTTP connections during the graceful drain process.
+	// TCP and UDP proxy connections are not drained by either strategy.
+	// If unspecified, defaults to "Immediate".
+	//
+	// Switching to or from "Gradual" changes the listener configuration, which makes the running
+	// Envoy proxies replace their listeners and drain the existing connections.
+	//
+	// +optional
+	DrainStrategy *DrainStrategy `json:"drainStrategy,omitempty"`
 }
+
+// DrainStrategy defines the strategy Envoy uses to drain listener connections.
+//
+// +kubebuilder:validation:Enum=Gradual;Immediate
+type DrainStrategy string
+
+const (
+	// DrainStrategyGradual drains HTTP connections progressively within the drain timeout.
+	DrainStrategyGradual DrainStrategy = "Gradual"
+	// DrainStrategyImmediate drains all HTTP connections once the drain process starts.
+	DrainStrategyImmediate DrainStrategy = "Immediate"
+)
 
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyDeployment) && !has(self.envoyDaemonSet)) || (!has(self.envoyDeployment) && has(self.envoyDaemonSet))) || (!has(self.envoyDeployment) && !has(self.envoyDaemonSet))",message="only one of envoyDeployment or envoyDaemonSet can be specified"
 // +kubebuilder:validation:XValidation:rule="((has(self.envoyHpa) && !has(self.envoyDaemonSet)) || (!has(self.envoyHpa) && has(self.envoyDaemonSet))) || (!has(self.envoyHpa) && !has(self.envoyDaemonSet))",message="cannot use envoyHpa if envoyDaemonSet is used"
@@ -838,6 +864,14 @@ const (
 	// `patch` fields configured on this EnvoyProxy were ignored because patching is
 	// disabled in the EnvoyGateway configuration.
 	EnvoyProxyReasonPatchDisabled EnvoyProxyConditionReason = "PatchDisabled"
+
+	// EnvoyProxyReasonInvalidField indicates that one or more fields configured on this
+	// EnvoyProxy are invalid and were ignored, while the rest of the EnvoyProxy is applied.
+	EnvoyProxyReasonInvalidField EnvoyProxyConditionReason = "InvalidField"
+
+	// EnvoyProxyReasonMultipleWarnings is used with the "Warning" condition when the EnvoyProxy
+	// has warnings with different reasons; the condition message lists all of them.
+	EnvoyProxyReasonMultipleWarnings EnvoyProxyConditionReason = "Warnings"
 )
 
 // +kubebuilder:object:root=true

@@ -127,8 +127,10 @@ spec:
           sinks:
             - type: OpenTelemetry
               openTelemetry:
-                host: otel-collector.monitoring.svc.cluster.local
-                port: 4317
+                backendRefs:
+                - name: otel-collector
+                  namespace: monitoring
+                  port: 4317
                 resources:
                   k8s.cluster.name: "cluster-1"
 EOF
@@ -225,8 +227,10 @@ spec:
           sinks:
             - type: OpenTelemetry
               openTelemetry:
-                host: otel-collector.monitoring.svc.cluster.local
-                port: 4317
+                backendRefs:
+                - name: otel-collector
+                  namespace: monitoring
+                  port: 4317
                 resources:
                   k8s.cluster.name: "cluster-1"
 EOF
@@ -301,8 +305,10 @@ spec:
           sinks:
             - type: OpenTelemetry
               openTelemetry:
-                host: otel-collector.monitoring.svc.cluster.local
-                port: 4317
+                backendRefs:
+                - name: otel-collector
+                  namespace: monitoring
+                  port: 4317
                 resources:
                   k8s.cluster.name: "cluster-1"
 EOF

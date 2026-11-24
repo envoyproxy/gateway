@@ -7,8 +7,8 @@ clientTrafficPolicies:
   spec:
     http1:
       http10: {}
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-1
@@ -27,11 +27,10 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
-        reason: Warnings
+        message: 'spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
+        reason: BehaviorChange
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -44,8 +43,8 @@ clientTrafficPolicies:
     http1:
       http10:
         useDefaultHost: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-2
@@ -64,11 +63,10 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
-        reason: Warnings
+        message: 'spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
+        reason: BehaviorChange
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -81,8 +79,8 @@ clientTrafficPolicies:
     http1:
       http10:
         useDefaultHost: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-3
@@ -102,11 +100,10 @@ clientTrafficPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
-        reason: Warnings
+        message: 'spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
+        reason: BehaviorChange
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -119,8 +116,8 @@ clientTrafficPolicies:
     http1:
       http10:
         useDefaultHost: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-4
@@ -139,11 +136,10 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
-        reason: Warnings
+        message: 'spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
+        reason: BehaviorChange
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -156,8 +152,8 @@ clientTrafficPolicies:
     http1:
       http10:
         useDefaultHost: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-5
@@ -177,11 +173,10 @@ clientTrafficPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated, use spec.targetRefs instead; spec.http1.http10
-          behavior will change in a future release: this field will only apply to
-          client connections, for compatibility: use BackendTrafficPolicy.http1: {}
-          for backend HTTP/1 settings'
-        reason: Warnings
+        message: 'spec.http1.http10 behavior will change in a future release: this
+          field will only apply to client connections, for compatibility: use BackendTrafficPolicy.http1:
+          {} for backend HTTP/1 settings'
+        reason: BehaviorChange
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

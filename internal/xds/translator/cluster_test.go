@@ -122,7 +122,7 @@ func TestBuildXdsHealthCheckDisableConnectionReuse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			hc := base()
 			hc.DisableConnectionReuse = tc.disable
-			out, err := buildXdsHealthCheck(hc, "", nil)
+			out, err := buildXdsHealthCheck(hc, "", nil, nil, false, false)
 			require.NoError(t, err)
 			require.Len(t, out, 1)
 			require.Equal(t, tc.expected, out[0].ReuseConnection)
@@ -160,6 +160,63 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil, nil, nil)
 
 	requireCmpNoDiff(t, bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0])
+}
+
+func TestBuildXdsClusterLoadAssignmentEndpointHostname(t *testing.T) {
+	localities := []struct {
+		name          string
+		preferLocal   *ir.PreferLocalZone
+		weightedZones []ir.WeightedZoneConfig
+	}{
+		{name: "weighted"},
+		{name: "zonal", preferLocal: &ir.PreferLocalZone{}},
+		{name: "weighted zonal", weightedZones: []ir.WeightedZoneConfig{{Zone: "test-zone", Weight: 1}}},
+	}
+	tests := []struct {
+		name                string
+		host                string
+		hostname            *string
+		expected            string
+		expectedHealthCheck *endpointv3.Endpoint_HealthCheckConfig
+	}{
+		{
+			name:     "absolute FQDN",
+			host:     "backend.example.com.",
+			expected: "backend.example.com",
+		},
+		{
+			name:                "absolute FQDN with explicit endpoint hostname",
+			host:                "backend.example.com.",
+			hostname:            new("override.example.com"),
+			expected:            "override.example.com",
+			expectedHealthCheck: &endpointv3.Endpoint_HealthCheckConfig{Hostname: "override.example.com"},
+		},
+		{
+			name: "FQDN without root dot",
+			host: "backend.example.com",
+		},
+	}
+	for _, locality := range localities {
+		t.Run(locality.name, func(t *testing.T) {
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					irEndpoint := &ir.DestinationEndpoint{
+						Host: tc.host, Hostname: tc.hostname, Port: 8080, Zone: new("test-zone"),
+					}
+					settings := []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{irEndpoint}}}
+					healthCheck := &ir.HealthCheck{Active: &ir.ActiveHealthCheck{HTTP: &ir.HTTPHealthChecker{}}}
+					actual := buildXdsClusterLoadAssignment("test-cluster", settings, healthCheck, locality.preferLocal, locality.weightedZones)
+					require.Len(t, actual.Endpoints, 1)
+					require.Len(t, actual.Endpoints[0].LbEndpoints, 1)
+					endpoint := actual.Endpoints[0].LbEndpoints[0].GetEndpoint()
+					require.Equal(t, tc.expected, endpoint.Hostname)
+					require.Equal(t, tc.host, endpoint.GetAddress().GetSocketAddress().GetAddress())
+					requireCmpNoDiff(t, tc.expectedHealthCheck, endpoint.HealthCheckConfig)
+					require.Equal(t, tc.hostname, irEndpoint.Hostname)
+				})
+			}
+		})
+	}
 }
 
 func TestBuildXdsClusterLoadAssignmentWithHealthCheckConfig(t *testing.T) {
@@ -750,4 +807,88 @@ func TestBackendClusterTranslatorAsClusterArgsAppliesTraffic(t *testing.T) {
 	args := BackendClusterTranslator{}.asClusterArgs("backend-1", nil, &ExtraArgs{traffic: traffic}, nil)
 
 	require.Equal(t, circuitBreaker, args.circuitBreaker)
+}
+
+func TestGRPCHealthCheckAuthority(t *testing.T) {
+	tests := []struct {
+		name          string
+		healthCheck   *ir.GRPCHealthChecker
+		routeHostname string
+		expected      string
+	}{
+		{
+			name:          "explicit authority wins over the route hostname",
+			healthCheck:   &ir.GRPCHealthChecker{Authority: "health.example.com"},
+			routeHostname: "grpc.example.com",
+			expected:      "health.example.com",
+		},
+		{
+			name:          "route hostname is used as the default",
+			healthCheck:   &ir.GRPCHealthChecker{},
+			routeHostname: "grpc.example.com",
+			expected:      "grpc.example.com",
+		},
+		{
+			name:          "wildcard route hostname is not a valid authority",
+			healthCheck:   &ir.GRPCHealthChecker{},
+			routeHostname: "*.example.com",
+			expected:      "",
+		},
+		{
+			name:          "empty route hostname",
+			healthCheck:   &ir.GRPCHealthChecker{},
+			routeHostname: "",
+			expected:      "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, grpcHealthCheckAuthority(tc.healthCheck, tc.routeHostname))
+		})
+	}
+}
+
+func TestGetHealthCheckOverridesHostnameWithGRPCAuthority(t *testing.T) {
+	tests := []struct {
+		name        string
+		healthCheck *ir.HealthCheck
+		endpoint    *ir.DestinationEndpoint
+		expected    string
+	}{
+		{
+			name: "GRPC health checker with an explicit authority keeps the cluster-level authority",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					GRPC: &ir.GRPCHealthChecker{Authority: "health.example.com"},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: new("backend.example.com"),
+			},
+			expected: "",
+		},
+		{
+			name: "GRPC health checker without an authority defers to the endpoint hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					GRPC: &ir.GRPCHealthChecker{},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: new("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, getHealthCheckOverridesHostname(tc.healthCheck, tc.endpoint))
+		})
+	}
 }

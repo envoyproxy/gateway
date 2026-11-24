@@ -6,8 +6,8 @@ clientTrafficPolicies:
     name: target-gateway-1
   spec:
     connection: {}
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -18,8 +18,8 @@ clientTrafficPolicies:
   spec:
     connection:
       bufferLimit: 100G
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-1

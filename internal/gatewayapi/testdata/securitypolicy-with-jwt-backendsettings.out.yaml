@@ -178,8 +178,8 @@ securityPolicies:
                 connectTimeout: 15s
           failedRefetchDuration: 30s
           uri: https://foo.bar.com/jwt/public-key/jwks.json
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -196,11 +196,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:
@@ -276,6 +271,7 @@ xdsIR:
           prefix: /
         security:
           jwt:
+            name: default/policy-for-route
             providers:
             - audiences:
               - foo.bar.com
