@@ -2321,7 +2321,7 @@ spec:
                                   cost and cannot be used with a response cost
                                 rule: '!has(self.refundOnResponse) || !self.refundOnResponse
                                   || (has(self.request) && self.request.from == ''Number''
-                                  && !has(self.response))'
+                                  && has(self.request.number) && !has(self.response))'
                             limit:
                               description: |-
                                 Limit holds the rate limit values.
@@ -2745,7 +2745,7 @@ spec:
                                   cost and cannot be used with a response cost
                                 rule: '!has(self.refundOnResponse) || !self.refundOnResponse
                                   || (has(self.request) && self.request.from == ''Number''
-                                  && !has(self.response))'
+                                  && has(self.request.number) && !has(self.response))'
                             limit:
                               description: |-
                                 Limit holds the rate limit values.

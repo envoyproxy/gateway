@@ -4894,6 +4894,80 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 			},
 		},
 		{
+			desc: "invalid Global rate limit rule with refund on response and Number request cost set from metadata",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Hour"},
+									Cost: &egv1a1.RateLimitCost{
+										Request: &egv1a1.RateLimitCostSpecifier{
+											From: egv1a1.RateLimitCostFromNumber,
+											Metadata: &egv1a1.RateLimitCostMetadata{
+												Namespace: "com.test.my_filter",
+												Key:       "on_request_key",
+											},
+										},
+										RefundOnResponse: new(true),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.rateLimit.global.rules[0].cost: Invalid value:",
+				": refundOnResponse requires a Number request cost and cannot be used with a response cost",
+			},
+		},
+		{
+			desc: "invalid Global rate limit rule with refund on response and Number request cost without a number",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Hour"},
+									Cost: &egv1a1.RateLimitCost{
+										Request: &egv1a1.RateLimitCostSpecifier{
+											From: egv1a1.RateLimitCostFromNumber,
+										},
+										RefundOnResponse: new(true),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.rateLimit.global.rules[0].cost: Invalid value:",
+				": refundOnResponse requires a Number request cost and cannot be used with a response cost",
+			},
+		},
+		{
 			desc: "invalid count of local rate limit rules specifying costPerResponse",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
@@ -4923,7 +4997,7 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 					},
 				}
 			},
-			wantErrors: []string{`response cost is not supported for Local Rate Limits`},
+			wantErrors: []string{`response cost and refundOnResponse are not supported for Local Rate Limits`},
 		},
 		{
 			desc: "invalid local rate limit rule sourcing limit from metadata",

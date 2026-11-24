@@ -145,7 +145,7 @@ type RateLimitRule struct {
 	XRateLimitHeaders *XRateLimitHeadersOption `json:"xRateLimitHeaders,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:rule="!has(self.refundOnResponse) || !self.refundOnResponse || (has(self.request) && self.request.from == 'Number' && !has(self.response))",message="refundOnResponse requires a Number request cost and cannot be used with a response cost"
+// +kubebuilder:validation:XValidation:rule="!has(self.refundOnResponse) || !self.refundOnResponse || (has(self.request) && self.request.from == 'Number' && has(self.request.number) && !has(self.response))",message="refundOnResponse requires a Number request cost and cannot be used with a response cost"
 type RateLimitCost struct {
 	// Request specifies the number to reduce the rate limit counters
 	// on the request path. If this is not specified, the default behavior
