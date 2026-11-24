@@ -670,6 +670,41 @@ func TestBuildCompression(t *testing.T) {
 			},
 			expectErr: true,
 		},
+		{
+			name: "content types are copied",
+			compressor: []*egv1a1.Compression{
+				{
+					Type:   egv1a1.BrotliCompressorType,
+					Brotli: &egv1a1.BrotliCompressor{},
+					ContentTypes: []egv1a1.StringMatch{
+						{Value: "image/svg+xml"},
+						{Type: new(egv1a1.StringMatchRegularExpression), Value: "^font/(ttf|otf)$"},
+					},
+				},
+			},
+			expected: []*ir.Compression{
+				{
+					Type:        egv1a1.BrotliCompressorType,
+					ChooseFirst: true,
+					ContentTypes: []egv1a1.StringMatch{
+						{Value: "image/svg+xml"},
+						{Type: new(egv1a1.StringMatchRegularExpression), Value: "^font/(ttf|otf)$"},
+					},
+				},
+			},
+		},
+		{
+			name: "content types with an invalid regex are rejected",
+			compression: []*egv1a1.Compression{
+				{
+					Type: egv1a1.GzipCompressorType,
+					ContentTypes: []egv1a1.StringMatch{
+						{Type: new(egv1a1.StringMatchRegularExpression), Value: "^font/(ttf"},
+					},
+				},
+			},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range cases {

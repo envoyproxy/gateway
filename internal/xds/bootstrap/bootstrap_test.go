@@ -109,6 +109,24 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "enable-prometheus-compression-with-content-types",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type:             egv1a1.GzipCompressorType,
+							MinContentLength: new(resource.MustParse("1Ki")),
+							ContentTypes: []egv1a1.StringMatch{
+								{Value: "text/plain"},
+								{Type: new(egv1a1.StringMatchPrefix), Value: "application/openmetrics-text"},
+							},
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
 			name: "enable-prometheus-brotli-compression-with-settings",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
@@ -445,6 +463,22 @@ func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
 				},
 			},
 			expectedError: "invalid prometheus compression: minContentLength must be between 1 and 4294967295 bytes, got 4Gi",
+		},
+		{
+			name: "prometheus compression content types with an invalid regex",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Compression: &egv1a1.Compression{
+							Type: egv1a1.GzipCompressorType,
+							ContentTypes: []egv1a1.StringMatch{
+								{Type: new(egv1a1.StringMatchRegularExpression), Value: "^text/(plain"},
+							},
+						},
+					},
+				},
+			},
+			expectedError: "invalid prometheus compression: invalid contentTypes: regex \"^text/(plain\" is invalid: error parsing regexp: missing closing ): `^text/(plain`",
 		},
 		{
 			name: "prometheus compression with unsupported settings",

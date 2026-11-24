@@ -258,4 +258,19 @@ type Compression struct {
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
 	MinContentLength *resource.Quantity `json:"minContentLength,omitempty"`
+
+	// ContentTypes defines the response content types that are compressed.
+	// A response is compressed if its Content-Type matches any of these matchers.
+	// Parameters such as "; charset=utf-8" are ignored, and Exact, Prefix and Suffix
+	// matches are case-insensitive.
+	//
+	// If unset, Envoy's default list of content types is used. Setting this replaces
+	// the default list, so it must include every content type that should be compressed.
+	// The default list can be found here:
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/compressor/v3/compressor.proto#envoy-v3-api-field-extensions-filters-http-compressor-v3-compressor-commondirectionconfig-content-type
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=64
+	ContentTypes []StringMatch `json:"contentTypes,omitempty"`
 }

@@ -12,9 +12,11 @@ import (
 	brotliv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/brotli/compressor/v3"
 	gzipv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/gzip/compressor/v3"
 	zstdv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/zstd/compressor/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
@@ -177,4 +179,31 @@ func buildZstdProto(zstd *egv1a1.ZstdCompressor) (*zstdv3.Zstd, error) {
 	}
 
 	return zstdProto, nil
+}
+
+// CompressorContentTypeMatchers builds the content type matchers of the compressor filter.
+// MIME types are case-insensitive, which Envoy also assumes for its default content types.
+func CompressorContentTypeMatchers(contentTypes []egv1a1.StringMatch) []*matcherv3.StringMatcher {
+	if len(contentTypes) == 0 {
+		return nil
+	}
+	matchers := make([]*matcherv3.StringMatcher, 0, len(contentTypes))
+	for _, contentType := range contentTypes {
+		matcher := &matcherv3.StringMatcher{IgnoreCase: true}
+		switch ptr.Deref(contentType.Type, egv1a1.StringMatchExact) {
+		case egv1a1.StringMatchPrefix:
+			matcher.MatchPattern = &matcherv3.StringMatcher_Prefix{Prefix: contentType.Value}
+		case egv1a1.StringMatchSuffix:
+			matcher.MatchPattern = &matcherv3.StringMatcher_Suffix{Suffix: contentType.Value}
+		case egv1a1.StringMatchRegularExpression:
+			matcher.IgnoreCase = false
+			matcher.MatchPattern = &matcherv3.StringMatcher_SafeRegex{
+				SafeRegex: &matcherv3.RegexMatcher{Regex: contentType.Value},
+			}
+		default:
+			matcher.MatchPattern = &matcherv3.StringMatcher_Exact{Exact: contentType.Value}
+		}
+		matchers = append(matchers, matcher)
+	}
+	return matchers
 }
