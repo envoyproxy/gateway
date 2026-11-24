@@ -9,8 +9,8 @@ clientTrafficPolicies:
       xForwardedFor:
         numTrustedHops: 2
         disableXForwardedForAppend: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-1
@@ -24,8 +24,8 @@ clientTrafficPolicies:
       customHeader:
         name: "x-client-ip-address"
         failClosed: false
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-2
@@ -39,8 +39,8 @@ clientTrafficPolicies:
       customHeader:
         name: "x-client-ip-address"
         failClosed: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-3

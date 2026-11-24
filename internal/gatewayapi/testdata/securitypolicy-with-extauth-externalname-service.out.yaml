@@ -104,12 +104,12 @@ securityPolicies:
   spec:
     extAuth:
       grpc:
-        backendRef:
-          kind: Service
+        backendRefs:
+        - kind: Service
           name: service-extauth-externalname
           port: 9000
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -128,13 +128,6 @@ securityPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.extAuth.grpc.backendRef is deprecated and will be removed in
-          v1.11, use spec.extAuth.grpc.backendRefs instead; spec.targetRef is deprecated
-          and will be removed in v1.11, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/gateway-1:

@@ -41,12 +41,13 @@ backendTrafficPolicies:
       namespace: envoy-gateway
       name: gateway-compression-policy
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-      compression:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
+      compressor:
         - type: Gzip
+          gzip: {}
   # Route-level policy
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
@@ -54,11 +55,13 @@ backendTrafficPolicies:
       namespace: default
       name: route-compression-policy
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
-      compression:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
+      compressor:
         - type: Brotli
+          brotli: {}
         - type: Zstd
+          zstd: {}
       mergeType: JSONMerge

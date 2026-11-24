@@ -20,8 +20,6 @@ tracing:
           name: "X-Request-Id"
           defaultValue: "-"
   provider:
-    host: ""
-    port: 4317
 http:
   - name: "first-listener"
     address: "::"

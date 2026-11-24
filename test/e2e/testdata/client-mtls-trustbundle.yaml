@@ -101,11 +101,11 @@ metadata:
   name: ctp-client-mtls-clustertrustbundle
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: client-mtls-clustertrustbundle
-    sectionName: mtls
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: client-mtls-clustertrustbundle
+      sectionName: mtls
   headers:
     xForwardedClientCert:
       certDetailsToAdd:

@@ -495,10 +495,10 @@ metadata:
   name: enable-early-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     earlyRequestHeaders:
       add:
@@ -555,10 +555,10 @@ metadata:
   name: enable-early-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     earlyRequestHeaders:
       add:

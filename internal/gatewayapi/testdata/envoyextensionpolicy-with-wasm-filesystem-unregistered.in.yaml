@@ -58,8 +58,8 @@ envoyextensionpolicies:
     namespace: default
     name: policy-for-http-route
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     wasm:
