@@ -202,5 +202,5 @@ only `targetRef` is used today, so decide which references to keep and move them
 A deprecated field that is set to its default, such as `enableProxyProtocol: false`, or that is
 ignored because its replacement is also set, is removed.
 
-[ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
+[ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/
 [Backend]: ../../tasks/traffic/backend.md
