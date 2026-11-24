@@ -35,7 +35,7 @@ securityPolicies:
     namespace: default
     name: sp-tcpr-no-auth
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: TCPRoute
       name: tcpr-app

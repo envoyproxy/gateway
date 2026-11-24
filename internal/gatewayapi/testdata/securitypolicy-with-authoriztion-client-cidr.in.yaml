@@ -78,8 +78,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: policy-for-gateway  # This policy should attach httproute-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     authorization:
@@ -96,8 +96,8 @@ securityPolicies:
     namespace: default
     name: policy-for-http-route-1   # This policy should attach httproute-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     authorization:
@@ -121,8 +121,8 @@ securityPolicies:
     namespace: default
     name: policy-for-http-route-3   # This policy should attach httproute-3
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
     authorization: {}

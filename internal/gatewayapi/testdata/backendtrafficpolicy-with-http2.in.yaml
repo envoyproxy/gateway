@@ -69,10 +69,10 @@ backendTrafficPolicies:
       namespace: envoy-gateway
       name: policy-for-gateway
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       http2:
         initialStreamWindowSize: 2Mi
         initialConnectionWindowSize: 1Gi
@@ -84,10 +84,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       http2:
         initialStreamWindowSize: 1Mi
         initialConnectionWindowSize: 500Mi

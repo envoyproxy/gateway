@@ -4,10 +4,10 @@ metadata:
   name: jwt-claim-path-example
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: jwt-claim-path-routing
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: jwt-claim-path-routing
   jwt:
     providers:
       - name: example
