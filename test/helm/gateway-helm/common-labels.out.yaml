@@ -40,6 +40,13 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
+    envoyProxy:
+      provider:
+        kubernetes:
+          envoyDeployment:
+            container:
+              image: docker.io/envoyproxy/envoy:distroless-dev
+        type: Kubernetes
     extensionApis: {}
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
