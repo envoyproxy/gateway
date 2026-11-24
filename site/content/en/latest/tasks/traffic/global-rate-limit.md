@@ -1678,6 +1678,9 @@ one (slow): 200
 one: 200
 ```
 
+The request cost is given back after the stream is closed, in a separate call to the rate limit service. If the last
+request is sent right after the slow ones finish, it can still get a `429` until that call has been processed.
+
 Keep the following in mind when using this pattern:
 
 * The counters still belong to a time window. When a new window starts, the counter starts again from zero and the requests

@@ -5000,6 +5000,71 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 			wantErrors: []string{`response cost and refundOnResponse are not supported for Local Rate Limits`},
 		},
 		{
+			desc: "invalid local rate limit rule with refund on response",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+									Cost: &egv1a1.RateLimitCost{
+										// This is not supported for LocalRateLimit.
+										Request:          &egv1a1.RateLimitCostSpecifier{From: egv1a1.RateLimitCostFromNumber, Number: new(uint64(1))},
+										RefundOnResponse: new(true),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{`response cost and refundOnResponse are not supported for Local Rate Limits`},
+		},
+		{
+			desc: "valid local rate limit rule with refund on response set to false",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					RateLimit: &egv1a1.RateLimitSpec{
+						Local: &egv1a1.LocalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Minute"},
+									Cost: &egv1a1.RateLimitCost{
+										Request:          &egv1a1.RateLimitCostSpecifier{From: egv1a1.RateLimitCostFromNumber, Number: new(uint64(1))},
+										RefundOnResponse: new(false),
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "invalid local rate limit rule sourcing limit from metadata",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

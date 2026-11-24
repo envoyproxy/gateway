@@ -67,7 +67,7 @@ type LocalRateLimit struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || (!has(r.cost.response) && !has(r.cost.refundOnResponse)))", message="response cost and refundOnResponse are not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || (!has(r.cost.response) && (!has(r.cost.refundOnResponse) || !r.cost.refundOnResponse)))", message="response cost and refundOnResponse are not supported for Local Rate Limits"
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.limit.fromMetadata))", message="limit fromMetadata is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
