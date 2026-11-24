@@ -4,6 +4,15 @@ title: "Response Override"
 
 Response Override allows you to override the response from the backend with a custom one. This can be useful for scenarios such as returning a custom 404 page when the requested resource is not found, a custom 500 error message when the backend is failing, or redirecting the client when the backend returns a 403 Forbidden. When using redirect, Envoy applies it internally: Envoy follows the redirect to the new URL, obtains the response from that URL, and sends that response to the client.
 
+{{% alert title="Note" color="primary" %}}
+Because Envoy follows the redirect internally, the redirect target is routed again on the same listener that received
+the original request. The target hostname and path must match a route attached to that listener, for example an
+HTTPRoute whose `parentRefs` include it. If no route matches, Envoy skips the redirect, sends the original response to
+the client, and increments the `custom_response_redirect_no_route` counter. The redirect `scheme` does not select a
+different listener: to redirect requests received on an HTTPS listener to a route that is only attached to an HTTP
+listener, attach that route to the HTTPS listener as well.
+{{% /alert %}}
+
 Each rule accepts an optional `source` field that controls which responses the rule applies to:
 
 - `All` (default) — overrides both Envoy-generated responses (e.g. auth failures, rate-limit rejections) and upstream responses with the matched status code.
