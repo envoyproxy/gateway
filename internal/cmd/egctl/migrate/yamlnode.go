@@ -6,6 +6,7 @@
 package migrate
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -227,4 +228,101 @@ func keyIndex(m *yaml.Node, key string) int {
 		}
 	}
 	return -1
+}
+
+// ExpandMergeKeys expands YAML merges before migration. Explicit keys override merged keys,
+// and earlier mappings in a merge sequence override later mappings. Documents without merges
+// retain their original nodes. When expanding, aliases are copied by value so removing a merge
+// cannot leave dangling aliases or allow a rewrite to modify another use of the merged mapping.
+func ExpandMergeKeys(root *yaml.Node) error {
+	if !hasMerge(root, make(map[*yaml.Node]bool)) {
+		return nil
+	}
+	expanded, err := expandMergedNode(root, make(map[*yaml.Node]bool))
+	if err != nil {
+		return err
+	}
+	*root = *expanded
+	return nil
+}
+
+func hasMerge(n *yaml.Node, seen map[*yaml.Node]bool) bool {
+	if n == nil || seen[n] {
+		return false
+	}
+	seen[n] = true
+	if n.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			if n.Content[i].Tag == "!!merge" {
+				return true
+			}
+		}
+	}
+	if hasMerge(n.Alias, seen) {
+		return true
+	}
+	for _, child := range n.Content {
+		if hasMerge(child, seen) {
+			return true
+		}
+	}
+	return false
+}
+
+func expandMergedNode(n *yaml.Node, active map[*yaml.Node]bool) (*yaml.Node, error) {
+	if n == nil {
+		return nil, nil
+	}
+	if active[n] {
+		return nil, fmt.Errorf("cyclic YAML alias or merge")
+	}
+	active[n] = true
+	defer delete(active, n)
+	if n.Kind == yaml.AliasNode {
+		return expandMergedNode(n.Alias, active)
+	}
+	out := *n
+	out.Anchor = ""
+	out.Content = nil
+	for _, child := range n.Content {
+		c, err := expandMergedNode(child, active)
+		if err != nil {
+			return nil, err
+		}
+		out.Content = append(out.Content, c)
+	}
+	if n.Kind != yaml.MappingNode {
+		return &out, nil
+	}
+	content := out.Content
+	out.Content = nil
+	keys := make(map[string]bool)
+	for i := 0; i+1 < len(content); i += 2 {
+		if content[i].Tag != "!!merge" {
+			out.Content = append(out.Content, content[i], content[i+1])
+			keys[content[i].Value] = true
+		}
+	}
+	for i := 0; i+1 < len(content); i += 2 {
+		if content[i].Tag != "!!merge" {
+			continue
+		}
+		sources := []*yaml.Node{content[i+1]}
+		if sources[0].Kind == yaml.SequenceNode {
+			sources = sources[0].Content
+		}
+		for _, source := range sources {
+			if source.Kind != yaml.MappingNode {
+				return nil, fmt.Errorf("YAML merge requires a mapping or a sequence of mappings")
+			}
+			for j := 0; j+1 < len(source.Content); j += 2 {
+				key := source.Content[j]
+				if !keys[key.Value] {
+					out.Content = append(out.Content, key, source.Content[j+1])
+					keys[key.Value] = true
+				}
+			}
+		}
+	}
+	return &out, nil
 }

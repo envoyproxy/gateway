@@ -145,7 +145,7 @@ func migrateEnvoyGatewayResource(obj *migrate.Object) ([]migrate.Finding, error)
 
 func reportConfigMap(obj *migrate.Object) ([]migrate.Finding, error) {
 	data := migrate.GetMapping(obj.Root, "data")
-	v := migrate.Get(data, envoyGatewayConfigKey)
+	v := migrate.Resolve(migrate.Get(data, envoyGatewayConfigKey))
 	if v == nil || v.Kind != yaml.ScalarNode {
 		return nil, nil
 	}
@@ -156,8 +156,11 @@ func reportConfigMap(obj *migrate.Object) ([]migrate.Finding, error) {
 	if len(doc.Content) == 0 {
 		return nil, nil
 	}
+	if err := migrate.ExpandMergeKeys(&doc); err != nil {
+		return nil, fmt.Errorf("decoding %s: %w", envoyGatewayConfigKey, err)
+	}
 	eg := doc.Content[0]
-	if kind := migrate.Get(eg, "kind"); kind == nil || kind.Value != egv1a1.KindEnvoyGateway {
+	if migrate.Scalar(migrate.Get(eg, "kind")) != egv1a1.KindEnvoyGateway {
 		return nil, nil
 	}
 	return reportEnvoyGateway("data."+envoyGatewayConfigKey+":", eg, helmValuesHint), nil

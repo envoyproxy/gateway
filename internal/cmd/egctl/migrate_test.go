@@ -333,6 +333,43 @@ func TestMigrateDeprecatedReviewRegressions(t *testing.T) {
 		want               any
 	}{
 		{
+			name: "merged resource and nested fields",
+			input: `<<:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+spec:
+  <<: [{targetRef: {name: first}}, {targetRef: {name: second}}]
+  headers:
+    <<: {preserveXRequestID: true}
+`,
+			field: "spec.targetRefs[0].name",
+			want:  "first",
+		},
+		{
+			name: "explicit key overrides merge",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+spec:
+  targetRef: {name: explicit}
+  <<: {targetRef: {name: inherited}}
+`,
+			field: "spec.targetRefs[0].name",
+			want:  "explicit",
+		},
+		{
+			name: "merged anchor stays independent",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+defaults: &defaults
+  targetRef: &target {name: inherited}
+copy: *target
+spec:
+  <<: *defaults
+`,
+			field: "defaults.targetRef.name",
+			want:  "inherited",
+		},
+		{
 			name: "nested typed list",
 			input: `apiVersion: v1
 kind: List
@@ -470,6 +507,39 @@ spec:
 			require.Equal(t, out, string(data))
 			_, _, err = runMigrate(t, "-f", file, "--mode", "check-only")
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestMigrateAliasedConfigMapData(t *testing.T) {
+	input := `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  annotations:
+    config: &config |
+      identity: &kind EnvoyGateway
+      kind: *kind
+      extensionApis:
+        <<: {disableLua: true}
+data:
+  envoy-gateway.yaml: *config
+`
+	file := filepath.Join(t.TempDir(), "config.yaml")
+	require.NoError(t, os.WriteFile(file, []byte(input), 0o600))
+	for _, mode := range []string{"print", "check-only", "in-place"} {
+		t.Run(mode, func(t *testing.T) {
+			out, report, err := runMigrate(t, "-f", file, "--mode", mode)
+			require.Equal(t, migrate.ExitCodeError, exitCode(err), "%v", err)
+			require.Contains(t, report, "extensionApis.disableLua")
+			if mode == "print" {
+				require.Equal(t, input, out)
+			} else {
+				require.Empty(t, out)
+			}
+			data, err := os.ReadFile(file)
+			require.NoError(t, err)
+			require.Equal(t, input, string(data))
 		})
 	}
 }

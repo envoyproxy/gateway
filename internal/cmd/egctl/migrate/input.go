@@ -218,6 +218,9 @@ func parseDocuments(source string, data []byte) ([]*document, error) {
 		if node.Kind != yaml.DocumentNode || len(node.Content) == 0 || node.Content[0].Kind != yaml.MappingNode {
 			continue
 		}
+		if err := ExpandMergeKeys(&node); err != nil {
+			return nil, fmt.Errorf("%s: document %d: %w", source, i+1, err)
+		}
 		d.node = &node
 		d.obj = newObject(node.Content[0], source)
 		if d.compactSeq, ok = seqStyle(d.raw); !ok {

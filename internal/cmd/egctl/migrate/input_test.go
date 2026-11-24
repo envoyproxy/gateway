@@ -116,3 +116,44 @@ func TestYAMLFilesSymlinkedDir(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{filepath.Join(link, "a.yaml"), filepath.Join(link, "sub", "b.yml")}, files)
 }
+
+func TestExpandMergeKeys(t *testing.T) {
+	for _, input := range []string{
+		"base: &base {a: 1, b: 2}\nvalue: {<<: *base, a: 3}\n",
+		"value: {<<: [{a: 1}, {a: 2, b: 3}]}\n",
+		"value: {<<: {<<: {a: 1}, b: 2}, b: 3}\n",
+		"value: {<<: {a: &a {nested: true}}}\ncopy: *a\n",
+		"value: {'<<': literal}\n",
+	} {
+		t.Run(input, func(t *testing.T) {
+			var doc yaml.Node
+			require.NoError(t, yaml.Unmarshal([]byte(input), &doc))
+			var want any
+			require.NoError(t, doc.Decode(&want))
+			require.NoError(t, ExpandMergeKeys(&doc))
+			encoded, err := yaml.Marshal(&doc)
+			require.NoError(t, err)
+			var got any
+			require.NoError(t, yaml.Unmarshal(encoded, &got))
+			require.Equal(t, want, got)
+		})
+	}
+	for _, input := range []string{
+		"value: {<<: 1}",
+		"value: {<<: [1]}",
+		"value: &value {<<: *value}",
+	} {
+		var doc yaml.Node
+		require.NoError(t, yaml.Unmarshal([]byte(input), &doc))
+		require.Error(t, ExpandMergeKeys(&doc))
+	}
+}
+
+func TestUnchangedMergeDocument(t *testing.T) {
+	input := "apiVersion: v1\nkind: ConfigMap\ndata:\n  <<: {key: value}\n"
+	in, err := newFileInput("config.yaml", []byte(input))
+	require.NoError(t, err)
+	var out bytes.Buffer
+	require.NoError(t, in.write(&out, true))
+	require.Equal(t, input, out.String())
+}
