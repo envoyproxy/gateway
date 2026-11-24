@@ -66,8 +66,8 @@ spec:
   extAuth:
     http:
       path: /auth
-      backendRef:
-        name: envoy-ext-auth
+      backendRefs:
+      - name: envoy-ext-auth
         namespace: gateway-conformance-infra
         port: 8080
       headersToBackend: ["x-current-user", "x-ext-auth-req-path"]
@@ -85,8 +85,8 @@ spec:
   extAuth:
     http:
       pathOverride: /auth
-      backendRef:
-        name: envoy-ext-auth
+      backendRefs:
+      - name: envoy-ext-auth
         namespace: gateway-conformance-infra
         port: 8080
       headersToBackend: ["x-current-user", "x-ext-auth-req-path"]

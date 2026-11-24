@@ -5,8 +5,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: target-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -15,8 +15,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: target-gateway-1-as-well
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -25,8 +25,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: target-httproute-in-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     cors:
@@ -39,8 +39,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: also-target-httproute-in-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -53,8 +53,8 @@ securityPolicies:
       allowOrigins:
       - "http://*.example.com"
       maxAge: 1000s
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -63,8 +63,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: target-unknown-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -73,8 +73,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: target-unknown-httproute
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: unknown-httproute
 httpRoutes:

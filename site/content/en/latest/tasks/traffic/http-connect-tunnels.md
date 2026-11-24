@@ -62,10 +62,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: connect-proxy
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: connect-proxy
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: connect-proxy
   httpUpgrade:
     - type: CONNECT
 ---

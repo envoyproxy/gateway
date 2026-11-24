@@ -112,10 +112,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-tcp
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: TCPRoute
-        name: tcp-app-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: TCPRoute
+          name: tcp-app-1
       http1:
         enableTrailers: true
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -124,10 +124,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-udp
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: UDPRoute
-        name: udp-app-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: UDPRoute
+          name: udp-app-1
       http1:
         enableTrailers: true
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -136,10 +136,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-tls
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: TLSRoute
-        name: tls-app-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: TLSRoute
+          name: tls-app-1
       http1:
         enableTrailers: true
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -148,9 +148,9 @@ backendTrafficPolicies:
       namespace: default
       name: policy-grpc
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: GRPCRoute
-        name: grpc-app-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: GRPCRoute
+          name: grpc-app-1
       http1:
         enableTrailers: true

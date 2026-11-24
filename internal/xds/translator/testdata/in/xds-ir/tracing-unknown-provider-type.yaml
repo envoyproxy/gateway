@@ -28,8 +28,6 @@ tracing:
             port: 1357
         name: "tracing-0/backend/0"
   provider:
-    host: awesome-agent.monitoring.svc.cluster.local
-    port: 1357
     type: AwesomeTelemetry
 http:
   - name: "first-listener"

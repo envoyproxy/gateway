@@ -55,10 +55,10 @@ backendTrafficPolicies:
       namespace: envoy-gateway
       name: policy-for-gateway
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       timeout:
         tcp:
           connectTimeout: 15s
@@ -73,10 +73,10 @@ backendTrafficPolicies:
       namespace: default
       name: merged-policy-for-route
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       mergeType: StrategicMerge
       timeout:
         tcp:
@@ -91,9 +91,9 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: GRPCRoute
-        name: grpcroute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: GRPCRoute
+          name: grpcroute-1
       connection:
         bufferLimit: 100M

@@ -18,9 +18,9 @@ envoyProxyForGatewayClass:
             loadBalancer:
               type: ConsistentHash
               consistentHash:
-                type: Header
-                header:
-                  name: X-some-header
+                type: Headers
+                headers:
+                  - name: X-some-header
             proxyProtocol:
               version: V2
             tcpKeepalive:

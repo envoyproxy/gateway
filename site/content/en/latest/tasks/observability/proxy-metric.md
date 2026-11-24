@@ -176,8 +176,10 @@ spec:
       sinks:
         - type: OpenTelemetry
           openTelemetry:
-            host: otel-collector.monitoring.svc.cluster.local
-            port: 4317
+            backendRefs:
+            - name: otel-collector
+              namespace: monitoring
+              port: 4317
 EOF
 ```
 {{% /tab %}}
@@ -211,8 +213,10 @@ spec:
       sinks:
         - type: OpenTelemetry
           openTelemetry:
-            host: otel-collector.monitoring.svc.cluster.local
-            port: 4317
+            backendRefs:
+            - name: otel-collector
+              namespace: monitoring
+              port: 4317
 ```
 {{% /tab %}}
 {{< /tabpane >}}

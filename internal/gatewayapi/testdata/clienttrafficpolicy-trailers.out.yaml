@@ -7,8 +7,8 @@ clientTrafficPolicies:
   spec:
     http1:
       enableTrailers: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -25,11 +25,10 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead; spec.http1.enableTrailers behavior will change in a future release:
+        message: 'spec.http1.enableTrailers behavior will change in a future release:
           this field will only apply to client connections, for compatibility: use
           BackendTrafficPolicy.http1.enableTrailers for backend settings'
-        reason: Warnings
+        reason: BehaviorChange
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

@@ -9,8 +9,8 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend-4
         port: 4000
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
