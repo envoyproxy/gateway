@@ -1685,9 +1685,12 @@ request is sent right after the slow ones finish, it can still get a `429` until
 
 Keep the following in mind when using this pattern:
 
-* The counters still belong to a time window. When a new window starts, the counter starts again from zero and the requests
-  still open from the previous window are no longer counted, so the limit can briefly be exceeded. A longer `unit`, such as
-  `Hour`, makes this less frequent.
+* The counters still belong to a time window, so the limit is not a strict bound on concurrency when a new window starts.
+  The counter starts again from zero and the requests still open from the previous window are no longer counted. When
+  those requests end, their cost is given back to the counter of the new window, which cancels the cost of requests that
+  started in it. A client can then keep more requests in flight than the limit, by as many as it had open when the window
+  started, and this can add up over several windows if the client stays at the limit. Use a `unit` that is much longer
+  than your longest request, such as `Hour`, so that few requests are open when a window starts.
 * The decrease is sent to the rate limit service when the stream is closed and is not retried. If that call fails, the
   counter stays higher than the real number of requests in flight until the window ends.
 * The descriptor is built again when the stream is closed, from the request headers as they are at that point. If the
