@@ -178,6 +178,34 @@ hpa:
   metrics: []
   behavior: {}
 
+metrics:
+  # -- Configure a prometheus-operator ServiceMonitor to scrape Envoy Gateway control plane metrics via the envoy-gateway Service.
+  serviceMonitor:
+    # -- Enable the ServiceMonitor.
+    enabled: false
+    # -- Namespace where the ServiceMonitor is installed. Defaults to the chart namespace.
+    namespace: ""
+    # -- Name of the Service port to scrape. Defaults to the metrics port defined in deployment.ports.
+    portName: metrics
+    # -- Additional labels for the ServiceMonitor resource.
+    labels: {}
+    # -- Annotations for the ServiceMonitor resource.
+    annotations: {}
+    # -- Scrape interval; Prometheus default when empty.
+    interval: ""
+    # -- Scrape protocol scheme (http/https).
+    scheme: ""
+    # -- Metrics scrape path; /metrics when empty.
+    path: ""
+    # -- TLS config for the scrape endpoint.
+    tlsConfig: {}
+    # -- MetricRelabelConfigs applied before ingestion.
+    metricRelabelings: []
+    # -- RelabelConfigs applied before scraping.
+    relabelings: []
+    # -- Label used as the job name.
+    jobLabel: ""
+
 config:
 # -- EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options.
   envoyGateway:

@@ -1,0 +1,52 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: envoy-gateway
+  namespace: {{ default (include "eg.namespace" .) .Values.metrics.serviceMonitor.namespace | quote }}
+  labels:
+    control-plane: envoy-gateway
+    {{- include "eg.labels" . | nindent 4 }}
+    {{- with .Values.metrics.serviceMonitor.labels }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.metrics.serviceMonitor.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  endpoints:
+  - port: {{ .Values.metrics.serviceMonitor.portName | quote }}
+    {{- if .Values.metrics.serviceMonitor.interval }}
+    interval: {{ .Values.metrics.serviceMonitor.interval }}
+    {{- end }}
+    {{- if .Values.metrics.serviceMonitor.scheme }}
+    scheme: {{ .Values.metrics.serviceMonitor.scheme | quote }}
+    {{- end }}
+    {{- if .Values.metrics.serviceMonitor.tlsConfig }}
+    tlsConfig:
+      {{- toYaml .Values.metrics.serviceMonitor.tlsConfig | nindent 6 }}
+    {{- end }}
+    {{- if .Values.metrics.serviceMonitor.metricRelabelings }}
+    metricRelabelings:
+      {{- tpl (toYaml .Values.metrics.serviceMonitor.metricRelabelings | nindent 6) . }}
+    {{- end }}
+    {{- if .Values.metrics.serviceMonitor.path }}
+    path: {{ .Values.metrics.serviceMonitor.path }}
+    {{- end }}
+    {{- if .Values.metrics.serviceMonitor.relabelings }}
+    relabelings:
+      {{- toYaml .Values.metrics.serviceMonitor.relabelings | nindent 6 }}
+    {{- end }}
+  {{- if .Values.metrics.serviceMonitor.jobLabel }}
+  jobLabel: {{ .Values.metrics.serviceMonitor.jobLabel }}
+  {{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ include "eg.namespace" . | quote }}
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway
+      {{- include "eg.selectorLabels" . | nindent 6 }}
+{{- end }}
+{{- end }}
