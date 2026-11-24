@@ -34,15 +34,11 @@ func (in *BackendEndpoints) DeepCopy() *BackendEndpoints { return in }
 
 func (in *BackendEndpoints) DeepCopyInto(out *BackendEndpoints) { *out = *in }
 
-// sourceForPort returns where one port's endpoints come from: this backend, the
-// port and this revision.
-func (in *BackendEndpoints) sourceForPort(portName string, protocol corev1.Protocol) *ir.EndpointSource {
-	return &ir.EndpointSource{Service: in.Backend, Revision: in.Revision, PortName: portName, Protocol: string(protocol)}
-}
-
 // ForPort returns this revision's endpoints, address type, and source for one port.
+// The source records the backend, port and revision the endpoints came from.
 func (in *BackendEndpoints) ForPort(portName string, protocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType, *ir.EndpointSource) {
-	return in.EndpointsByPort[Port{Name: portName, Protocol: protocol}], addressType(in.EndpointSlices), in.sourceForPort(portName, protocol)
+	source := &ir.EndpointSource{Service: in.Backend, Revision: in.Revision, PortName: portName, Protocol: string(protocol)}
+	return in.EndpointsByPort[Port{Name: portName, Protocol: protocol}], addressType(in.EndpointSlices), source
 }
 
 func NewBackendEndpoints(backend ir.ServiceKey, slices []*discoveryv1.EndpointSlice) *BackendEndpoints {

@@ -187,10 +187,10 @@ const (
 	// EndpointFastPath enables publishing eligible Kubernetes endpoint changes without
 	// waiting for full translation. Full reconciliation remains enabled. Disabled by default;
 	// it is planned to be enabled by default in the next release.
-	// It has no effect while an extension server registers the Endpoints hook, since
-	// fast updates would rebuild endpoints without calling it.
+	// It has no effect while an extension server registers the Endpoints hook, and it skips
+	// any cluster whose endpoints an EnvoyPatchPolicy patches, since fast updates would
+	// rebuild endpoints without calling the hook or applying the patch.
 	EndpointFastPath RuntimeFlag = "EndpointFastPath"
-	// TODO(robin): make EndpointFastPath work with ExtensionServer's Endpoints hook.
 
 	// PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per
 	// BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead
