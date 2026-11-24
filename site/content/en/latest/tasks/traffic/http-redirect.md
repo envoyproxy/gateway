@@ -88,10 +88,13 @@ matching portions. Substitutions must be non-empty and cannot contain NUL, CR, L
 
 The redirect applies only when both the HTTPRoute matches and the transformation regex match the
 request path. The transformation check excludes the query string and does not change route
-precedence. It uses the path at the start of the HTTP filter chain; subsequent path changes by other
-HTTP filters are not reflected in this check. If the pattern does not match, Envoy considers the next
-matching route instead of sending a redirect. Ensure that substitutions do not produce the original
-URL or create cycles between redirect rules.
+precedence. It uses the path saved at the start of the HTTP filter chain, which is refreshed immediately
+after a gRPC-JSON transcoder runs. The transcoder does not itself trigger route recomputation, but if
+`EnvoyProxy.spec.filterOrder` places a filter that clears the route cache after it, like ExtAuth or JWT
+with `recomputeRoute`, the later route lookup checks the transcoded path. Other HTTP filter path changes
+are not reflected in the saved path. If the pattern does not match, Envoy considers the next matching
+route instead of sending a redirect. Ensure that substitutions do not produce the original URL or
+create cycles between redirect rules.
 
 Only one redirect extension and at most one native `RequestRedirect` filter are supported per HTTPRoute
 rule. If present, the native filter must not specify `path`, since it would conflict with the
