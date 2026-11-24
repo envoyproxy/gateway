@@ -16,8 +16,12 @@ import (
 	"github.com/envoyproxy/gateway/internal/cmd/egctl/migrate"
 )
 
-// defaultTelemetryPort is the CRD default of the deprecated telemetry port fields.
-const defaultTelemetryPort = 4317
+const (
+	// defaultTelemetryPort is the CRD default of the deprecated telemetry port fields.
+	defaultTelemetryPort = 4317
+	// consistentHashTypeHeader is the deprecated consistent hash type, replaced by Headers.
+	consistentHashTypeHeader = "Header"
+)
 
 // migrateTargetRef rewrites spec.targetRef to spec.targetRefs.
 //
@@ -175,7 +179,7 @@ func migrateConsistentHash(ch *yaml.Node, base string) migrate.Finding {
 	if typ == nil {
 		return errorf(base+".type", "unexpected shape, consistentHash has no type, not migrated")
 	}
-	if typ.Value != string(egv1a1.HeaderConsistentHashType) {
+	if typ.Value != consistentHashTypeHeader {
 		// Only header is set, with another type: it is unused.
 		migrate.Delete(ch, "header")
 		return migrated(base+".header", "removed, it is unused with type %s", typ.Value)

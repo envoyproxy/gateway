@@ -6,14 +6,12 @@
 package migrate
 
 import (
-	"bytes"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
-	sigsyaml "sigs.k8s.io/yaml"
 )
 
 // Get returns the value of key in the mapping node m, or nil if m isn't a mapping or has no key.
@@ -124,19 +122,6 @@ func Equal(a, b *yaml.Node) bool {
 		return false
 	}
 	return reflect.DeepEqual(va, vb)
-}
-
-// DecodeInto decodes n into the Kubernetes-style object out, using its JSON field names.
-func DecodeInto(n *yaml.Node, out any) error {
-	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	if err := enc.Encode(n); err != nil {
-		return err
-	}
-	if err := enc.Close(); err != nil {
-		return err
-	}
-	return sigsyaml.Unmarshal(buf.Bytes(), out)
 }
 
 var pathSegment = regexp.MustCompile(`^([^\[\]]+)((?:\[\d+\])*)$`)

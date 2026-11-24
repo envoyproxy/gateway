@@ -17,12 +17,11 @@ import (
 	"go.yaml.in/yaml/v3"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	sigsyaml "sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/egctl/migrate"
-	"github.com/envoyproxy/gateway/internal/deprecation"
 )
 
 const (
@@ -50,42 +49,17 @@ var _ migrate.Path = (*Path)(nil)
 // the envoy-gateway-config ConfigMap.
 func (p *Path) Fetch(ctx context.Context, cli client.Client, namespace string) ([]client.Object, error) {
 	var objs []client.Object
-	opts := []client.ListOption{client.InNamespace(namespace)}
-
-	var ctps egv1a1.ClientTrafficPolicyList
-	if err := cli.List(ctx, &ctps, opts...); err != nil {
-		return nil, fmt.Errorf("listing ClientTrafficPolicies: %w", err)
-	}
-	for i := range ctps.Items {
-		objs = append(objs, &ctps.Items[i])
-	}
-	var btps egv1a1.BackendTrafficPolicyList
-	if err := cli.List(ctx, &btps, opts...); err != nil {
-		return nil, fmt.Errorf("listing BackendTrafficPolicies: %w", err)
-	}
-	for i := range btps.Items {
-		objs = append(objs, &btps.Items[i])
-	}
-	var sps egv1a1.SecurityPolicyList
-	if err := cli.List(ctx, &sps, opts...); err != nil {
-		return nil, fmt.Errorf("listing SecurityPolicies: %w", err)
-	}
-	for i := range sps.Items {
-		objs = append(objs, &sps.Items[i])
-	}
-	var eeps egv1a1.EnvoyExtensionPolicyList
-	if err := cli.List(ctx, &eeps, opts...); err != nil {
-		return nil, fmt.Errorf("listing EnvoyExtensionPolicies: %w", err)
-	}
-	for i := range eeps.Items {
-		objs = append(objs, &eeps.Items[i])
-	}
-	var eps egv1a1.EnvoyProxyList
-	if err := cli.List(ctx, &eps, opts...); err != nil {
-		return nil, fmt.Errorf("listing EnvoyProxies: %w", err)
-	}
-	for i := range eps.Items {
-		objs = append(objs, &eps.Items[i])
+	// The objects are read as unstructured, so that the deprecated fields are kept even when this
+	// egctl is built from an API that no longer has them.
+	for _, kind := range migratedKinds {
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(egv1a1.GroupVersion.WithKind(kind + "List"))
+		if err := cli.List(ctx, list, client.InNamespace(namespace)); err != nil {
+			return nil, fmt.Errorf("listing %s resources: %w", kind, err)
+		}
+		for i := range list.Items {
+			objs = append(objs, &list.Items[i])
+		}
 	}
 
 	if namespace == "" || namespace == p.EnvoyGatewayNamespace {
@@ -101,6 +75,15 @@ func (p *Path) Fetch(ctx context.Context, cli client.Client, namespace string) (
 	return objs, nil
 }
 
+// migratedKinds are the kinds whose deprecated fields are rewritten.
+var migratedKinds = []string{
+	egv1a1.KindClientTrafficPolicy,
+	egv1a1.KindBackendTrafficPolicy,
+	egv1a1.KindSecurityPolicy,
+	egv1a1.KindEnvoyExtensionPolicy,
+	egv1a1.KindEnvoyProxy,
+}
+
 // Migrate rewrites the deprecated fields of obj.
 func (p *Path) Migrate(obj *migrate.Object) ([]migrate.Finding, error) {
 	switch {
@@ -111,50 +94,25 @@ func (p *Path) Migrate(obj *migrate.Object) ([]migrate.Finding, error) {
 	case obj.APIVersion == "" && obj.Kind == "":
 		// Helm values of the gateway-helm chart.
 		if config := migrate.Lookup(obj.Root, "config.envoyGateway"); config != nil && config.Kind == yaml.MappingNode {
-			eg := &egv1a1.EnvoyGateway{}
-			if err := migrate.DecodeInto(config, eg); err != nil {
-				return nil, fmt.Errorf("decoding config.envoyGateway: %w", err)
-			}
-			return reportEnvoyGateway("config.envoyGateway.", eg, "update it in the Helm values"), nil
+			return reportEnvoyGateway("config.envoyGateway.", config, "update it in the Helm values"), nil
 		}
 	}
 	return nil, nil
 }
 
 func migrateEnvoyGatewayResource(obj *migrate.Object) ([]migrate.Finding, error) {
-	var detect func(*yaml.Node) (map[string]deprecation.DeprecatedField, error)
-	switch obj.Kind {
-	case egv1a1.KindClientTrafficPolicy:
-		detect = detector(deprecation.ClientTrafficPolicy)
-	case egv1a1.KindBackendTrafficPolicy:
-		detect = detector(deprecation.BackendTrafficPolicy)
-	case egv1a1.KindSecurityPolicy:
-		detect = detector(deprecation.SecurityPolicy)
-	case egv1a1.KindEnvoyExtensionPolicy:
-		detect = detector(deprecation.EnvoyExtensionPolicy)
-	case egv1a1.KindEnvoyProxy:
-		detect = detector(deprecation.EnvoyProxy)
-	case egv1a1.KindEnvoyGateway:
-		eg := &egv1a1.EnvoyGateway{}
-		if err := migrate.DecodeInto(obj.Root, eg); err != nil {
-			return nil, fmt.Errorf("decoding EnvoyGateway: %w", err)
-		}
-		return reportEnvoyGateway("", eg, helmValuesHint), nil
-	default:
+	if obj.Kind == egv1a1.KindEnvoyGateway {
+		return reportEnvoyGateway("", obj.Root, helmValuesHint), nil
+	}
+	if !slices.Contains(migratedKinds, obj.Kind) {
 		return nil, nil
 	}
 
-	fields, err := detect(obj.Root)
-	if err != nil {
-		return nil, err
-	}
+	fields := detect(obj.Kind, obj.Root)
 	findings, unmigrated := rewrite(obj.Root, slices.Collect(maps.Keys(fields)))
 
 	// Safety net: every field that was reported as migrated must be gone.
-	after, err := detect(obj.Root)
-	if err != nil {
-		return nil, fmt.Errorf("decoding the migrated object: %w", err)
-	}
+	after := detect(obj.Kind, obj.Root)
 	for _, path := range slices.Sorted(maps.Keys(after)) {
 		if !unmigrated[path] {
 			return nil, fmt.Errorf("%s is still deprecated after migration, please report this as a bug", path)
@@ -163,28 +121,21 @@ func migrateEnvoyGatewayResource(obj *migrate.Object) ([]migrate.Finding, error)
 	return findings, nil
 }
 
-// detector returns a function that decodes a node into T and runs detect on it.
-func detector[T any](detect func(*T) map[string]deprecation.DeprecatedField) func(*yaml.Node) (map[string]deprecation.DeprecatedField, error) {
-	return func(n *yaml.Node) (map[string]deprecation.DeprecatedField, error) {
-		obj := new(T)
-		if err := migrate.DecodeInto(n, obj); err != nil {
-			return nil, err
-		}
-		return detect(obj), nil
-	}
-}
-
 func reportConfigMap(obj *migrate.Object) ([]migrate.Finding, error) {
 	data := migrate.GetMapping(obj.Root, "data")
 	v := migrate.Get(data, envoyGatewayConfigKey)
 	if v == nil || v.Kind != yaml.ScalarNode {
 		return nil, nil
 	}
-	eg := &egv1a1.EnvoyGateway{}
-	if err := sigsyaml.Unmarshal([]byte(v.Value), eg); err != nil {
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte(v.Value), &doc); err != nil {
 		return nil, fmt.Errorf("decoding %s: %w", envoyGatewayConfigKey, err)
 	}
-	if eg.Kind != egv1a1.KindEnvoyGateway {
+	if len(doc.Content) == 0 {
+		return nil, nil
+	}
+	eg := doc.Content[0]
+	if kind := migrate.Get(eg, "kind"); kind == nil || kind.Value != egv1a1.KindEnvoyGateway {
 		return nil, nil
 	}
 	return reportEnvoyGateway("data."+envoyGatewayConfigKey+":", eg, helmValuesHint), nil
@@ -192,14 +143,14 @@ func reportConfigMap(obj *migrate.Object) ([]migrate.Finding, error) {
 
 // reportEnvoyGateway reports every deprecated field of the EnvoyGateway configuration as an error.
 // The configuration is usually rendered from the Helm values, so a rewrite here would be lost.
-func reportEnvoyGateway(prefix string, eg *egv1a1.EnvoyGateway, hint string) []migrate.Finding {
-	fields := deprecation.EnvoyGatewayFields(eg)
-	findings := make([]migrate.Finding, 0, len(fields))
-	for _, w := range fields {
+func reportEnvoyGateway(prefix string, eg *yaml.Node, hint string) []migrate.Finding {
+	warnings := detectEnvoyGateway(eg)
+	findings := make([]migrate.Finding, 0, len(warnings))
+	for _, w := range warnings {
 		findings = append(findings, migrate.Finding{
-			Field:  prefix + w.Path,
+			Field:  prefix + w.path,
 			Result: migrate.ResultError,
-			Note:   fmt.Sprintf("%s; EnvoyGateway configuration is not migrated automatically, %s", w.Message, hint),
+			Note:   fmt.Sprintf("%s; EnvoyGateway configuration is not migrated automatically, %s", w.message, hint),
 		})
 	}
 	return findings
@@ -230,7 +181,7 @@ type group struct {
 	keys []string
 }
 
-// classify maps a deprecated field path reported by internal/deprecation to its rule and the path
+// classify maps a deprecated field path reported by detect to its rule and the path
 // of the node the rule rewrites.
 func classify(path string) (rule, string) {
 	switch path {
