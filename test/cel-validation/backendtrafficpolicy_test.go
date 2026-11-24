@@ -4188,7 +4188,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "valid Global rate limit rule with negative response cost",
+			desc: "valid Global rate limit rule with refund on response",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -4210,11 +4210,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 											From:   egv1a1.RateLimitCostFromNumber,
 											Number: new(uint64(1)),
 										},
-										Response: &egv1a1.RateLimitCostSpecifier{
-											From:     egv1a1.RateLimitCostFromNumber,
-											Number:   new(uint64(1)),
-											Negative: new(true),
-										},
+										RefundOnResponse: new(true),
 									},
 								},
 							},
@@ -4225,7 +4221,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "invalid Global rate limit rule with negative request cost",
+			desc: "invalid Global rate limit rule with refund on response and metadata request cost",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -4244,10 +4240,13 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 									Limit: egv1a1.RateLimitValue{Requests: 10, Unit: "Hour"},
 									Cost: &egv1a1.RateLimitCost{
 										Request: &egv1a1.RateLimitCostSpecifier{
-											From:     egv1a1.RateLimitCostFromNumber,
-											Number:   new(uint64(1)),
-											Negative: new(true),
+											From: egv1a1.RateLimitCostFromMetadata,
+											Metadata: &egv1a1.RateLimitCostMetadata{
+												Namespace: "com.test.my_filter",
+												Key:       "on_request_key",
+											},
 										},
+										RefundOnResponse: new(true),
 									},
 								},
 							},
@@ -4257,7 +4256,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.rateLimit.global.rules[0].cost: Invalid value:",
-				": negative is only supported for response cost",
+				": refundOnResponse requires a Number request cost and cannot be used with a response cost",
 			},
 		},
 		{
