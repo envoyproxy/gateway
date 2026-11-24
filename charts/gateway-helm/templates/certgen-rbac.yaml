@@ -19,6 +19,9 @@ metadata:
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
 ---
+{{- $rbac := .Values.rbac | default dict -}}
+{{- $rbacCreate := ternary $rbac.create true (hasKey $rbac "create") -}}
+{{- if $rbacCreate }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -128,4 +131,5 @@ subjects:
   - kind: ServiceAccount
     name: '{{ include "eg.fullname" . }}-certgen'
     namespace: {{ include "eg.namespace" . }}
-{{- end }}
+{{- end -}}
+{{- end -}}
