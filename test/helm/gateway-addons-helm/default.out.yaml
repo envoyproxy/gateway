@@ -5722,7 +5722,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "PBFA97CFB590B2093"
+                  "uid": "$datasource"
                 },
                 "disableTextWrap": false,
                 "editorMode": "builder",
@@ -5795,7 +5795,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "PBFA97CFB590B2093"
+                  "uid": "$datasource"
                 },
                 "disableTextWrap": false,
                 "editorMode": "builder",
@@ -5868,7 +5868,7 @@ data:
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "PBFA97CFB590B2093"
+                  "uid": "$datasource"
                 },
                 "disableTextWrap": false,
                 "editorMode": "builder",
