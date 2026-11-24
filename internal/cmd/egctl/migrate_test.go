@@ -333,6 +333,44 @@ func TestMigrateDeprecatedReviewRegressions(t *testing.T) {
 		want               any
 	}{
 		{
+			name: "removed boolean anchor",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+spec:
+  enableProxyProtocol: &enabled true
+  proxyProtocol: {optional: *enabled}
+`,
+			field: "spec.proxyProtocol.optional",
+			want:  true,
+		},
+		{
+			name: "replaced boolean anchor",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+spec:
+  enableProxyProtocol: &enabled true
+  tls:
+    clientValidation:
+      optional: *enabled
+`,
+			field: "spec.tls.clientValidation.mode",
+			want:  "VerifyIfGiven",
+		},
+		{
+			name: "block scalar before matching comment",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  annotations:
+    description: |
+      hello # note
+spec:
+  enableProxyProtocol: true # note
+`,
+			field: "metadata.annotations.description",
+			want:  "hello # note\n",
+		},
+		{
 			name: "merged resource and nested fields",
 			input: `<<:
   apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -368,22 +406,6 @@ spec:
 `,
 			field: "defaults.targetRef.name",
 			want:  "inherited",
-		},
-		{
-			name: "nested typed list",
-			input: `apiVersion: v1
-kind: List
-items:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: ClientTrafficPolicyList
-  items:
-  - metadata:
-      name: policy
-    spec:
-      targetRef: {name: eg}
-`,
-			field: "items[0].items[0].spec.targetRefs[0].name",
-			want:  "eg",
 		},
 		{
 			name: "aliased identity",
@@ -541,5 +563,25 @@ data:
 			require.NoError(t, err)
 			require.Equal(t, input, string(data))
 		})
+	}
+}
+
+func TestMigrateRejectsListResources(t *testing.T) {
+	for _, kind := range []string{"List", "SecurityPolicyList", "ClientTrafficPolicyList"} {
+		for _, mode := range []string{"print", "check-only", "in-place"} {
+			t.Run(kind+"/"+mode, func(t *testing.T) {
+				input := "apiVersion: gateway.envoyproxy.io/v1alpha1\nkind: ClientTrafficPolicy\nspec:\n  enableProxyProtocol: true\n---\napiVersion: v1\nkind: " + kind + "\nitems: []\n"
+				file := filepath.Join(t.TempDir(), "list.yaml")
+				require.NoError(t, os.WriteFile(file, []byte(input), 0o600))
+				out, _, err := runMigrate(t, "-f", file, "--mode", mode)
+				require.ErrorContains(t, err, "list resource")
+				require.ErrorContains(t, err, kind)
+				require.ErrorContains(t, err, "split its items into individual YAML documents")
+				require.Empty(t, out)
+				data, err := os.ReadFile(file)
+				require.NoError(t, err)
+				require.Equal(t, input, string(data), "reject all input before migrating or writing any document")
+			})
+		}
 	}
 }

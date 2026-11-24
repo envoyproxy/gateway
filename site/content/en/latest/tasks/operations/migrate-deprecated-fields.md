@@ -20,6 +20,10 @@ written to stderr:
 egctl x migrate deprecated -f manifests/
 ```
 
+Use individual resource documents, separated by `---` when a file contains multiple resources.
+`List` and typed lists such as `SecurityPolicyList` are rejected before any files are changed;
+split their `items` into individual resource documents first.
+
 Given this ClientTrafficPolicy:
 
 ```yaml

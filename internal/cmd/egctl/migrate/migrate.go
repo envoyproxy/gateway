@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"go.yaml.in/yaml/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -150,7 +149,7 @@ func Run(ctx context.Context, path Path, opts Options, cli client.Client, out, r
 			if doc.obj == nil {
 				continue
 			}
-			migrateDoc(path, doc, rep, make(map[*yaml.Node]bool))
+			migrateDoc(path, doc, rep)
 		}
 	}
 
@@ -188,37 +187,8 @@ func Run(ctx context.Context, path Path, opts Options, cli client.Client, out, r
 
 // migrateDoc runs the path on one document and records its findings. Managed objects are reverted
 // and every finding on them is reported as an error.
-func migrateDoc(path Path, doc *document, rep *reporter, seen map[*yaml.Node]bool) {
+func migrateDoc(path Path, doc *document, rep *reporter) {
 	obj := doc.obj
-	root := Resolve(obj.Root)
-	if seen[root] {
-		return
-	}
-	seen[root] = true
-	// kubectl can emit generic Lists or typed lists whose items omit their GVK.
-	if obj.APIVersion != "" && strings.HasSuffix(obj.Kind, "List") {
-		if items := Resolve(Get(root, "items")); items != nil && items.Kind == yaml.SequenceNode {
-			for i, item := range items.Content {
-				if Resolve(item).Kind != yaml.MappingNode {
-					continue
-				}
-				child := newObject(item, obj.Source)
-				if obj.Kind != "List" {
-					if child.APIVersion == "" {
-						child.APIVersion = obj.APIVersion
-					}
-					if child.Kind == "" {
-						child.Kind = strings.TrimSuffix(obj.Kind, "List")
-					}
-				}
-				d := &document{obj: child, managedBy: doc.managedBy}
-				migrateDoc(path, d, rep, seen)
-				items.Content[i] = child.Root
-				doc.changed = doc.changed || d.changed
-			}
-			return
-		}
-	}
 	original := Clone(obj.Root)
 	findings, err := path.Migrate(obj)
 	if err != nil {

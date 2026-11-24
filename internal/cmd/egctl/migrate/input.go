@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -128,53 +127,79 @@ func (d *document) text() ([]byte, error) {
 	if d.compactSeq {
 		enc.CompactSeqIndent()
 	}
-	if err := enc.Encode(d.node); err != nil {
+	if err := enc.Encode(preserveAnchors(d.node)); err != nil {
 		return nil, err
 	}
 	if err := enc.Close(); err != nil {
 		return nil, err
 	}
-	return padLineComments(buf.Bytes(), d.node), nil
+	return padLineComments(buf.Bytes()), nil
 }
 
-// padLineComments puts two spaces before each trailing comment of the encoded node n. The encoder
-// writes one, which yamllint and most YAML style guides reject.
-//
-// The comments are matched to output lines in document order, so a block scalar line that happens
-// to end with the same text isn't changed.
-func padLineComments(data []byte, n *yaml.Node) []byte {
-	var comments []string
-	var walk func(*yaml.Node)
-	walk = func(n *yaml.Node) {
+// padLineComments adds the second space required by yamllint before inline
+// comments. A suffix match alone cannot distinguish a comment from scalar text.
+// Reparse each proposed edit and accept it only if the YAML values and structure
+// are identical, including the exact contents of quoted and block scalars.
+func padLineComments(data []byte) []byte {
+	var original yaml.Node
+	if yaml.Unmarshal(data, &original) != nil {
+		return data
+	}
+	comments := make(map[string]bool)
+	var collect func(*yaml.Node)
+	collect = func(n *yaml.Node) {
 		if n.LineComment != "" {
-			comments = append(comments, n.LineComment)
+			comments[n.LineComment] = true
 		}
-		for _, c := range n.Content {
-			walk(c)
+		for _, child := range n.Content {
+			collect(child)
 		}
 	}
-	walk(n)
+	collect(&original)
 	if len(comments) == 0 {
 		return data
 	}
-
 	lines := bytes.SplitAfter(data, []byte("\n"))
 	for i, line := range lines {
-		if len(comments) == 0 {
+		body := bytes.TrimSuffix(line, []byte("\n"))
+		for comment := range comments {
+			suffix := []byte(" " + comment)
+			if !bytes.HasSuffix(body, suffix) || len(body) <= len(suffix) {
+				continue
+			}
+			at := len(body) - len(suffix)
+			if body[at-1] == ' ' {
+				continue
+			}
+			candidate := make([]byte, 0, len(line)+1)
+			candidate = append(candidate, line[:at]...)
+			candidate = append(candidate, ' ')
+			candidate = append(candidate, line[at:]...)
+			lines[i] = candidate
+			var parsed yaml.Node
+			if yaml.Unmarshal(bytes.Join(lines, nil), &parsed) != nil || !sameYAMLValues(&original, &parsed) {
+				lines[i] = line
+				continue
+			}
 			break
 		}
-		body := bytes.TrimRight(line, "\n")
-		suffix := " " + comments[0]
-		if !bytes.HasSuffix(body, []byte(suffix)) || len(body) == len(suffix) {
-			continue
-		}
-		code := body[:len(body)-len(suffix)]
-		if !bytes.HasSuffix(code, []byte(" ")) {
-			lines[i] = slices.Concat(code, []byte("  "+comments[0]), line[len(body):])
-		}
-		comments = comments[1:]
 	}
 	return bytes.Join(lines, nil)
+}
+
+func sameYAMLValues(a, b *yaml.Node) bool {
+	if a.Kind != b.Kind || a.Tag != b.Tag || a.Value != b.Value || a.Anchor != b.Anchor || len(a.Content) != len(b.Content) {
+		return false
+	}
+	if a.HeadComment != b.HeadComment || a.LineComment != b.LineComment || a.FootComment != b.FootComment {
+		return false
+	}
+	for i := range a.Content {
+		if !sameYAMLValues(a.Content[i], b.Content[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 var (
@@ -223,6 +248,9 @@ func parseDocuments(source string, data []byte) ([]*document, error) {
 		}
 		d.node = &node
 		d.obj = newObject(node.Content[0], source)
+		if strings.HasSuffix(d.obj.Kind, "List") {
+			return nil, fmt.Errorf("%s: document %d: list resource %q is not supported; split its items into individual YAML documents separated by ---", source, i+1, d.obj.Kind)
+		}
 		if d.compactSeq, ok = seqStyle(d.raw); !ok {
 			d.compactSeq = fileCompact
 		}

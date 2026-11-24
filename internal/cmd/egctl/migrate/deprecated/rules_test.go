@@ -1,0 +1,127 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+package deprecated
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
+
+	"github.com/envoyproxy/gateway/internal/cmd/egctl/migrate"
+)
+
+func TestTelemetryHostEmptyBackendRefs(t *testing.T) {
+	for _, refs := range []string{"[]", "null"} {
+		t.Run(refs, func(t *testing.T) {
+			sink := parse(t, "host: collector.monitoring.svc\nport: 4317\nbackendRefs: "+refs)
+			migrateTelemetryHost(sink, "sink")
+			data, err := yaml.Marshal(sink)
+			require.NoError(t, err)
+			var got map[string]any
+			// Decoding into a map rejects duplicate keys.
+			require.NoError(t, yaml.Unmarshal(data, &got))
+			require.Equal(t, map[string]any{
+				"backendRefs": []any{map[string]any{"name": "collector", "namespace": "monitoring", "port": 4317}},
+			}, got)
+		})
+	}
+}
+
+func TestDeprecatedBooleanAliases(t *testing.T) {
+	tests := []struct {
+		field, replacement, value string
+		rewrite                   func(*yaml.Node, string) migrate.Finding
+	}{
+		{"enableProxyProtocol", "proxyProtocol", "{}", migrateProxyProtocol},
+		{"preserveXRequestID", "requestID", "PreserveOrGenerate", migrateXRequestID},
+		{"optional", "mode", "VerifyIfGiven", migrateClientValidation},
+	}
+	for _, tt := range tests {
+		for _, enabled := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s/%t", tt.field, enabled), func(t *testing.T) {
+				root := parse(t, fmt.Sprintf("anchor: &enabled %t\n%s: *enabled\n", enabled, tt.field))
+				tt.rewrite(root, "spec")
+				require.False(t, migrate.Has(root, tt.field))
+				if enabled {
+					want := parse(t, "value: "+tt.value)
+					require.True(t, migrate.Equal(migrate.Get(want, "value"), migrate.Get(root, tt.replacement)))
+				} else {
+					require.False(t, migrate.Has(root, tt.replacement))
+				}
+			})
+		}
+	}
+}
+
+func TestCompressionNullSettings(t *testing.T) {
+	for typ, block := range compressorBlocks {
+		for _, settings := range []string{"null", "*unset"} {
+			t.Run(typ+"/"+settings, func(t *testing.T) {
+				spec := parse(t, fmt.Sprintf("anchor: &unset null\ncompression:\n- type: %s\n  %s: %s\n", typ, block, settings))
+				migrateCompression(spec, "spec")
+				require.False(t, migrate.Has(spec, "compression"))
+				entries := migrate.Get(spec, "compressor")
+				require.Len(t, entries.Content, 1)
+				settings := migrate.Get(entries.Content[0], block)
+				require.NotNil(t, settings)
+				require.Equal(t, yaml.MappingNode, settings.Kind)
+				require.Empty(t, settings.Content)
+			})
+		}
+	}
+}
+
+func TestIgnoredAuthenticationBackendRef(t *testing.T) {
+	for _, base := range []string{"spec.jwt.providers[0].remoteJWKS", "spec.oidc.provider"} {
+		for _, refs := range []string{"", "backendRefs: []", "backendRefs: null", "backendRefs: [{name: active, port: 443}]"} {
+			t.Run(base+"/"+refs, func(t *testing.T) {
+				urlField := "uri"
+				if base == "spec.oidc.provider" {
+					urlField = "issuer"
+				}
+				provider := "{" + urlField + ": https://example.com/auth, backendRef: {name: nonexistent, port: 443}"
+				if refs != "" {
+					provider += ", " + refs
+				}
+				provider += "}"
+				spec := "jwt: {providers: [{name: jwt, remoteJWKS: " + provider + "}]}"
+				if base == "spec.oidc.provider" {
+					spec = "oidc: {provider: " + provider + "}"
+				}
+				root := parse(t, "kind: SecurityPolicy\nspec: {"+spec+"}\n")
+				cluster := migrate.Lookup(root, base)
+				var want map[string]any
+				require.NoError(t, cluster.Decode(&want))
+				delete(want, "backendRef")
+
+				findings, err := migrateEnvoyGatewayResource(&migrate.Object{Kind: "SecurityPolicy", Root: root})
+				require.NoError(t, err)
+				require.Len(t, findings, 1)
+				require.Equal(t, migrate.ResultMigrated, findings[0].Result)
+				require.Contains(t, findings[0].Note, "ignored")
+				var got map[string]any
+				require.NoError(t, cluster.Decode(&got))
+				require.Equal(t, want, got, "only the ignored reference should change")
+			})
+		}
+	}
+}
+
+func TestExternalAuthBackendRefStillMigrates(t *testing.T) {
+	for _, protocol := range []string{"http", "grpc"} {
+		t.Run(protocol, func(t *testing.T) {
+			root := parse(t, "kind: SecurityPolicy\nspec:\n  extAuth:\n    "+protocol+":\n      backendRef: {name: auth, port: 9002}\n")
+			findings, err := migrateEnvoyGatewayResource(&migrate.Object{Kind: "SecurityPolicy", Root: root})
+			require.NoError(t, err)
+			require.Len(t, findings, 1)
+			cluster := migrate.Lookup(root, "spec.extAuth."+protocol)
+			require.False(t, migrate.Has(cluster, "backendRef"))
+			require.Equal(t, "auth", migrate.Scalar(migrate.Lookup(cluster, "backendRefs[0].name")))
+		})
+	}
+}

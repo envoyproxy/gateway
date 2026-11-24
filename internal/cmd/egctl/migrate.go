@@ -56,6 +56,8 @@ func newMigrateCommand() *cobra.Command {
 The migrated YAML is printed to stdout (--mode print), written back to the files (--mode in-place),
 or not written at all (--mode check-only). A report of every migrated field is written to stderr.
 
+List resources are not supported. Split their items into individual YAML documents separated by ---.
+
 Exit codes:
   0  nothing to migrate, or everything was migrated
   1  --mode check-only found something to migrate

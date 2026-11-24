@@ -117,8 +117,9 @@ func IsEmpty(n *yaml.Node) bool {
 	return false
 }
 
-// IsTrue reports whether n is the scalar true.
+// IsTrue reports whether n is the scalar true, following an alias.
 func IsTrue(n *yaml.Node) bool {
+	n = Resolve(n)
 	var b bool
 	return n != nil && n.Kind == yaml.ScalarNode && n.Decode(&b) == nil && b
 }
@@ -195,6 +196,30 @@ func Lookup(root *yaml.Node, path string) *yaml.Node {
 // Clone returns a deep copy of n, preserving shared nodes and cycles in aliases.
 func Clone(n *yaml.Node) *yaml.Node {
 	return clone(n, make(map[*yaml.Node]*yaml.Node))
+}
+
+// preserveAnchors prepares an output tree without changing the migration tree.
+// Removing or replacing an anchored field can leave aliases pointing to nodes no
+// longer in the document. Emit that anchor at its first surviving use instead.
+// Track anchors in output order, including names reused for different nodes.
+func preserveAnchors(root *yaml.Node) *yaml.Node {
+	anchors := make(map[string]*yaml.Node)
+	var visit func(*yaml.Node) *yaml.Node
+	visit = func(n *yaml.Node) *yaml.Node {
+		if n.Kind == yaml.AliasNode && anchors[n.Value] != n.Alias {
+			n = n.Alias
+		}
+		out := *n
+		if n.Anchor != "" {
+			anchors[n.Anchor] = n
+		}
+		out.Content = make([]*yaml.Node, len(n.Content))
+		for i, child := range n.Content {
+			out.Content[i] = visit(child)
+		}
+		return &out
+	}
+	return visit(root)
 }
 
 func clone(n *yaml.Node, seen map[*yaml.Node]*yaml.Node) *yaml.Node {

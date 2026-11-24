@@ -124,7 +124,7 @@ func migrateCompression(spec *yaml.Node, base string) migrate.Finding {
 	added := 0
 	for _, entry := range entries.Content {
 		block, ok := compressorBlocks[migrate.Scalar(migrate.Get(entry, "type"))]
-		if ok && migrate.Get(entry, block) == nil {
+		if ok && !migrate.IsSet(entry, block) {
 			migrate.Set(entry, block, migrate.Mapping())
 			added++
 		}
@@ -243,6 +243,7 @@ func migrateTelemetryHost(sink *yaml.Node, base string) migrate.Finding {
 	}
 
 	ref := migrate.Mapping("name", migrate.String(m[1]), "namespace", migrate.String(m[3]), "port", migrate.Int(int64(port)))
+	migrate.Delete(sink, "backendRefs")
 	migrate.Replace(sink, "host", "backendRefs", migrate.Sequence(ref))
 	migrate.Delete(sink, "port")
 	return migrated(field, "replaced host and port with a backendRef to Service %s/%s port %d; "+

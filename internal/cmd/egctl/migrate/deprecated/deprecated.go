@@ -128,7 +128,7 @@ func migrateEnvoyGatewayResource(obj *migrate.Object) ([]migrate.Finding, error)
 		}
 	}
 	fields := detect(obj.Kind, obj.Root)
-	rewritten, unmigrated := rewrite(obj.Root, slices.Collect(maps.Keys(fields)))
+	rewritten, unmigrated := rewrite(obj.Kind, obj.Root, slices.Collect(maps.Keys(fields)))
 
 	findings = append(findings, rewritten...)
 	slices.SortStableFunc(findings, func(a, b migrate.Finding) int { return cmp.Compare(a.Field, b.Field) })
@@ -245,7 +245,7 @@ func classify(path string) (rule, string) {
 
 // rewrite applies the rules for the deprecated field paths to root. It returns the findings, and
 // the paths that were left unchanged because they couldn't be migrated.
-func rewrite(root *yaml.Node, paths []string) ([]migrate.Finding, map[string]bool) {
+func rewrite(kind string, root *yaml.Node, paths []string) ([]migrate.Finding, map[string]bool) {
 	groups := map[string]*group{}
 	for _, p := range paths {
 		r, base := classify(p)
@@ -262,7 +262,7 @@ func rewrite(root *yaml.Node, paths []string) ([]migrate.Finding, map[string]boo
 	findings := make([]migrate.Finding, 0, len(ordered))
 	unmigrated := map[string]bool{}
 	for _, g := range ordered {
-		f := apply(root, g)
+		f := apply(kind, root, g)
 		if f.Result == migrate.ResultError {
 			for _, k := range g.keys {
 				unmigrated[k] = true
@@ -274,7 +274,7 @@ func rewrite(root *yaml.Node, paths []string) ([]migrate.Finding, map[string]boo
 	return findings, unmigrated
 }
 
-func apply(root *yaml.Node, g *group) migrate.Finding {
+func apply(kind string, root *yaml.Node, g *group) migrate.Finding {
 	n := migrate.Lookup(root, g.base)
 	if g.rule == ruleUnknown {
 		return errorf(g.base, "deprecated, but there is no automatic migration for it")
@@ -284,6 +284,14 @@ func apply(root *yaml.Node, g *group) migrate.Finding {
 	}
 	switch g.rule {
 	case ruleBackendRef:
+		if kind == egv1a1.KindSecurityPolicy &&
+			(g.base == "spec.oidc.provider" ||
+				(strings.HasPrefix(g.base, "spec.jwt.providers[") && strings.HasSuffix(g.base, "].remoteJWKS"))) {
+			// JWT and OIDC only consume BackendRefs; the singular field never
+			// overrides their URL, even when BackendRefs is empty.
+			migrate.Delete(n, "backendRef")
+			return migrated(g.base+".backendRef", "removed, it was ignored by the authentication provider")
+		}
 		return migrateBackendRef(n, g.base)
 	case ruleTargetRef:
 		return migrateTargetRef(n, g.base)

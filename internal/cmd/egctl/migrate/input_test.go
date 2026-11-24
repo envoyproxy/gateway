@@ -157,3 +157,82 @@ func TestUnchangedMergeDocument(t *testing.T) {
 	require.NoError(t, in.write(&out, true))
 	require.Equal(t, input, out.String())
 }
+
+func TestWritePreservesRemovedAnchors(t *testing.T) {
+	for _, operation := range []string{"delete", "replace", "set"} {
+		for _, value := range []string{"true", "{nested: &nested true, copy: *nested}"} {
+			t.Run(operation+"/"+value, func(t *testing.T) {
+				src := "kind: Example\nold: &enabled " + value + "\nother: *enabled\nagain: *enabled\n"
+				in, err := newFileInput("example.yaml", []byte(src))
+				require.NoError(t, err)
+				d := in.docs[0]
+				var want any
+				require.NoError(t, Get(d.obj.Root, "other").Decode(&want))
+				switch operation {
+				case "delete":
+					Delete(d.obj.Root, "old")
+				case "replace":
+					Replace(d.obj.Root, "old", "new", Mapping())
+				case "set":
+					Set(d.obj.Root, "old", Mapping())
+				}
+				d.changed = true
+				var out bytes.Buffer
+				require.NoError(t, in.write(&out, true))
+				var got map[string]any
+				require.NoError(t, yaml.Unmarshal(out.Bytes(), &got))
+				require.Equal(t, want, got["other"])
+				require.Equal(t, want, got["again"])
+				// Rendering must not mutate the migration tree.
+				require.Equal(t, yaml.AliasNode, Get(d.obj.Root, "other").Kind)
+			})
+		}
+	}
+}
+
+func TestWritePreservesScalarCommentText(t *testing.T) {
+	for _, scalar := range []string{"|\n  hello # note\n", ">\n  hello # note\n", "\"hello # note\"\n"} {
+		t.Run(scalar, func(t *testing.T) {
+			in, err := newFileInput("example.yaml", []byte("kind: Example\ntext: "+scalar+"old: true # note\n"))
+			require.NoError(t, err)
+			d := in.docs[0]
+			want := Scalar(Get(d.obj.Root, "text"))
+			Replace(d.obj.Root, "old", "new", Bool(true))
+			d.changed = true
+			var out bytes.Buffer
+			require.NoError(t, in.write(&out, true))
+			var got map[string]any
+			require.NoError(t, yaml.Unmarshal(out.Bytes(), &got))
+			require.Equal(t, want, got["text"])
+			require.Contains(t, out.String(), "new: true  # note")
+		})
+	}
+}
+
+func TestPadLineComments(t *testing.T) {
+	for _, scalar := range []string{
+		"|\n  hello # note\n",
+		">\n  hello # note\n",
+		"\"hello # note\n  world\"\n",
+		"'hello # note\n  world'\n",
+	} {
+		t.Run(scalar, func(t *testing.T) {
+			input := "text: " + scalar + "first: true # longer # note\nsecond: false # note\n"
+			want := "text: " + scalar + "first: true  # longer # note\nsecond: false  # note\n"
+			require.Equal(t, want, string(padLineComments([]byte(input))))
+			require.Equal(t, want, string(padLineComments([]byte(want))), "padding must be idempotent")
+		})
+	}
+}
+
+func TestListInputRejected(t *testing.T) {
+	for _, input := range []string{
+		"apiVersion: v1\nkind: List\nitems: []\n",
+		"kind: SecurityPolicyList\nitems: []\n",
+		"identity: &kind List\nkind: *kind\nitems: []\n",
+		"<<: {kind: List}\nitems: []\n",
+	} {
+		_, err := newFileInput("-", []byte(input))
+		require.ErrorContains(t, err, "-: document 1: list resource")
+	}
+}
