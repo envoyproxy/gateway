@@ -391,6 +391,61 @@ func TestRedirectFilterOrdering(t *testing.T) {
 	}
 }
 
+func TestRedirectReferenceValidationPreservesMalformedExtensionRefs(t *testing.T) {
+	matching := extRes("foo.example.io/v1", "Foo", "default", "extension", "match")
+	malformed := extRes("v1", "Foo", "default", "extension", "malformed")
+	for _, tc := range []struct {
+		name       string
+		extensions []unstructured.Unstructured
+		wantErr    string
+	}{
+		{name: "malformed before match", extensions: []unstructured.Unstructured{malformed, matching}, wantErr: "Unable to translate APIVersion"},
+		{name: "malformed without match", extensions: []unstructured.Unstructured{malformed}, wantErr: "Unable to translate APIVersion"},
+		{name: "malformed after match", extensions: []unstructured.Unstructured{matching, malformed}},
+		{name: "missing", wantErr: "Reference default/extension not found"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resources := &resource.Resources{
+				ExtensionRefFilters: tc.extensions,
+				HTTPRouteFilters: []*egv1a1.HTTPRouteFilter{{
+					ObjectMeta: metav1.ObjectMeta{Name: "redirect", Namespace: "default"},
+					Spec: egv1a1.HTTPRouteFilterSpec{Redirect: &egv1a1.HTTPRedirectFilter{Path: egv1a1.HTTPPathModifier{
+						Type:              egv1a1.RegexHTTPPathModifier,
+						ReplaceRegexMatch: &egv1a1.ReplaceRegexMatch{Pattern: "(", Substitution: "/new"},
+					}}},
+				}},
+			}
+			translator := &Translator{
+				ExtensionGroupKinds: []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},
+				TranslatorContext: &TranslatorContext{
+					ExtensionRefIndex: BuildExtensionRefIndex(resources.ExtensionRefFilters),
+				},
+			}
+			filters := []gwapiv1.HTTPRouteFilter{
+				{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{
+					Group: egv1a1.GroupName, Kind: egv1a1.KindHTTPRouteFilter, Name: "redirect",
+				}},
+				{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: &gwapiv1.LocalObjectReference{
+					Group: "foo.example.io", Kind: "Foo", Name: "extension",
+				}},
+			}
+			route := &HTTPRouteContext{HTTPRoute: &gwapiv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "default"}}}
+			_, errs := translator.ProcessHTTPFilters(nil, route, filters, 0, resources, nil)
+			conditionErrors := map[gwapiv1.RouteConditionType]string{}
+			for _, err := range errs {
+				conditionErrors[err.Type()] = err.Error()
+			}
+			require.Contains(t, conditionErrors[gwapiv1.RouteConditionAccepted], "valid RE2")
+			if tc.wantErr != "" {
+				require.Contains(t, conditionErrors[gwapiv1.RouteConditionResolvedRefs], tc.wantErr)
+			} else {
+				require.Empty(t, conditionErrors[gwapiv1.RouteConditionResolvedRefs])
+			}
+			require.Empty(t, translator.ExtensionResourceMap)
+		})
+	}
+}
+
 func TestRedirectReferenceValidationIncludesCredentialInjection(t *testing.T) {
 	translator := &Translator{TranslatorContext: &TranslatorContext{}}
 	redirect := &egv1a1.HTTPRouteFilter{

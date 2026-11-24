@@ -1160,11 +1160,15 @@ func (t *Translator) validateExtensionRefHTTPFilter(ref *gwapiv1.LocalObjectRefe
 			gwapiv1.RouteReasonUnsupportedValue,
 		).WithType(gwapiv1.RouteConditionResolvedRefs)
 	}
-	for _, res := range resources.ExtensionRefFilters {
-		if res.GetKind() == string(ref.Kind) && res.GetName() == string(ref.Name) && res.GetNamespace() == namespace &&
-			res.GroupVersionKind().Group == string(ref.Group) {
-			return nil
-		}
+	res, malformed := t.getExtensionRef(resources, string(ref.Group), string(ref.Kind), namespace, string(ref.Name))
+	if malformed {
+		return status.NewRouteStatusError(
+			fmt.Errorf("Unable to translate APIVersion for Extension Filter: kind: %s, %s/%s", ref.Kind, namespace, ref.Name),
+			gwapiv1.RouteReasonUnsupportedValue,
+		).WithType(gwapiv1.RouteConditionResolvedRefs)
+	}
+	if res != nil {
+		return nil
 	}
 	return status.NewRouteStatusError(
 		fmt.Errorf("Reference %s/%s not found for filter type: %v", namespace, ref.Name, ref.Kind),

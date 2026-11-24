@@ -7,6 +7,7 @@ package translator
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -129,5 +130,94 @@ func TestRegexRedirectPathFilter(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRegexRedirectPathFilterRemovedWithoutRedirect(t *testing.T) {
+	transcoder := testTranscoder(t)
+	mgr := &hcmv3.HttpConnectionManager{}
+	translator := &Translator{}
+	listener := &ir.HTTPListener{Routes: []*ir.HTTPRoute{
+		{
+			Name:               "transcode",
+			GRPCJSONTranscoder: transcoder,
+		},
+		{
+			Name: "redirect",
+			Redirect: &ir.Redirect{Path: &ir.ExtendedHTTPPathModifier{
+				RegexMatchReplace: &ir.RegexMatchReplace{Pattern: "^/old$", Substitution: "/new"},
+			}},
+		},
+	}}
+
+	require.NoError(t, translator.patchHCMWithFilters(mgr, listener, nil))
+	require.True(t, hcmContainsFilter(mgr, regexRedirectPathFilter))
+	require.Len(t, mgr.HttpFilters, 4)
+
+	listener.Routes = listener.Routes[:1]
+	require.NoError(t, translator.patchHCMWithFilters(mgr, listener, nil))
+	require.False(t, hcmContainsFilter(mgr, regexRedirectPathFilter))
+	require.Len(t, mgr.HttpFilters, 2)
+	for _, filter := range mgr.HttpFilters {
+		require.NotContains(t, filter.Name, regexRedirectPathFilter)
+	}
+}
+
+func TestRegexRedirectPathRefreshAfterTranscoder(t *testing.T) {
+	for _, authFilter := range []egv1a1.EnvoyFilter{egv1a1.EnvoyFilterJWTAuthn, egv1a1.EnvoyFilterExtAuthz} {
+		for _, recompute := range []bool{false, true} {
+			t.Run(string(authFilter)+"/recompute="+strconv.FormatBool(recompute), func(t *testing.T) {
+				transcoder := testTranscoder(t)
+				secondTranscoder := testTranscoder(t)
+				secondTranscoder.Name += "-second"
+				listener := &ir.HTTPListener{Routes: []*ir.HTTPRoute{
+					{Name: "transcode", GRPCJSONTranscoder: transcoder},
+					{Name: "transcode-second", GRPCJSONTranscoder: secondTranscoder},
+					{Name: "redirect", Redirect: &ir.Redirect{Path: &ir.ExtendedHTTPPathModifier{
+						RegexMatchReplace: &ir.RegexMatchReplace{Pattern: "^/example.Greeter/SayHello$", Substitution: "/hello"},
+					}}},
+				}}
+				mgr := &hcmv3.HttpConnectionManager{HttpFilters: []*hcmv3.HttpFilter{
+					httpFilterForTest(authFilter),
+				}}
+				translator := &Translator{}
+				if recompute {
+					translator.FilterOrder = []egv1a1.FilterPosition{{
+						Name: authFilter, After: new(egv1a1.EnvoyFilterGRPCJSONTranscoder),
+					}}
+				}
+				for range 2 {
+					require.NoError(t, translator.patchHCMWithFilters(mgr, listener, nil))
+					require.Len(t, mgr.HttpFilters, 7)
+					require.Equal(t, regexRedirectPathFilter, mgr.HttpFilters[0].Name)
+					var authIndex, lastTranscoderIndex int
+					for i, filter := range mgr.HttpFilters {
+						if isFilterType(filter, authFilter) {
+							authIndex = i
+						}
+						if !isFilterType(filter, egv1a1.EnvoyFilterGRPCJSONTranscoder) {
+							continue
+						}
+						lastTranscoderIndex = i
+						refresh := mgr.HttpFilters[i+1]
+						require.Equal(t, regexRedirectPathFilter+"/"+filter.Name, refresh.Name)
+						require.False(t, refresh.Disabled)
+						config := &setfilterstatev3.Config{}
+						require.NoError(t, refresh.GetTypedConfig().UnmarshalTo(config))
+						require.NoError(t, config.ValidateAll())
+						require.False(t, config.ClearRouteCache)
+						require.Len(t, config.OnRequestHeaders, 1)
+						value := config.OnRequestHeaders[0]
+						require.Equal(t, regexRedirectPathKey, value.GetObjectKey())
+						require.Equal(t, "%PATH(NQ:PATH)%", value.GetFormatString().GetTextFormatSource().GetInlineString())
+					}
+					if recompute {
+						require.Greater(t, authIndex, lastTranscoderIndex+1)
+					} else {
+						require.Less(t, authIndex, lastTranscoderIndex)
+					}
+				}
+			})
+		}
 	}
 }
