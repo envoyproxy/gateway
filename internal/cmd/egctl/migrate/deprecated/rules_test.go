@@ -76,42 +76,6 @@ func TestCompressionNullSettings(t *testing.T) {
 	}
 }
 
-func TestIgnoredAuthenticationBackendRef(t *testing.T) {
-	for _, base := range []string{"spec.jwt.providers[0].remoteJWKS", "spec.oidc.provider"} {
-		for _, refs := range []string{"", "backendRefs: []", "backendRefs: null", "backendRefs: [{name: active, port: 443}]"} {
-			t.Run(base+"/"+refs, func(t *testing.T) {
-				urlField := "uri"
-				if base == "spec.oidc.provider" {
-					urlField = "issuer"
-				}
-				provider := "{" + urlField + ": https://example.com/auth, backendRef: {name: nonexistent, port: 443}"
-				if refs != "" {
-					provider += ", " + refs
-				}
-				provider += "}"
-				spec := "jwt: {providers: [{name: jwt, remoteJWKS: " + provider + "}]}"
-				if base == "spec.oidc.provider" {
-					spec = "oidc: {provider: " + provider + "}"
-				}
-				root := parse(t, "kind: SecurityPolicy\nspec: {"+spec+"}\n")
-				cluster := migrate.Lookup(root, base)
-				var want map[string]any
-				require.NoError(t, cluster.Decode(&want))
-				delete(want, "backendRef")
-
-				findings, err := migrateEnvoyGatewayResource(&migrate.Object{Kind: "SecurityPolicy", Root: root})
-				require.NoError(t, err)
-				require.Len(t, findings, 1)
-				require.Equal(t, migrate.ResultMigrated, findings[0].Result)
-				require.Contains(t, findings[0].Note, "ignored")
-				var got map[string]any
-				require.NoError(t, cluster.Decode(&got))
-				require.Equal(t, want, got, "only the ignored reference should change")
-			})
-		}
-	}
-}
-
 func TestExternalAuthBackendRefStillMigrates(t *testing.T) {
 	for _, protocol := range []string{"http", "grpc"} {
 		t.Run(protocol, func(t *testing.T) {

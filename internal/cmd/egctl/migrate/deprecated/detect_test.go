@@ -131,8 +131,6 @@ oidc:
 			want: []string{
 				"spec.extAuth.grpc.backendRef",
 				"spec.extAuth.http.backendSettings.loadBalancer.consistentHash.type: Header",
-				"spec.jwt.providers[1].remoteJWKS.backendRef",
-				"spec.oidc.provider.backendRef",
 			},
 		},
 		{
@@ -156,7 +154,6 @@ backends:
 `,
 			want: []string{
 				"spec.backends[1].backendSettings.loadBalancer.consistentHash.header",
-				"spec.extProc[0].backendRef",
 				"spec.targetRef",
 			},
 		},
@@ -202,8 +199,6 @@ telemetry:
 `,
 			want: []string{
 				"spec.luaValidation",
-				"spec.telemetry.accessLog.settings[0].sinks[0].als.backendRef",
-				"spec.telemetry.accessLog.settings[0].sinks[1].openTelemetry.backendRef",
 				"spec.telemetry.metrics.sinks[0].openTelemetry.port",
 				"spec.telemetry.metrics.sinks[1].openTelemetry.port",
 				"spec.telemetry.metrics.sinks[2].openTelemetry.port",

@@ -459,7 +459,6 @@ spec:
       provider:
         host: null
         port: null
-        backendRef: null
 `,
 			field: "spec",
 			want: map[string]any{"telemetry": map[string]any{

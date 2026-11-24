@@ -181,7 +181,7 @@ your Helm values instead:
 | `extensionManager.service.host`, `extensionManager.service.port` (and the same under `extensionManagers` and `provider.custom.infrastructure.remote.service`) | `fqdn` with `hostname` and `port`, or `ip` with `address` and `port` |
 | `extensionApis.disableLua` | `extensionApis.enableLua` |
 | `envoyProxy.luaValidation` | `envoyProxy.lua.validationType` |
-| `envoyProxy.telemetry...` `host`, `port`, `backendRef` | `backendRefs` |
+| `envoyProxy.telemetry...` `host`, `port` | `backendRefs` |
 
 ### Conflicting fields
 
@@ -199,7 +199,7 @@ only `targetRef` is used today, so decide which references to keep and move them
 | ClientTrafficPolicy | `spec.tls.clientValidation.optional: true` | `spec.tls.clientValidation.mode: VerifyIfGiven` |
 | BackendTrafficPolicy | `spec.compression` | `spec.compressor`, with an empty settings block such as `gzip: {}` added where it is missing, since `compressor` ignores an entry without one |
 | All load balancers | `consistentHash.type: Header` and `consistentHash.header` | `consistentHash.type: Headers` and `consistentHash.headers` |
-| External auth, external processing, JWT remote JWKS, OIDC provider and telemetry backends | `backendRef` | `backendRefs` |
+| SecurityPolicy | External auth `backendRef` | `backendRefs` |
 | EnvoyProxy | `spec.luaValidation` | `spec.lua.validationType` |
 | EnvoyProxy | Telemetry `host` and `port` | `backendRefs`, see [above](#telemetry-host-and-port) |
 

@@ -39,6 +39,3 @@ spec:
   - backendRefs:
     - name: ok
       port: 9002
-  - backendRefs:
-    - name: ext-proc
-      port: 9002

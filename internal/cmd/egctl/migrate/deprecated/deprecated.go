@@ -284,14 +284,6 @@ func apply(kind string, root *yaml.Node, g *group) migrate.Finding {
 	}
 	switch g.rule {
 	case ruleBackendRef:
-		if kind == egv1a1.KindSecurityPolicy &&
-			(g.base == "spec.oidc.provider" ||
-				(strings.HasPrefix(g.base, "spec.jwt.providers[") && strings.HasSuffix(g.base, "].remoteJWKS"))) {
-			// JWT and OIDC only consume BackendRefs; the singular field never
-			// overrides their URL, even when BackendRefs is empty.
-			migrate.Delete(n, "backendRef")
-			return migrated(g.base+".backendRef", "removed, it was ignored by the authentication provider")
-		}
 		return migrateBackendRef(n, g.base)
 	case ruleTargetRef:
 		return migrateTargetRef(n, g.base)

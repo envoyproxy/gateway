@@ -114,8 +114,15 @@ func detectClientTrafficPolicy(fs fields, spec *yaml.Node) {
 func detectSecurityPolicy(fs fields, spec *yaml.Node) {
 	detectTargetRef(fs, spec)
 	if extAuth := migrate.GetMapping(spec, "extAuth"); extAuth != nil {
-		detectBackendCluster(fs, migrate.GetMapping(extAuth, "grpc"), "spec.extAuth.grpc", false)
-		detectBackendCluster(fs, migrate.GetMapping(extAuth, "http"), "spec.extAuth.http", false)
+		for _, protocol := range []string{"grpc", "http"} {
+			cluster, path := migrate.GetMapping(extAuth, protocol), "spec.extAuth."+protocol
+			detectBackendCluster(fs, cluster, path, false)
+			// External auth is the only BackendCluster that ever supported the singular
+			// backendRef, the CRD rejects it everywhere else.
+			if migrate.Has(cluster, "backendRef") {
+				fs.scheduled(path+".backendRef", path+".backendRefs")
+			}
+		}
 	}
 	each(migrate.GetMapping(spec, "jwt"), "providers", "spec.jwt", func(p *yaml.Node, path string) {
 		detectBackendCluster(fs, migrate.GetMapping(p, "remoteJWKS"), path+".remoteJWKS", false)
@@ -123,9 +130,10 @@ func detectSecurityPolicy(fs fields, spec *yaml.Node) {
 	detectBackendCluster(fs, migrate.Lookup(spec, "oidc.provider"), "spec.oidc.provider", false)
 }
 
-// detectBackendCluster records the deprecated fields of the BackendCluster at path: backendRef, the
-// host and port of a telemetry sink if isSink, and the consistent hash fields of backendSettings,
-// which is inlined into the BackendCluster.
+// detectBackendCluster records the deprecated fields of the BackendCluster at path: the host and
+// port of a telemetry sink if isSink, and the consistent hash fields of backendSettings, which is
+// inlined into the BackendCluster. backendRef isn't reported: the CRD rejects it on every
+// BackendCluster but the external auth ones, and the translator never reads it there.
 //
 // A port is reported whenever it is set, including to its CRD default, 4317, which every sink read
 // from a cluster has: the field is removed from the API, so a manifest that still sets it fails
@@ -142,9 +150,6 @@ func detectBackendCluster(fs fields, cluster *yaml.Node, path string, isSink boo
 			// The host warning covers the port when both are set.
 			fs.scheduled(path+".port", path+".backendRefs")
 		}
-	}
-	if migrate.Has(cluster, "backendRef") {
-		fs.scheduled(path+".backendRef", path+".backendRefs")
 	}
 	detectLoadBalancer(fs, migrate.GetMapping(cluster, "backendSettings"), path+".backendSettings")
 }

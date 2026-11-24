@@ -32,12 +32,6 @@ spec:
             - name: otel-collector
               namespace: monitoring
               port: 4317
-        - type: ALS
-          als:
-            type: HTTP
-            backendRef:
-              name: als
-              port: 9000
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
