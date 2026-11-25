@@ -140,9 +140,9 @@ infraIR:
                     onInvalidMessage: TerminateStream
                   loadBalancer:
                     consistentHash:
-                      header:
-                        name: X-some-header
-                      type: Header
+                      headers:
+                      - name: X-some-header
+                      type: Headers
                     type: ConsistentHash
                   proxyProtocol:
                     version: V2
@@ -258,9 +258,9 @@ xdsIR:
             onInvalidMessage: TerminateStream
           loadBalancer:
             consistentHash:
-              header:
-                name: X-some-header
-              type: Header
+              headers:
+              - name: X-some-header
+              type: Headers
             type: ConsistentHash
           proxyProtocol:
             version: V2

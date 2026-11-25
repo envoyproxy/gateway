@@ -65,8 +65,8 @@ backendTrafficPolicies:
     namespace: envoy-gateway
     name: policy-for-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     routingType: Service
@@ -77,8 +77,8 @@ backendTrafficPolicies:
     namespace: envoy-gateway
     name: policy-for-listener
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http
@@ -90,8 +90,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     routingType: Service
@@ -102,8 +102,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-rule-0
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-0

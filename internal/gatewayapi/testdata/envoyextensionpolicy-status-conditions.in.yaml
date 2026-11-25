@@ -5,8 +5,8 @@ EnvoyExtensionPolicies:
     namespace: envoy-gateway
     name: target-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -15,8 +15,8 @@ EnvoyExtensionPolicies:
     namespace: envoy-gateway
     name: target-gateway-1-as-well
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -25,8 +25,8 @@ EnvoyExtensionPolicies:
     namespace: envoy-gateway
     name: target-unknown-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -35,8 +35,8 @@ EnvoyExtensionPolicies:
     namespace: envoy-gateway
     name: not-same-namespace-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: not-same-namespace-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -45,8 +45,8 @@ EnvoyExtensionPolicies:
     namespace: envoy-gateway
     name: target-httproute-in-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -55,8 +55,8 @@ EnvoyExtensionPolicies:
     namespace: envoy-gateway
     name: also-target-httproute-in-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -65,8 +65,8 @@ EnvoyExtensionPolicies:
     namespace: envoy-gateway
     name: target-grpcroute-in-gateway-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -75,8 +75,8 @@ EnvoyExtensionPolicies:
     namespace: envoy-gateway
     name: target-unknown-httproute
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: unknown-httproute
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -85,8 +85,8 @@ EnvoyExtensionPolicies:
     namespace: envoy-gateway
     name: not-same-namespace-httproute
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: not-same-namespace-httproute
 httpRoutes:
