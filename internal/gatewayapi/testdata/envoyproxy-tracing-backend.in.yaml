@@ -18,9 +18,9 @@ envoyProxyForGatewayClass:
             loadBalancer:
               type: ConsistentHash
               consistentHash:
-                type: Header
-                header:
-                  name: X-some-header
+                type: Headers
+                headers:
+                  - name: X-some-header
             proxyProtocol:
               version: V2
             tcpKeepalive:
@@ -37,9 +37,9 @@ envoyProxyForGatewayClass:
             connection:
               bufferLimit: 20Mi
           backendRefs:
-          - name: otel-collector
-            namespace: monitoring
-            port: 4317
+            - name: otel-collector
+              namespace: monitoring
+              port: 4317
           type: OpenTelemetry
     provider:
       type: Kubernetes
@@ -50,10 +50,10 @@ envoyProxyForGatewayClass:
           replicas: 2
           container:
             env:
-            - name: env_a
-              value: env_a_value
-            - name: env_b
-              value: env_b_name
+              - name: env_a
+                value: env_a_value
+              - name: env_b
+                value: env_b_name
             image: "envoyproxy/envoy:distroless-dev"
             resources:
               requests:
@@ -70,37 +70,37 @@ envoyProxyForGatewayClass:
               nodeAffinity:
                 requiredDuringSchedulingIgnoredDuringExecution:
                   nodeSelectorTerms:
-                  - matchExpressions:
-                    - key: cloud.google.com/gke-nodepool
-                      operator: In
-                      values:
-                      - router-node
+                    - matchExpressions:
+                        - key: cloud.google.com/gke-nodepool
+                          operator: In
+                          values:
+                            - router-node
             tolerations:
-            - effect: NoSchedule
-              key: node-type
-              operator: Exists
-              value: "router"
+              - effect: NoSchedule
+                key: node-type
+                operator: Exists
+                value: "router"
             securityContext:
               runAsUser: 1000
               runAsGroup: 3000
               fsGroup: 2000
               fsGroupChangePolicy: "OnRootMismatch"
             volumes:
-            - name: certs
-              secret:
-                secretName: envoy-cert
+              - name: certs
+                secret:
+                  secretName: envoy-cert
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: Gateway
-  metadata:
-    namespace: envoy-gateway
-    name: gateway-1
-  spec:
-    gatewayClassName: envoy-gateway-class
-    listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
-        namespaces:
-          from: Same
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: Same

@@ -93,10 +93,10 @@ securityPolicies:
       namespace: envoy-gateway
       name: policy-for-gateway
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       cors:
         allowOrigins:
           - "https://*.test.com:8080"
@@ -134,10 +134,10 @@ envoyextensionpolicies:
       namespace: envoy-gateway
       name: policy-for-gateway  # This policy should attach httproute-2
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       wasm:
         - name: wasm-filter-1
           code:

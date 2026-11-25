@@ -162,6 +162,63 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 	requireCmpNoDiff(t, bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0])
 }
 
+func TestBuildXdsClusterLoadAssignmentEndpointHostname(t *testing.T) {
+	localities := []struct {
+		name          string
+		preferLocal   *ir.PreferLocalZone
+		weightedZones []ir.WeightedZoneConfig
+	}{
+		{name: "weighted"},
+		{name: "zonal", preferLocal: &ir.PreferLocalZone{}},
+		{name: "weighted zonal", weightedZones: []ir.WeightedZoneConfig{{Zone: "test-zone", Weight: 1}}},
+	}
+	tests := []struct {
+		name                string
+		host                string
+		hostname            *string
+		expected            string
+		expectedHealthCheck *endpointv3.Endpoint_HealthCheckConfig
+	}{
+		{
+			name:     "absolute FQDN",
+			host:     "backend.example.com.",
+			expected: "backend.example.com",
+		},
+		{
+			name:                "absolute FQDN with explicit endpoint hostname",
+			host:                "backend.example.com.",
+			hostname:            new("override.example.com"),
+			expected:            "override.example.com",
+			expectedHealthCheck: &endpointv3.Endpoint_HealthCheckConfig{Hostname: "override.example.com"},
+		},
+		{
+			name: "FQDN without root dot",
+			host: "backend.example.com",
+		},
+	}
+	for _, locality := range localities {
+		t.Run(locality.name, func(t *testing.T) {
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					irEndpoint := &ir.DestinationEndpoint{
+						Host: tc.host, Hostname: tc.hostname, Port: 8080, Zone: new("test-zone"),
+					}
+					settings := []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{irEndpoint}}}
+					healthCheck := &ir.HealthCheck{Active: &ir.ActiveHealthCheck{HTTP: &ir.HTTPHealthChecker{}}}
+					actual := buildXdsClusterLoadAssignment("test-cluster", settings, healthCheck, locality.preferLocal, locality.weightedZones)
+					require.Len(t, actual.Endpoints, 1)
+					require.Len(t, actual.Endpoints[0].LbEndpoints, 1)
+					endpoint := actual.Endpoints[0].LbEndpoints[0].GetEndpoint()
+					require.Equal(t, tc.expected, endpoint.Hostname)
+					require.Equal(t, tc.host, endpoint.GetAddress().GetSocketAddress().GetAddress())
+					requireCmpNoDiff(t, tc.expectedHealthCheck, endpoint.HealthCheckConfig)
+					require.Equal(t, tc.hostname, irEndpoint.Hostname)
+				})
+			}
+		})
+	}
+}
+
 func TestBuildXdsClusterLoadAssignmentWithHealthCheckConfig(t *testing.T) {
 	tests := []struct {
 		name        string

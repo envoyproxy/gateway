@@ -5,8 +5,8 @@ envoyExtensionPolicies:
     name: policy-for-httproute-1
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     wasm:
@@ -34,9 +34,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead; spec.wasm.code is deprecated, use spec.wasm.name referencing a
-          module registered in EnvoyProxy spec.wasmModules instead
+        message: spec.wasm.code is deprecated, use spec.wasm.name referencing a module
+          registered in EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -47,8 +46,8 @@ envoyExtensionPolicies:
     name: policy-for-httproute-2
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
     wasm:
@@ -77,9 +76,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead; spec.wasm.code is deprecated, use spec.wasm.name referencing a
-          module registered in EnvoyProxy spec.wasmModules instead
+        message: spec.wasm.code is deprecated, use spec.wasm.name referencing a module
+          registered in EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -90,8 +88,8 @@ envoyExtensionPolicies:
     name: policy-for-httproute-3
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
     wasm:
@@ -132,9 +130,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead; spec.wasm.code is deprecated, use spec.wasm.name referencing a
-          module registered in EnvoyProxy spec.wasmModules instead
+        message: spec.wasm.code is deprecated, use spec.wasm.name referencing a module
+          registered in EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -149,8 +146,8 @@ envoyExtensionPolicies:
     - inline: function envoy_on_response(response_handle) response_handle:UnknownApi()
         end
       type: Inline
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-4
     wasm:
@@ -183,9 +180,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead; spec.wasm.code is deprecated, use spec.wasm.name referencing a
-          module registered in EnvoyProxy spec.wasmModules instead
+        message: spec.wasm.code is deprecated, use spec.wasm.name referencing a module
+          registered in EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -196,8 +192,8 @@ envoyExtensionPolicies:
     name: policy-for-gateway-2
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
     wasm:
@@ -225,9 +221,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead; spec.wasm.code is deprecated, use spec.wasm.name referencing a
-          module registered in EnvoyProxy spec.wasmModules instead
+        message: spec.wasm.code is deprecated, use spec.wasm.name referencing a module
+          registered in EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning
@@ -238,8 +233,8 @@ envoyExtensionPolicies:
     name: policy-for-gateway-3
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-3
     wasm:
@@ -266,9 +261,8 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead; spec.wasm.code is deprecated, use spec.wasm.name referencing a
-          module registered in EnvoyProxy spec.wasmModules instead
+        message: spec.wasm.code is deprecated, use spec.wasm.name referencing a module
+          registered in EnvoyProxy spec.wasmModules instead
         reason: DeprecatedField
         status: "True"
         type: Warning

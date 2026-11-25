@@ -167,10 +167,10 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: foo
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: foo
   jwt:
     providers:
     - name: example
@@ -231,10 +231,10 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: foo
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: foo
   jwt:
     providers:
     - name: example
@@ -308,10 +308,10 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: foo
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: foo
   jwt:
     providers:
     - name: example
@@ -357,10 +357,10 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: foo
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: foo
   jwt:
     providers:
     - name: example

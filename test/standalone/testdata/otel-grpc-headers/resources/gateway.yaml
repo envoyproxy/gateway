@@ -8,8 +8,10 @@ spec:
       sinks:
         - type: OpenTelemetry
           openTelemetry:
-            host: 127.0.0.1
-            port: 4317
+            backendRefs:
+              - group: gateway.envoyproxy.io
+                kind: Backend
+                name: otel-collector
             headers:
               - name: Authorization
                 value: Bearer test-api-key
@@ -21,8 +23,10 @@ spec:
       samplingRate: 100
       provider:
         type: OpenTelemetry
-        host: 127.0.0.1
-        port: 4317
+        backendRefs:
+          - group: gateway.envoyproxy.io
+            kind: Backend
+            name: otel-collector
         openTelemetry:
           headers:
             - name: Authorization
@@ -40,8 +44,10 @@ spec:
           sinks:
             - type: OpenTelemetry
               openTelemetry:
-                host: 127.0.0.1
-                port: 4317
+                backendRefs:
+                  - group: gateway.envoyproxy.io
+                    kind: Backend
+                    name: otel-collector
                 headers:
                   - name: Authorization
                     value: Bearer test-api-key
@@ -99,3 +105,13 @@ spec:
     - ip:
         address: 127.0.0.1
         port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: otel-collector
+spec:
+  endpoints:
+    - ip:
+        address: 127.0.0.1
+        port: 4317

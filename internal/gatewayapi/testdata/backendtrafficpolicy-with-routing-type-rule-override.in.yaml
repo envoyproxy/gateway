@@ -46,8 +46,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     routingType: Service
@@ -58,8 +58,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-rule-0
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-0
