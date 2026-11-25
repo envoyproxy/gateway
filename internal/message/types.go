@@ -26,11 +26,6 @@ import (
 // The provider publishes resources and endpoint updates for the Gateway API and
 // xDS runners, and the runners write statuses back for the provider to update.
 type ProviderResources struct {
-	// EndpointRevisions gives each backend's endpoints a revision. Both the full
-	// and endpoint controllers load endpoints through it, so the two paths agree
-	// on revisions.
-	EndpointRevisions endpoint.RevisionTracker
-
 	// EndpointUpdates carries fast-path endpoint updates from the endpoint
 	// controller to the xDS publisher, which takes them in batches.
 	EndpointUpdates endpoint.UpdateQueue

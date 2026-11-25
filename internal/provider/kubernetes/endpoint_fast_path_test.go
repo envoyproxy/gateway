@@ -14,7 +14,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -23,7 +22,6 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -72,13 +70,13 @@ func TestEndpointFullCaptureRefreshesBeforeEndpointWorker(t *testing.T) {
 			r, service, slice := endpointReconciler(t)
 			key := ir.ServiceKey{Kind: resource.KindService, Namespace: service.Namespace, Name: service.Name}
 			tree := &resource.Resources{Services: []*corev1.Service{service}}
-			require.NoError(t, r.populateBackendEndpoints(t.Context(), resource.ControllerResources{tree}))
+			require.NoError(t, r.loadBackendEndpoints(t.Context(), resource.ControllerResources{tree}))
 			slice.Endpoints = tc.endpoints
 			require.NoError(t, r.client.Update(t.Context(), slice))
 
 			// Full reconciliation reads the cache even before the endpoint worker runs.
 			next := &resource.Resources{Services: []*corev1.Service{service}}
-			require.NoError(t, r.populateBackendEndpoints(t.Context(), resource.ControllerResources{next}))
+			require.NoError(t, r.loadBackendEndpoints(t.Context(), resource.ControllerResources{next}))
 			require.Equal(t, tc.endpoints, next.EndpointSlices[0].Endpoints)
 			require.Len(t, next.BackendEndpoints[0].EndpointsByPort[endpoint.Port{Name: "http", Protocol: corev1.ProtocolTCP}], len(tc.endpoints))
 			require.Greater(t, next.BackendEndpoints[0].Revision, tree.BackendEndpoints[0].Revision)
@@ -101,70 +99,43 @@ func TestEndpointCollectionServiceImportAndSliceDeduplication(t *testing.T) {
 	slice.Labels[mcsapiv1a1.LabelServiceName] = "orders"
 	require.NoError(t, r.client.Update(t.Context(), slice))
 	tree := &resource.Resources{Services: []*corev1.Service{service}, ServiceImports: []*mcsapiv1a1.ServiceImport{imported}}
-	require.NoError(t, r.populateBackendEndpoints(t.Context(), resource.ControllerResources{tree}))
+	require.NoError(t, r.loadBackendEndpoints(t.Context(), resource.ControllerResources{tree}))
 	require.Len(t, tree.EndpointSlices, 1)
 	require.Len(t, tree.BackendEndpoints, 2)
 	require.Equal(t, "ServiceImport", tree.BackendEndpoints[1].Backend.Kind)
 	require.Equal(t, "10.0.0.1", tree.BackendEndpoints[1].EndpointsByPort[endpoint.Port{Name: "http", Protocol: corev1.ProtocolTCP}][0].Host)
 }
 
-func TestEndpointReconcileSkipsRemovedReference(t *testing.T) {
+// The endpoint controller only queues backends that full reconciliation has
+// loaded into the revision tracker.
+func TestEndpointReconcileQueuesOnlyTrackedBackends(t *testing.T) {
 	r, service, slice := endpointReconciler(t)
 	key := ir.ServiceKey{Kind: resource.KindService, Namespace: service.Namespace, Name: service.Name}
-	tree := &resource.Resources{Services: []*corev1.Service{service}}
-	require.NoError(t, r.populateBackendEndpoints(t.Context(), resource.ControllerResources{tree}))
-	// The source still retains this backend until the next full collection, but
-	// the endpoint controller must use the current Kubernetes references.
-	require.NoError(t, r.client.Delete(t.Context(), &gwapiv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{Namespace: service.Namespace, Name: service.Name},
-	}))
-	slice.Endpoints[0].Addresses[0] = "10.0.0.2"
-	require.NoError(t, r.client.Update(t.Context(), slice))
-	_, err := r.reconcileBackendEndpoints(t.Context(), key)
-	require.NoError(t, err)
-	require.Empty(t, r.resources.EndpointUpdates.Drain())
+	reconcileKey := func() map[ir.ServiceKey]*endpoint.BackendEndpoints {
+		t.Helper()
+		_, err := r.reconcileBackendEndpoints(t.Context(), key)
+		require.NoError(t, err)
+		return r.resources.EndpointUpdates.Drain()
+	}
+	require.Empty(t, reconcileKey(), "a backend full reconciliation hasn't loaded is skipped")
+
+	require.NoError(t, r.loadBackendEndpoints(t.Context(), resource.ControllerResources{{Services: []*corev1.Service{service}}}))
+	updated := reconcileKey()[key]
+	require.NotNil(t, updated, "a loaded backend takes the fast path")
+	require.Equal(t, slice.Endpoints[0].Addresses[0], updated.EndpointsByPort[endpoint.Port{Name: "http", Protocol: corev1.ProtocolTCP}][0].Host)
+
+	require.NoError(t, r.loadBackendEndpoints(t.Context(), resource.ControllerResources{{}}))
+	require.Empty(t, reconcileKey(), "a backend pruned by full reconciliation is skipped")
 }
 
 func TestEndpointCacheClearedWithoutManagedGatewayClasses(t *testing.T) {
 	r, service, _ := endpointReconciler(t)
 	tree := &resource.Resources{Services: []*corev1.Service{service}}
-	require.NoError(t, r.populateBackendEndpoints(t.Context(), resource.ControllerResources{tree}))
+	require.NoError(t, r.loadBackendEndpoints(t.Context(), resource.ControllerResources{tree}))
 	_, err := r.Reconcile(t.Context(), reconcile.Request{})
 	require.NoError(t, err)
 	key := ir.ServiceKey{Kind: resource.KindService, Namespace: service.Namespace, Name: service.Name}
 	recaptured, err := r.refreshBackendEndpoints(t.Context(), key)
 	require.NoError(t, err)
 	require.Greater(t, recaptured.Revision, tree.BackendEndpoints[0].Revision)
-}
-
-func TestEndpointReconcileQueuesProxyServiceUpdate(t *testing.T) {
-	r, service, slice := endpointReconciler(t)
-	r.classController = "gateway.envoyproxy.io/gatewayclass-controller"
-	// Drop the route so the Service is used only as a Gateway's Envoy Service.
-	require.NoError(t, r.client.Delete(t.Context(), &gwapiv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{Namespace: service.Namespace, Name: service.Name},
-	}))
-	require.NoError(t, r.client.Create(t.Context(), &gwapiv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "eg"},
-		Spec:       gwapiv1.GatewayClassSpec{ControllerName: r.classController},
-	}))
-	require.NoError(t, r.client.Create(t.Context(), &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway"},
-		Spec:       gwapiv1.GatewaySpec{GatewayClassName: "eg"},
-	}))
-	key := ir.ServiceKey{Kind: resource.KindService, Namespace: service.Namespace, Name: service.Name}
-	_, err := r.reconcileBackendEndpoints(t.Context(), key)
-	require.NoError(t, err)
-	require.Empty(t, r.resources.EndpointUpdates.Drain(), "an unreferenced Service without owner labels is skipped")
-
-	labels := gatewayapi.OwnerLabels(&gwapiv1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway"}}, false)
-	current := &corev1.Service{}
-	require.NoError(t, r.client.Get(t.Context(), client.ObjectKeyFromObject(service), current))
-	current.Labels = labels
-	require.NoError(t, r.client.Update(t.Context(), current))
-	_, err = r.reconcileBackendEndpoints(t.Context(), key)
-	require.NoError(t, err)
-	updated := r.resources.EndpointUpdates.Drain()[key]
-	require.NotNil(t, updated, "the Gateway's Envoy Service must take the fast path")
-	require.Equal(t, slice.Endpoints[0].Addresses[0], updated.EndpointsByPort[endpoint.Port{Name: "http", Protocol: corev1.ProtocolTCP}][0].Host)
 }

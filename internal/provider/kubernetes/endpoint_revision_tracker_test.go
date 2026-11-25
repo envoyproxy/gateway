@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package endpoint
+package kubernetes
 
 import (
 	"errors"
@@ -14,10 +14,11 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func endpointSlices(address string) []*discoveryv1.EndpointSlice {
+func trackerSlices(address string) []*discoveryv1.EndpointSlice {
 	return []*discoveryv1.EndpointSlice{{
 		ObjectMeta:  metav1.ObjectMeta{Name: "orders-1", Namespace: "default"},
 		AddressType: discoveryv1.AddressTypeIPv4,
@@ -27,10 +28,10 @@ func endpointSlices(address string) []*discoveryv1.EndpointSlice {
 }
 
 func TestRevisionTrackerKeepsEntryOnError(t *testing.T) {
-	var tracker RevisionTracker
+	var tracker revisionTracker
 	key := ir.ServiceKey{Kind: "Service", Namespace: "default", Name: "orders"}
 	stored, err := tracker.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
-		return endpointSlices("10.0.0.1"), nil
+		return trackerSlices("10.0.0.1"), nil
 	})
 	require.NoError(t, err)
 	_, err = tracker.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
@@ -41,15 +42,15 @@ func TestRevisionTrackerKeepsEntryOnError(t *testing.T) {
 }
 
 func TestRevisionTrackerSerializesCaptureWithRevision(t *testing.T) {
-	var tracker RevisionTracker
+	var tracker revisionTracker
 	key := ir.ServiceKey{Kind: "Service", Name: "orders"}
 	entered, release := make(chan struct{}), make(chan struct{})
-	results := make(chan *BackendEndpoints, 2)
+	results := make(chan *endpoint.BackendEndpoints, 2)
 	go func() {
 		backendEndpoints, err := tracker.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
 			close(entered)
 			<-release
-			return endpointSlices("10.0.0.1"), nil
+			return trackerSlices("10.0.0.1"), nil
 		})
 		if err == nil {
 			results <- backendEndpoints
@@ -60,7 +61,7 @@ func TestRevisionTrackerSerializesCaptureWithRevision(t *testing.T) {
 	go func() {
 		close(started)
 		backendEndpoints, err := tracker.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
-			return endpointSlices("10.0.0.2"), nil
+			return trackerSlices("10.0.0.2"), nil
 		})
 		if err == nil {
 			results <- backendEndpoints
@@ -72,18 +73,18 @@ func TestRevisionTrackerSerializesCaptureWithRevision(t *testing.T) {
 	if a.Revision > b.Revision {
 		a, b = b, a
 	}
-	require.Equal(t, "10.0.0.1", a.EndpointsByPort[Port{Name: "http", Protocol: corev1.ProtocolTCP}][0].Host)
-	require.Equal(t, "10.0.0.2", b.EndpointsByPort[Port{Name: "http", Protocol: corev1.ProtocolTCP}][0].Host)
+	require.Equal(t, "10.0.0.1", a.EndpointsByPort[endpoint.Port{Name: "http", Protocol: corev1.ProtocolTCP}][0].Host)
+	require.Equal(t, "10.0.0.2", b.EndpointsByPort[endpoint.Port{Name: "http", Protocol: corev1.ProtocolTCP}][0].Host)
 }
 
 func TestRevisionTrackerPrunesUnreferencedBackends(t *testing.T) {
-	var tracker RevisionTracker
+	var tracker revisionTracker
 	removed := ir.ServiceKey{Kind: "Service", Name: "removed"}
 	retained := ir.ServiceKey{Kind: "Service", Name: "retained"}
-	var retainedEndpoints *BackendEndpoints
+	var retainedEndpoints *endpoint.BackendEndpoints
 	for _, backend := range []ir.ServiceKey{removed, retained} {
 		backendEndpoints, err := tracker.Track(backend, func() ([]*discoveryv1.EndpointSlice, error) {
-			return endpointSlices("10.0.0.1"), nil
+			return trackerSlices("10.0.0.1"), nil
 		})
 		require.NoError(t, err)
 		retainedEndpoints = backendEndpoints
@@ -96,9 +97,9 @@ func TestRevisionTrackerPrunesUnreferencedBackends(t *testing.T) {
 }
 
 func TestRevisionTrackerReusesUnchangedSlices(t *testing.T) {
-	var tracker RevisionTracker
+	var tracker revisionTracker
 	key := ir.ServiceKey{Kind: "Service", Namespace: "default", Name: "orders"}
-	slices := endpointSlices("10.0.0.1")
+	slices := trackerSlices("10.0.0.1")
 	slices[0].ResourceVersion = "1"
 	load := func() ([]*discoveryv1.EndpointSlice, error) { return slices, nil }
 	first, err := tracker.Track(key, load)
@@ -107,7 +108,7 @@ func TestRevisionTrackerReusesUnchangedSlices(t *testing.T) {
 	require.NoError(t, err)
 	require.Same(t, first, again, "unchanged slices must reuse the stored entry")
 
-	slices = endpointSlices("10.0.0.2")
+	slices = trackerSlices("10.0.0.2")
 	slices[0].ResourceVersion = "2"
 	changed, err := tracker.Track(key, load)
 	require.NoError(t, err)

@@ -3,6 +3,8 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
+// Package endpoint holds Kubernetes endpoint data with a revision, and queues
+// fast-path endpoint updates for the xDS publisher.
 package endpoint
 
 import (

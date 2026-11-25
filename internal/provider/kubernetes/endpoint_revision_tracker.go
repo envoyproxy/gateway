@@ -3,9 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-// Package endpoint gives Kubernetes endpoint data a revision, and queues
-// fast-path endpoint updates for the xDS publisher.
-package endpoint
+package kubernetes
 
 import (
 	"sync"
@@ -13,14 +11,15 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-// RevisionTracker gives each backend's endpoints a revision. A higher revision
+// revisionTracker gives each backend's endpoints a revision. A higher revision
 // always means a later load, and an unchanged revision means the EndpointSlices
 // did not change. The xDS publisher compares these revisions to keep the newer
 // endpoints.
-type RevisionTracker struct {
+type revisionTracker struct {
 	once sync.Once
 
 	// mu protects the fields below. Track holds it across the load, so loads
@@ -34,17 +33,17 @@ type RevisionTracker struct {
 
 	// lastLoaded holds the endpoints last loaded for each referenced backend.
 	// Track compares against it to keep the revision when nothing changed.
-	lastLoaded map[ir.ServiceKey]*BackendEndpoints
+	lastLoaded map[ir.ServiceKey]*endpoint.BackendEndpoints
 }
 
-func (s *RevisionTracker) init() {
-	s.once.Do(func() { s.lastLoaded = make(map[ir.ServiceKey]*BackendEndpoints) })
+func (s *revisionTracker) init() {
+	s.once.Do(func() { s.lastLoaded = make(map[ir.ServiceKey]*endpoint.BackendEndpoints) })
 }
 
 // Track loads a backend's EndpointSlices and returns its endpoints with a
 // revision: the stored one if the slices are unchanged, otherwise the next
 // one. On error the stored entry is left as is.
-func (s *RevisionTracker) Track(key ir.ServiceKey, load func() ([]*discoveryv1.EndpointSlice, error)) (*BackendEndpoints, error) {
+func (s *revisionTracker) Track(key ir.ServiceKey, load func() ([]*discoveryv1.EndpointSlice, error)) (*endpoint.BackendEndpoints, error) {
 	s.init()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -59,18 +58,28 @@ func (s *RevisionTracker) Track(key ir.ServiceKey, load func() ([]*discoveryv1.E
 	if sameSliceVersions(previous, slices) {
 		return previous, nil
 	}
-	current := NewBackendEndpoints(key, slices)
+	current := endpoint.NewBackendEndpoints(key, slices)
 	s.lastRevision++
 	current.Revision = s.lastRevision
 	s.lastLoaded[key] = current
 	return current, nil
 }
 
+// Tracks reports whether the backend's endpoints are stored. Full reconciliation
+// stores every referenced backend, so this tells whether a backend is in use.
+func (s *revisionTracker) Tracks(key ir.ServiceKey) bool {
+	s.init()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, found := s.lastLoaded[key]
+	return found
+}
+
 // PruneBackends removes stored endpoints for backends absent from full
 // Kubernetes collection. It waits for an in-flight Track. A Track that
 // starts afterwards can restore an entry until the next full collection prunes
 // it. Revisions never reset.
-func (s *RevisionTracker) PruneBackends(keys []ir.ServiceKey) {
+func (s *revisionTracker) PruneBackends(keys []ir.ServiceKey) {
 	s.init()
 	next := make(map[ir.ServiceKey]struct{}, len(keys))
 	for _, key := range keys {
@@ -88,7 +97,7 @@ func (s *RevisionTracker) PruneBackends(keys []ir.ServiceKey) {
 // sameSliceVersions reports whether slices are exactly the EndpointSlices previous
 // was built from, at the same resource versions. Slices without a resource
 // version never match, so they always take the full comparison.
-func sameSliceVersions(previous *BackendEndpoints, slices []*discoveryv1.EndpointSlice) bool {
+func sameSliceVersions(previous *endpoint.BackendEndpoints, slices []*discoveryv1.EndpointSlice) bool {
 	if previous == nil || len(previous.EndpointSlices) != len(slices) {
 		return false
 	}

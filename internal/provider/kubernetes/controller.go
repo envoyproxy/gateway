@@ -80,6 +80,11 @@ type gatewayAPIReconciler struct {
 	extSecretGVKs        []schema.GroupVersionKind
 	gatewayNamespaceMode bool
 
+	// endpointRevisions gives each backend's endpoints a revision. Both the full
+	// and endpoint controllers load endpoints through it, so the two paths agree
+	// on revisions.
+	endpointRevisions revisionTracker
+
 	backendCRDExists       bool
 	btlsCRDExists          bool
 	btpCRDExists           bool
@@ -387,7 +392,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	if managedGCs == nil {
 		if r.endpointFastPathEnabled() {
-			r.resources.EndpointRevisions.PruneBackends(nil)
+			r.endpointRevisions.PruneBackends(nil)
 		}
 		r.resources.GatewayAPIResources.Delete(string(r.classController))
 		logger.Info("no accepted gatewayclass")
@@ -414,10 +419,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	}
 
 	if r.endpointFastPathEnabled() {
-		// Populate each backend's current endpoints after all references are known.
-		// Collection is serialized with the endpoint controller so the full path's
-		// endpoint data and revisions remain consistent with fast updates.
-		if err := r.populateBackendEndpoints(ctx, gwcResources); err != nil {
+		// Load each referenced backend's endpoints now that every reference is known.
+		// This takes turns with the endpoint controller, so full and fast updates
+		// always see the same endpoints and revisions.
+		if err := r.loadBackendEndpoints(ctx, gwcResources); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -956,10 +961,10 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		}
 
 		// Retrieve the EndpointSlices associated with the Service and ServiceImport.
-		// With the endpoint fast path, populateBackendEndpoints loads them at the end
+		// With the endpoint fast path, loadBackendEndpoints loads them at the end
 		// of reconcile instead, so the slices and the BackendEndpoints revision come
 		// from the same read.
-		// TODO(robin): Always load endpoints through populateBackendEndpoints so there
+		// TODO(robin): Always load endpoints through loadBackendEndpoints so there
 		// is a single source of endpoint data, and remove this listing.
 		if endpointSliceLabelKey != "" && !r.endpointFastPathEnabled() {
 			endpointSliceList := new(discoveryv1.EndpointSliceList)

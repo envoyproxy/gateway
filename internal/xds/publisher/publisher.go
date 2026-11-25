@@ -32,8 +32,8 @@ type fullPublication struct {
 // keep the two paths consistent:
 //  1. The full path still runs for every endpoint change, so the fast path only
 //     publishes the same endpoints earlier, and can skip anything it can't handle.
-//  2. Both paths load endpoints through one RevisionTracker, so a backend's
-//     revisions grow in the order its EndpointSlices were read.
+//  2. The provider gives both paths' endpoints revisions from one counter, so a
+//     backend's revisions grow in the order its EndpointSlices were read.
 //  3. This one goroutine publishes everything, and on both paths a cluster
 //     setting only takes endpoints with a newer revision than it has.
 type Publisher struct {

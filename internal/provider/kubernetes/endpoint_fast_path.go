@@ -11,9 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -35,7 +33,7 @@ func (r *gatewayAPIReconciler) endpointFastPathEnabled() bool {
 
 func (r *gatewayAPIReconciler) watchEndpointUpdates(mgr manager.Manager, name string) error {
 	c, err := controller.NewTyped(name, mgr, controller.TypedOptions[ir.ServiceKey]{
-		// One worker: RevisionTracker.Track serializes loads anyway, so more workers
+		// One worker: revisionTracker.Track serializes loads anyway, so more workers
 		// would only wait on its lock.
 		Reconciler:         reconcile.TypedFunc[ir.ServiceKey](r.reconcileBackendEndpoints),
 		SkipNameValidation: skipNameValidation(),
@@ -44,8 +42,6 @@ func (r *gatewayAPIReconciler) watchEndpointUpdates(mgr manager.Manager, name st
 	if err != nil {
 		return err
 	}
-	// Map handlers process both old and new objects on reassociation. Use the same
-	// current resource references as the full controller to select relevant backends.
 	return c.Watch(source.TypedKind(mgr.GetCache(), &discoveryv1.EndpointSlice{},
 		handler.TypedEnqueueRequestsFromMapFunc(func(_ context.Context, slice *discoveryv1.EndpointSlice) []ir.ServiceKey {
 			if r.namespaceLabel != nil && !r.hasMatchingNamespaceLabels(slice) {
@@ -58,7 +54,7 @@ func (r *gatewayAPIReconciler) watchEndpointUpdates(mgr manager.Manager, name st
 			} {
 				if name := slice.Labels[backend.label]; name != "" {
 					key := ir.ServiceKey{Kind: backend.kind, Namespace: slice.Namespace, Name: name}
-					if r.isFastPathBackend(key, slice.Labels) {
+					if r.endpointRevisions.Tracks(key) {
 						keys = append(keys, key)
 					}
 				}
@@ -67,30 +63,10 @@ func (r *gatewayAPIReconciler) watchEndpointUpdates(mgr manager.Manager, name st
 		})))
 }
 
-// isFastPathBackend reports whether a backend's endpoints are used in the xDS
-// output: it is referenced by a route or policy, or it is a Gateway's own Envoy
-// Service, which feeds the proxy's local cluster. The labels are those of the
-// Service or one of its EndpointSlices, which copy the Service's labels.
-func (r *gatewayAPIReconciler) isFastPathBackend(key ir.ServiceKey, labels map[string]string) bool {
-	if r.isEndpointSliceBackendReferenced(&types.NamespacedName{Namespace: key.Namespace, Name: key.Name}) {
-		return true
-	}
-	return key.Kind == resource.KindService && r.isProxyServiceCluster(labels)
-}
-
 func (r *gatewayAPIReconciler) reconcileBackendEndpoints(ctx context.Context, key ir.ServiceKey) (reconcile.Result, error) {
-	// References may have disappeared while this key was queued. The full path
-	// will update any snapshot that still uses the backend.
-	var labels map[string]string
-	if key.Kind == resource.KindService {
-		service := &corev1.Service{}
-		if err := r.client.Get(ctx, types.NamespacedName{Namespace: key.Namespace, Name: key.Name}, service); err == nil {
-			labels = service.Labels
-		} else if !kerrors.IsNotFound(err) {
-			return reconcile.Result{}, err
-		}
-	}
-	if !r.isFastPathBackend(key, labels) {
+	// Skip backends full reconciliation has pruned since this key was queued.
+	// They're no longer referenced, and loading one would store it again.
+	if !r.endpointRevisions.Tracks(key) {
 		return reconcile.Result{}, nil
 	}
 	backendEndpoints, err := r.refreshBackendEndpoints(ctx, key)
@@ -109,7 +85,7 @@ func (r *gatewayAPIReconciler) reconcileBackendEndpoints(ctx context.Context, ke
 // slices changed. Both the endpoint controller and full reconciliation call
 // it, and the tracker keeps their loads of a backend in order.
 func (r *gatewayAPIReconciler) refreshBackendEndpoints(ctx context.Context, key ir.ServiceKey) (*endpoint.BackendEndpoints, error) {
-	return r.resources.EndpointRevisions.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
+	return r.endpointRevisions.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
 		return r.listBackendEndpointSlices(ctx, key)
 	})
 }
@@ -142,11 +118,11 @@ func (r *gatewayAPIReconciler) listBackendEndpointSlices(ctx context.Context, ke
 	return slices, nil
 }
 
-// populateBackendEndpoints loads the endpoints of every Service and ServiceImport
+// loadBackendEndpoints loads the endpoints of every Service and ServiceImport
 // in the resource trees and fills in each tree's BackendEndpoints and EndpointSlices.
 // Trees that share a backend get the same endpoints and revision.
 // It also drops stored endpoints for backends no longer referenced.
-func (r *gatewayAPIReconciler) populateBackendEndpoints(ctx context.Context, resources resource.ControllerResources) error {
+func (r *gatewayAPIReconciler) loadBackendEndpoints(ctx context.Context, resources resource.ControllerResources) error {
 	var keys []ir.ServiceKey
 	for _, tree := range resources {
 		for _, service := range tree.Services {
@@ -159,7 +135,7 @@ func (r *gatewayAPIReconciler) populateBackendEndpoints(ctx context.Context, res
 
 	// Remove any backends that are no longer referenced by the current resource trees from the endpoint source.
 	// This ensures that the source only retains endpoints for backends that are still relevant.
-	r.resources.EndpointRevisions.PruneBackends(keys)
+	r.endpointRevisions.PruneBackends(keys)
 
 	// Load each backend's endpoints through the revision tracker, which gives
 	// them a revision, and capture the result.
