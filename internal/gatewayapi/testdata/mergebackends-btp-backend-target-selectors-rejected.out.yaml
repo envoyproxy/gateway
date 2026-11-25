@@ -22,7 +22,7 @@ backendTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: targetSelectors is not supported for Service, ServiceImport, or Backend
-          kinds; use targetRef or targetRefs instead
+          kinds; use targetRefs instead
         reason: Invalid
         status: "False"
         type: Accepted

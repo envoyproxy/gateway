@@ -72,8 +72,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 192.168.0.0/16
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: TLSRoute
       name: tlsroute-a
   status:
@@ -90,12 +90,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -111,8 +105,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 10.0.0.0/8
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: TLSRoute
       name: tlsroute-b
   status:
@@ -129,12 +123,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs
-          instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2

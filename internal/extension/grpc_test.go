@@ -352,14 +352,6 @@ func TestGetExtensionServerAddress(t *testing.T) {
 			},
 			Expected: "unix:///some/path",
 		},
-		{
-			Name: "has a Unix path",
-			Service: &egv1a1.ExtensionService{
-				Host: "foo.bar",
-				Port: 5050,
-			},
-			Expected: "foo.bar:5050",
-		},
 	}
 
 	for _, tc := range tests {

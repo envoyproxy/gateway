@@ -1107,7 +1107,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"host or backendRefs needs to be set"},
+			wantErrors: []string{"backendRefs needs to be set"},
 		},
 		{
 			desc: "ProxyMetricSink-with-TypeOpenTelemetry-but-no-openTelemetry",
@@ -1229,7 +1229,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"host or backendRefs needs to be set"},
+			wantErrors: []string{"backendRefs needs to be set"},
 		},
 		{
 			desc: "ProxyMetrics-sinks-backendref",
@@ -1436,7 +1436,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"host or backendRefs needs to be set"},
+			wantErrors: []string{"backendRefs needs to be set"},
 		},
 		{
 			desc: "valid-tracing-service-name",

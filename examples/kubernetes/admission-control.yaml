@@ -9,10 +9,10 @@ metadata:
   name: admission-control-policy
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: example-route
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: example-route
   admissionControl:
     samplingWindow: 30s
     minSuccessRate: 95

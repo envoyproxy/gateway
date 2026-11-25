@@ -1,0 +1,6 @@
+KIND                  NAMESPACE/NAME                             FIELD                                                                 RESULT    NOTE
+SecurityPolicy        default/ext-auth (securitypolicy.in.yaml)  spec.extAuth.grpc.backendRef                                          migrated  moved to spec.extAuth.grpc.backendRefs
+SecurityPolicy        default/ext-auth (securitypolicy.in.yaml)  spec.extAuth.grpc.backendSettings.loadBalancer.consistentHash.header  migrated  replaced type Header and header with type Headers and headers
+SecurityPolicy        default/ext-auth (securitypolicy.in.yaml)  spec.extAuth.http.backendRef                                          migrated  removed, it was ignored because spec.extAuth.http.backendRefs is set
+EnvoyExtensionPolicy  default/ext-proc (securitypolicy.in.yaml)  spec.extProc[1].backendRef                                            migrated  moved to spec.extProc[1].backendRefs
+EnvoyExtensionPolicy  default/ext-proc (securitypolicy.in.yaml)  spec.targetRef                                                        migrated  moved to spec.targetRefs

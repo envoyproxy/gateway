@@ -295,22 +295,15 @@ func GetRenderedBootstrapConfig(opts *RenderBootstrapConfigOptions) (string, err
 			// Fall back to resolving from ProxyMetrics (legacy path for Service-type backends)
 			addresses := sets.New[string]()
 			for _, sink := range proxyMetrics.Sinks {
-				if sink.OpenTelemetry == nil {
+				if sink.OpenTelemetry == nil || len(sink.OpenTelemetry.BackendRefs) == 0 {
 					continue
 				}
 
-				var host string
-				var port uint32
-				if sink.OpenTelemetry.Host != nil {
-					host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
+				ref := sink.OpenTelemetry.BackendRefs[0].BackendObjectReference
+				if ref.Port == nil {
+					return "", fmt.Errorf("metrics sink backendRef %s has no port", ref.Name)
 				}
-				if len(sink.OpenTelemetry.BackendRefs) > 0 {
-					ref := sink.OpenTelemetry.BackendRefs[0].BackendObjectReference
-					if ref.Port == nil {
-						return "", fmt.Errorf("metrics sink backendRef %s has no port", ref.Name)
-					}
-					host, port = netutils.BackendHostAndPort(ref, "")
-				}
+				host, port := netutils.BackendHostAndPort(ref, "")
 
 				// skip duplicate sinks
 				addr := net.JoinHostPort(host, strconv.Itoa(int(port)))

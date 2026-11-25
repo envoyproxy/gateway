@@ -1,0 +1,41 @@
+# The EnvoyGateway configuration is reported, never rewritten.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      disableLua: true
+    extensionManager:
+      hooks:
+        xdsTranslator:
+          post:
+          - HTTPListener
+      service:
+        host: extension.default.svc.cluster.local
+        port: 5005
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+provider:
+  type: Kubernetes
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+envoyProxy:
+  luaValidation: Strict
+---
+# Helm values of the gateway-helm chart.
+config:
+  envoyGateway:
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      disableLua: false

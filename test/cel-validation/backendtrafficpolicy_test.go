@@ -946,7 +946,7 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 					},
 				}
 			},
-			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRef/targetRefs (targetSelectors is not supported for those kinds)"},
+			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRefs (targetSelectors is not supported for those kinds)"},
 		},
 		{
 			desc: "admissionControl rejected on UDPRoute target via targetRefs",
@@ -968,7 +968,7 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 					},
 				}
 			},
-			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRef/targetRefs (targetSelectors is not supported for those kinds)"},
+			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRefs (targetSelectors is not supported for those kinds)"},
 		},
 		{
 			desc: "admissionControl rejected on TLSRoute target via targetSelectors",
@@ -987,7 +987,7 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 					},
 				}
 			},
-			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRef/targetRefs (targetSelectors is not supported for those kinds)"},
+			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRefs (targetSelectors is not supported for those kinds)"},
 		},
 		{
 			desc: "admissionControl allowed on Gateway target",
@@ -1119,7 +1119,7 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 					},
 				}
 			},
-			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRef/targetRefs (targetSelectors is not supported for those kinds)"},
+			wantErrors: []string{"admissionControl can only be used with HTTPRoute, GRPCRoute, Gateway, or ListenerSet targets, or with Service, ServiceImport, or Backend targets via targetRefs (targetSelectors is not supported for those kinds)"},
 		},
 		{
 			desc: "no targetRef",
@@ -1128,7 +1128,7 @@ func backendTrafficPolicyCases() []backendTrafficPolicyCase {
 			},
 			wantErrors: []string{
 				"spec: Invalid value:",
-				": either targetRef or targetRefs must be used",
+				": either targetRefs or targetSelectors must be used",
 			},
 		},
 		{

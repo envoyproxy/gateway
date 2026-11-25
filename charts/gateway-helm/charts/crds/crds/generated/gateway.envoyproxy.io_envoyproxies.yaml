@@ -11847,80 +11847,6 @@ spec:
                                     description: ALS defines the gRPC Access Log Service
                                       (ALS) sink.
                                     properties:
-                                      backendRef:
-                                        description: |-
-                                          BackendRef references a Kubernetes object that represents the
-                                          backend server to which the authorization request will be sent.
-
-                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                                        properties:
-                                          group:
-                                            default: ""
-                                            description: |-
-                                              Group is the group of the referent. For example, "gateway.networking.k8s.io".
-                                              When unspecified or empty string, core API group is inferred.
-                                            maxLength: 253
-                                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                                            type: string
-                                          kind:
-                                            default: Service
-                                            description: |-
-                                              Kind is the Kubernetes resource kind of the referent. For example
-                                              "Service".
-
-                                              Defaults to "Service" when not specified.
-
-                                              ExternalName services can refer to CNAME DNS records that may live
-                                              outside of the cluster and as such are difficult to reason about in
-                                              terms of conformance. They also may not be safe to forward to (see
-                                              CVE-2021-25740 for more information). Implementations SHOULD NOT
-                                              support ExternalName Services.
-
-                                              Support: Core (Services with a type other than ExternalName)
-
-                                              Support: Implementation-specific (Services with type ExternalName)
-                                            maxLength: 63
-                                            minLength: 1
-                                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                                            type: string
-                                          name:
-                                            description: Name is the name of the referent.
-                                            maxLength: 253
-                                            minLength: 1
-                                            type: string
-                                          namespace:
-                                            description: |-
-                                              Namespace is the namespace of the backend. When unspecified, the local
-                                              namespace is inferred.
-
-                                              Note that when a namespace different than the local namespace is specified,
-                                              a ReferenceGrant object is required in the referent namespace to allow that
-                                              namespace's owner to accept the reference. See the ReferenceGrant
-                                              documentation for details.
-
-                                              Support: Core
-                                            maxLength: 63
-                                            minLength: 1
-                                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                                            type: string
-                                          port:
-                                            description: |-
-                                              Port specifies the destination port number to use for this resource.
-                                              Port is required when the referent is a Kubernetes Service. In this
-                                              case, the port number is the service port number, not the target port.
-                                              For other resources, destination port might be derived from the referent
-                                              resource or this field.
-                                            format: int32
-                                            maximum: 65535
-                                            minimum: 1
-                                            type: integer
-                                        required:
-                                        - name
-                                        type: object
-                                        x-kubernetes-validations:
-                                        - message: Must have port for Service reference
-                                          rule: '(size(self.group) == 0 && self.kind
-                                            == ''Service'') ? has(self.port) : true'
                                       backendRefs:
                                         description: |-
                                           BackendRefs references a Kubernetes object that represents the
@@ -12791,8 +12717,6 @@ spec:
                                           http1:
                                             description: |-
                                               HTTP1 provides HTTP/1 configuration for backend connections.
-                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
-                                              this field takes precedence for backend (upstream) traffic.
 
                                               Behavior when targeting route kinds that do not use HTTP/1:
                                                 - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
@@ -13047,19 +12971,6 @@ spec:
                                                     required:
                                                     - name
                                                     type: object
-                                                  header:
-                                                    description: |-
-                                                      Header configures the header hash policy when the consistent hash type is set to Header.
-
-                                                      Deprecated: use Headers instead. This field will be removed in v1.11.
-                                                    properties:
-                                                      name:
-                                                        description: Name of the header
-                                                          to hash.
-                                                        type: string
-                                                    required:
-                                                    - name
-                                                    type: object
                                                   headers:
                                                     description: Headers configures
                                                       the header hash policy for each
@@ -13109,13 +13020,11 @@ spec:
                                                     description: |-
                                                       ConsistentHashType defines the type of input to hash on. Valid Type values are
                                                       "SourceIP",
-                                                      "Header",
                                                       "Headers",
                                                       "Cookie".
                                                       "QueryParams".
                                                     enum:
                                                     - SourceIP
-                                                    - Header
                                                     - Headers
                                                     - Cookie
                                                     - QueryParams
@@ -13124,11 +13033,6 @@ spec:
                                                 - type
                                                 type: object
                                                 x-kubernetes-validations:
-                                                - message: If consistent hash type
-                                                    is header, the header field must
-                                                    be set.
-                                                  rule: 'self.type == ''Header'' ?
-                                                    has(self.header) : !has(self.header)'
                                                 - message: If consistent hash type
                                                     is headers, the headers field
                                                     must be set.
@@ -13629,9 +13533,6 @@ spec:
                                     - message: The http field may only be set when
                                         type is HTTP.
                                       rule: self.type == 'HTTP' || !has(self.http)
-                                    - message: BackendRefs must be used, backendRef
-                                        is not supported.
-                                      rule: '!has(self.backendRef)'
                                     - message: must have at least one backend in backendRefs
                                       rule: has(self.backendRefs) && self.backendRefs.size()
                                         > 0
@@ -13663,80 +13564,6 @@ spec:
                                     description: OpenTelemetry defines the OpenTelemetry
                                       accesslog sink.
                                     properties:
-                                      backendRef:
-                                        description: |-
-                                          BackendRef references a Kubernetes object that represents the
-                                          backend server to which the authorization request will be sent.
-
-                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                                        properties:
-                                          group:
-                                            default: ""
-                                            description: |-
-                                              Group is the group of the referent. For example, "gateway.networking.k8s.io".
-                                              When unspecified or empty string, core API group is inferred.
-                                            maxLength: 253
-                                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                                            type: string
-                                          kind:
-                                            default: Service
-                                            description: |-
-                                              Kind is the Kubernetes resource kind of the referent. For example
-                                              "Service".
-
-                                              Defaults to "Service" when not specified.
-
-                                              ExternalName services can refer to CNAME DNS records that may live
-                                              outside of the cluster and as such are difficult to reason about in
-                                              terms of conformance. They also may not be safe to forward to (see
-                                              CVE-2021-25740 for more information). Implementations SHOULD NOT
-                                              support ExternalName Services.
-
-                                              Support: Core (Services with a type other than ExternalName)
-
-                                              Support: Implementation-specific (Services with type ExternalName)
-                                            maxLength: 63
-                                            minLength: 1
-                                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                                            type: string
-                                          name:
-                                            description: Name is the name of the referent.
-                                            maxLength: 253
-                                            minLength: 1
-                                            type: string
-                                          namespace:
-                                            description: |-
-                                              Namespace is the namespace of the backend. When unspecified, the local
-                                              namespace is inferred.
-
-                                              Note that when a namespace different than the local namespace is specified,
-                                              a ReferenceGrant object is required in the referent namespace to allow that
-                                              namespace's owner to accept the reference. See the ReferenceGrant
-                                              documentation for details.
-
-                                              Support: Core
-                                            maxLength: 63
-                                            minLength: 1
-                                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                                            type: string
-                                          port:
-                                            description: |-
-                                              Port specifies the destination port number to use for this resource.
-                                              Port is required when the referent is a Kubernetes Service. In this
-                                              case, the port number is the service port number, not the target port.
-                                              For other resources, destination port might be derived from the referent
-                                              resource or this field.
-                                            format: int32
-                                            maximum: 65535
-                                            minimum: 1
-                                            type: integer
-                                        required:
-                                        - name
-                                        type: object
-                                        x-kubernetes-validations:
-                                        - message: Must have port for Service reference
-                                          rule: '(size(self.group) == 0 && self.kind
-                                            == ''Service'') ? has(self.port) : true'
                                       backendRefs:
                                         description: |-
                                           BackendRefs references a Kubernetes object that represents the
@@ -14607,8 +14434,6 @@ spec:
                                           http1:
                                             description: |-
                                               HTTP1 provides HTTP/1 configuration for backend connections.
-                                              When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
-                                              this field takes precedence for backend (upstream) traffic.
 
                                               Behavior when targeting route kinds that do not use HTTP/1:
                                                 - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
@@ -14863,19 +14688,6 @@ spec:
                                                     required:
                                                     - name
                                                     type: object
-                                                  header:
-                                                    description: |-
-                                                      Header configures the header hash policy when the consistent hash type is set to Header.
-
-                                                      Deprecated: use Headers instead. This field will be removed in v1.11.
-                                                    properties:
-                                                      name:
-                                                        description: Name of the header
-                                                          to hash.
-                                                        type: string
-                                                    required:
-                                                    - name
-                                                    type: object
                                                   headers:
                                                     description: Headers configures
                                                       the header hash policy for each
@@ -14925,13 +14737,11 @@ spec:
                                                     description: |-
                                                       ConsistentHashType defines the type of input to hash on. Valid Type values are
                                                       "SourceIP",
-                                                      "Header",
                                                       "Headers",
                                                       "Cookie".
                                                       "QueryParams".
                                                     enum:
                                                     - SourceIP
-                                                    - Header
                                                     - Headers
                                                     - Cookie
                                                     - QueryParams
@@ -14940,11 +14750,6 @@ spec:
                                                 - type
                                                 type: object
                                                 x-kubernetes-validations:
-                                                - message: If consistent hash type
-                                                    is header, the header field must
-                                                    be set.
-                                                  rule: 'self.type == ''Header'' ?
-                                                    has(self.header) : !has(self.header)'
                                                 - message: If consistent hash type
                                                     is headers, the headers field
                                                     must be set.
@@ -15440,21 +15245,6 @@ spec:
                                         maxItems: 32
                                         minItems: 1
                                         type: array
-                                      host:
-                                        description: |-
-                                          Host define the extension service hostname.
-
-                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                                        type: string
-                                      port:
-                                        default: 4317
-                                        description: |-
-                                          Port defines the port the extension service is exposed on.
-
-                                          Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                                        format: int32
-                                        minimum: 0
-                                        type: integer
                                       resourceAttributes:
                                         additionalProperties:
                                           type: string
@@ -15473,12 +15263,9 @@ spec:
                                         type: object
                                     type: object
                                     x-kubernetes-validations:
-                                    - message: host or backendRefs needs to be set
-                                      rule: has(self.host) || self.backendRefs.size()
+                                    - message: backendRefs needs to be set
+                                      rule: has(self.backendRefs) && self.backendRefs.size()
                                         > 0
-                                    - message: BackendRefs must be used, backendRef
-                                        is not supported.
-                                      rule: '!has(self.backendRef)'
                                     - message: BackendRefs only support Service and
                                         Backend kind.
                                       rule: 'has(self.backendRefs) ? self.backendRefs.all(f,
@@ -15907,80 +15694,6 @@ spec:
                                 OpenTelemetry defines the configuration for OpenTelemetry sink.
                                 It's required if the sink type is OpenTelemetry.
                               properties:
-                                backendRef:
-                                  description: |-
-                                    BackendRef references a Kubernetes object that represents the
-                                    backend server to which the authorization request will be sent.
-
-                                    Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                                  properties:
-                                    group:
-                                      default: ""
-                                      description: |-
-                                        Group is the group of the referent. For example, "gateway.networking.k8s.io".
-                                        When unspecified or empty string, core API group is inferred.
-                                      maxLength: 253
-                                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                                      type: string
-                                    kind:
-                                      default: Service
-                                      description: |-
-                                        Kind is the Kubernetes resource kind of the referent. For example
-                                        "Service".
-
-                                        Defaults to "Service" when not specified.
-
-                                        ExternalName services can refer to CNAME DNS records that may live
-                                        outside of the cluster and as such are difficult to reason about in
-                                        terms of conformance. They also may not be safe to forward to (see
-                                        CVE-2021-25740 for more information). Implementations SHOULD NOT
-                                        support ExternalName Services.
-
-                                        Support: Core (Services with a type other than ExternalName)
-
-                                        Support: Implementation-specific (Services with type ExternalName)
-                                      maxLength: 63
-                                      minLength: 1
-                                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                                      type: string
-                                    name:
-                                      description: Name is the name of the referent.
-                                      maxLength: 253
-                                      minLength: 1
-                                      type: string
-                                    namespace:
-                                      description: |-
-                                        Namespace is the namespace of the backend. When unspecified, the local
-                                        namespace is inferred.
-
-                                        Note that when a namespace different than the local namespace is specified,
-                                        a ReferenceGrant object is required in the referent namespace to allow that
-                                        namespace's owner to accept the reference. See the ReferenceGrant
-                                        documentation for details.
-
-                                        Support: Core
-                                      maxLength: 63
-                                      minLength: 1
-                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                                      type: string
-                                    port:
-                                      description: |-
-                                        Port specifies the destination port number to use for this resource.
-                                        Port is required when the referent is a Kubernetes Service. In this
-                                        case, the port number is the service port number, not the target port.
-                                        For other resources, destination port might be derived from the referent
-                                        resource or this field.
-                                      format: int32
-                                      maximum: 65535
-                                      minimum: 1
-                                      type: integer
-                                  required:
-                                  - name
-                                  type: object
-                                  x-kubernetes-validations:
-                                  - message: Must have port for Service reference
-                                    rule: '(size(self.group) == 0 && self.kind ==
-                                      ''Service'') ? has(self.port) : true'
                                 backendRefs:
                                   description: |-
                                     BackendRefs references a Kubernetes object that represents the
@@ -16823,8 +16536,6 @@ spec:
                                     http1:
                                       description: |-
                                         HTTP1 provides HTTP/1 configuration for backend connections.
-                                        When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
-                                        this field takes precedence for backend (upstream) traffic.
 
                                         Behavior when targeting route kinds that do not use HTTP/1:
                                           - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
@@ -17072,19 +16783,6 @@ spec:
                                               required:
                                               - name
                                               type: object
-                                            header:
-                                              description: |-
-                                                Header configures the header hash policy when the consistent hash type is set to Header.
-
-                                                Deprecated: use Headers instead. This field will be removed in v1.11.
-                                              properties:
-                                                name:
-                                                  description: Name of the header
-                                                    to hash.
-                                                  type: string
-                                              required:
-                                              - name
-                                              type: object
                                             headers:
                                               description: Headers configures the
                                                 header hash policy for each header,
@@ -17134,13 +16832,11 @@ spec:
                                               description: |-
                                                 ConsistentHashType defines the type of input to hash on. Valid Type values are
                                                 "SourceIP",
-                                                "Header",
                                                 "Headers",
                                                 "Cookie".
                                                 "QueryParams".
                                               enum:
                                               - SourceIP
-                                              - Header
                                               - Headers
                                               - Cookie
                                               - QueryParams
@@ -17149,10 +16845,6 @@ spec:
                                           - type
                                           type: object
                                           x-kubernetes-validations:
-                                          - message: If consistent hash type is header,
-                                              the header field must be set.
-                                            rule: 'self.type == ''Header'' ? has(self.header)
-                                              : !has(self.header)'
                                           - message: If consistent hash type is headers,
                                               the headers field must be set.
                                             rule: 'self.type == ''Headers'' ? has(self.headers)
@@ -17631,22 +17323,6 @@ spec:
                                   maxItems: 32
                                   minItems: 1
                                   type: array
-                                host:
-                                  description: |-
-                                    Host define the service hostname.
-
-                                    Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                                  type: string
-                                port:
-                                  default: 4317
-                                  description: |-
-                                    Port defines the port the service is exposed on.
-
-                                    Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                                  format: int32
-                                  maximum: 65535
-                                  minimum: 0
-                                  type: integer
                                 prefix:
                                   description: |-
                                     Prefix configures the OpenTelemetry sink to prepend the given prefix to emitted stat names,
@@ -17672,12 +17348,9 @@ spec:
                                   type: object
                               type: object
                               x-kubernetes-validations:
-                              - message: host or backendRefs needs to be set
-                                rule: has(self.host) || self.backendRefs.size() >
-                                  0
-                              - message: BackendRefs must be used, backendRef is not
-                                  supported.
-                                rule: '!has(self.backendRef)'
+                              - message: backendRefs needs to be set
+                                rule: has(self.backendRefs) && self.backendRefs.size()
+                                  > 0
                               - message: BackendRefs only support Service and Backend
                                   kind.
                                 rule: 'has(self.backendRefs) ? self.backendRefs.all(f,
@@ -17845,80 +17518,6 @@ spec:
                       provider:
                         description: Provider defines the tracing provider.
                         properties:
-                          backendRef:
-                            description: |-
-                              BackendRef references a Kubernetes object that represents the
-                              backend server to which the authorization request will be sent.
-
-                              Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                            properties:
-                              group:
-                                default: ""
-                                description: |-
-                                  Group is the group of the referent. For example, "gateway.networking.k8s.io".
-                                  When unspecified or empty string, core API group is inferred.
-                                maxLength: 253
-                                pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                                type: string
-                              kind:
-                                default: Service
-                                description: |-
-                                  Kind is the Kubernetes resource kind of the referent. For example
-                                  "Service".
-
-                                  Defaults to "Service" when not specified.
-
-                                  ExternalName services can refer to CNAME DNS records that may live
-                                  outside of the cluster and as such are difficult to reason about in
-                                  terms of conformance. They also may not be safe to forward to (see
-                                  CVE-2021-25740 for more information). Implementations SHOULD NOT
-                                  support ExternalName Services.
-
-                                  Support: Core (Services with a type other than ExternalName)
-
-                                  Support: Implementation-specific (Services with type ExternalName)
-                                maxLength: 63
-                                minLength: 1
-                                pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                                type: string
-                              name:
-                                description: Name is the name of the referent.
-                                maxLength: 253
-                                minLength: 1
-                                type: string
-                              namespace:
-                                description: |-
-                                  Namespace is the namespace of the backend. When unspecified, the local
-                                  namespace is inferred.
-
-                                  Note that when a namespace different than the local namespace is specified,
-                                  a ReferenceGrant object is required in the referent namespace to allow that
-                                  namespace's owner to accept the reference. See the ReferenceGrant
-                                  documentation for details.
-
-                                  Support: Core
-                                maxLength: 63
-                                minLength: 1
-                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                                type: string
-                              port:
-                                description: |-
-                                  Port specifies the destination port number to use for this resource.
-                                  Port is required when the referent is a Kubernetes Service. In this
-                                  case, the port number is the service port number, not the target port.
-                                  For other resources, destination port might be derived from the referent
-                                  resource or this field.
-                                format: int32
-                                maximum: 65535
-                                minimum: 1
-                                type: integer
-                            required:
-                            - name
-                            type: object
-                            x-kubernetes-validations:
-                            - message: Must have port for Service reference
-                              rule: '(size(self.group) == 0 && self.kind == ''Service'')
-                                ? has(self.port) : true'
                           backendRefs:
                             description: |-
                               BackendRefs references a Kubernetes object that represents the
@@ -18751,8 +18350,6 @@ spec:
                               http1:
                                 description: |-
                                   HTTP1 provides HTTP/1 configuration for backend connections.
-                                  When both this field and the deprecated HTTP1 field on ClientTrafficPolicy are set,
-                                  this field takes precedence for backend (upstream) traffic.
 
                                   Behavior when targeting route kinds that do not use HTTP/1:
                                     - GRPCRoute, TCPRoute, TLSRoute, UDPRoute: targeting these route kinds
@@ -18997,18 +18594,6 @@ spec:
                                         required:
                                         - name
                                         type: object
-                                      header:
-                                        description: |-
-                                          Header configures the header hash policy when the consistent hash type is set to Header.
-
-                                          Deprecated: use Headers instead. This field will be removed in v1.11.
-                                        properties:
-                                          name:
-                                            description: Name of the header to hash.
-                                            type: string
-                                        required:
-                                        - name
-                                        type: object
                                       headers:
                                         description: Headers configures the header
                                           hash policy for each header, when the consistent
@@ -19055,13 +18640,11 @@ spec:
                                         description: |-
                                           ConsistentHashType defines the type of input to hash on. Valid Type values are
                                           "SourceIP",
-                                          "Header",
                                           "Headers",
                                           "Cookie".
                                           "QueryParams".
                                         enum:
                                         - SourceIP
-                                        - Header
                                         - Headers
                                         - Cookie
                                         - QueryParams
@@ -19070,10 +18653,6 @@ spec:
                                     - type
                                     type: object
                                     x-kubernetes-validations:
-                                    - message: If consistent hash type is header,
-                                        the header field must be set.
-                                      rule: 'self.type == ''Header'' ? has(self.header)
-                                        : !has(self.header)'
                                     - message: If consistent hash type is headers,
                                         the headers field must be set.
                                       rule: 'self.type == ''Headers'' ? has(self.headers)
@@ -19502,12 +19081,6 @@ spec:
                             - message: proxyProtocol cannot be used together with
                                 http3
                               rule: '!has(self.http3) || !has(self.proxyProtocol)'
-                          host:
-                            description: |-
-                              Host define the provider service hostname.
-
-                              Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                            type: string
                           openTelemetry:
                             description: OpenTelemetry defines the OpenTelemetry tracing
                               provider configuration
@@ -19605,15 +19178,6 @@ spec:
                                     == ''TraceIdRatio'' || self.type == ''ParentBasedTraceIdRatio'')
                                     : true'
                             type: object
-                          port:
-                            default: 4317
-                            description: |-
-                              Port defines the port the provider service is exposed on.
-
-                              Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-                            format: int32
-                            minimum: 0
-                            type: integer
                           serviceName:
                             description: |-
                               ServiceName defines the service name to use in tracing configuration.
@@ -19654,10 +19218,9 @@ spec:
                         - type
                         type: object
                         x-kubernetes-validations:
-                        - message: host or backendRefs needs to be set
-                          rule: has(self.host) || self.backendRefs.size() > 0
-                        - message: BackendRefs must be used, backendRef is not supported.
-                          rule: '!has(self.backendRef)'
+                        - message: backendRefs needs to be set
+                          rule: has(self.backendRefs) && self.backendRefs.size() >
+                            0
                         - message: BackendRefs only support Service and Backend kind.
                           rule: 'has(self.backendRefs) ? self.backendRefs.all(f, f.kind
                             == ''Service'' || f.kind == ''Backend'') : true'

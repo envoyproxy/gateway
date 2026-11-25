@@ -1,0 +1,7 @@
+KIND                  NAMESPACE/NAME                               FIELD                                    RESULT    NOTE
+ClientTrafficPolicy   default/ctp (translate-equivalence.in.yaml)  spec.enableProxyProtocol                 migrated  replaced with spec.proxyProtocol: {}
+ClientTrafficPolicy   default/ctp (translate-equivalence.in.yaml)  spec.headers.preserveXRequestID          migrated  replaced with spec.headers.requestID: PreserveOrGenerate
+ClientTrafficPolicy   default/ctp (translate-equivalence.in.yaml)  spec.targetRef                           migrated  moved to spec.targetRefs
+BackendTrafficPolicy  default/btp (translate-equivalence.in.yaml)  spec.compression                         migrated  moved to spec.compressor, with an empty settings block added for 2 compressor type(s)
+BackendTrafficPolicy  default/btp (translate-equivalence.in.yaml)  spec.loadBalancer.consistentHash.header  migrated  replaced type Header and header with type Headers and headers
+BackendTrafficPolicy  default/btp (translate-equivalence.in.yaml)  spec.targetRef                           migrated  moved to spec.targetRefs

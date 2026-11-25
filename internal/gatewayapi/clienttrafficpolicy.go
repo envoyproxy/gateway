@@ -24,6 +24,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -142,27 +143,6 @@ func BuildCTPClusterSettingsIndex(
 
 func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
-}
-
-// deprecatedFieldsUsedInClientTrafficPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy) map[string]status.DeprecatedField {
-	deprecatedFields := make(map[string]status.DeprecatedField)
-	if policy.Spec.EnableProxyProtocol != nil {
-		deprecatedFields["spec.enableProxyProtocol"] = deprecatedFieldScheduledForRemoval("spec.proxyProtocol")
-	}
-	if policy.Spec.Headers != nil && policy.Spec.Headers.PreserveXRequestID != nil {
-		deprecatedFields["spec.headers.preserveXRequestID"] = deprecatedFieldScheduledForRemoval("spec.headers.requestID")
-	}
-	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
-	}
-	// Optional is a non-pointer bool, so deprecated usage is only observable when it changes behavior.
-	if policy.Spec.TLS != nil &&
-		policy.Spec.TLS.ClientValidation != nil &&
-		policy.Spec.TLS.ClientValidation.Optional {
-		deprecatedFields["spec.tls.clientValidation.optional"] = deprecatedField("spec.tls.clientValidation.mode")
-	}
-	return deprecatedFields
 }
 
 // behaviorChangedFieldsUsedInClientTrafficPolicy returns a map of CTP field paths to free-form
@@ -343,7 +323,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				// Check for deprecated fields and set warning if any are found
-				if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
+				if deprecatedFields := deprecation.ClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
 					status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 				}
 				if behaviorFields := behaviorChangedFieldsUsedInClientTrafficPolicy(policy); len(behaviorFields) > 0 {
@@ -555,7 +535,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					}
 
 					// Check for deprecated fields and set warning if any are found
-					if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
+					if deprecatedFields := deprecation.ClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
 						status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 					}
 					if behaviorFields := behaviorChangedFieldsUsedInClientTrafficPolicy(policy); len(behaviorFields) > 0 {
@@ -791,16 +771,10 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 
 	// Translate Proxy Protocol
 	if policy.Spec.ProxyProtocol != nil {
-		// ProxyProtocol field takes precedence when configured
 		// Even if it's an empty object {}, we should enable proxy protocol with default settings
 		proxyProtocol = &ir.ProxyProtocolSettings{
 			Optional:     ptr.Deref(policy.Spec.ProxyProtocol.Optional, false),
 			ForwardProto: buildIRForwardProtoConfig(policy.Spec.ProxyProtocol.ForwardProto),
-		}
-	} else if ptr.Deref(policy.Spec.EnableProxyProtocol, false) {
-		// Fallback to legacy EnableProxyProtocol field
-		proxyProtocol = &ir.ProxyProtocolSettings{
-			Optional: false, // Default behavior for legacy field
 		}
 	}
 
@@ -1103,8 +1077,6 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	}
 	if headerSettings.RequestID != nil {
 		httpIR.Headers.RequestID = (*ir.RequestIDAction)(headerSettings.RequestID)
-	} else if headerSettings.PreserveXRequestID != nil && *headerSettings.PreserveXRequestID {
-		httpIR.Headers.RequestID = new(ir.RequestIDActionPreserveOrGenerate)
 	}
 
 	if headerSettings.XForwardedClientCert != nil {

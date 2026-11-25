@@ -3,8 +3,8 @@ kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: GRPCRoute
     name: yages
   jwt:

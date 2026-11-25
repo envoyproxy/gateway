@@ -150,7 +150,6 @@ const (
 // stream is established.
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'HTTP' || !has(self.http)",message="The http field may only be set when type is HTTP."
-// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="must have at least one backend in backendRefs",rule="has(self.backendRefs) && self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
@@ -192,28 +191,13 @@ type FileEnvoyProxyAccessLog struct {
 
 // OpenTelemetryEnvoyProxyAccessLog defines the OpenTelemetry access log sink.
 //
-// +kubebuilder:validation:XValidation:message="host or backendRefs needs to be set",rule="has(self.host) || self.backendRefs.size() > 0"
-// +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
+// +kubebuilder:validation:XValidation:message="backendRefs needs to be set",rule="has(self.backendRefs) && self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:rule="!has(self.resources) || !has(self.resourceAttributes)",message="either resources or resourceAttributes can be set, not both"
 // +kubebuilder:validation:XValidation:message="http1 is not supported for OpenTelemetry access log backends, which always use gRPC.",rule="!has(self.backendSettings) || !has(self.backendSettings.http1)"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	BackendCluster `json:",inline"`
-	// Host define the extension service hostname.
-	//
-	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-	//
-	// +optional
-	Host *string `json:"host,omitempty"`
-	// Port defines the port the extension service is exposed on.
-	//
-	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=4317
-	Port int32 `json:"port,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
 	//

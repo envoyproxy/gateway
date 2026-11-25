@@ -57,7 +57,7 @@ func TestExtractTargetRefs(t *testing.T) {
 			expectedError: "no targets found for the policy",
 		},
 		{
-			desc: "valid single targetRef",
+			desc: "valid single targetRef of an extension policy",
 			specInput: map[string]any{
 				"targetRef": map[string]any{
 					"group": "some.group",
@@ -66,11 +66,13 @@ func TestExtractTargetRefs(t *testing.T) {
 				},
 			},
 			output: egv1a1.PolicyTargetReferences{
-				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind",
-						Name:  "name",
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: "some.group",
+							Kind:  "SomeKind",
+							Name:  "name",
+						},
 					},
 				},
 			},

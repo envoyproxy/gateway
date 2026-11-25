@@ -266,10 +266,6 @@ func boundPolicyAncestors(policyStatus *gwapiv1.PolicyStatus) {
 	policyStatus.Ancestors = append(policyStatus.Ancestors[:worst], policyStatus.Ancestors[worst+1:]...)
 }
 
-// DeprecatedFieldsRemovalRelease is the release that removes the deprecated fields tracked in
-// https://github.com/envoyproxy/gateway/issues/10211.
-const DeprecatedFieldsRemovalRelease = deprecation.DeprecatedFieldsRemovalRelease
-
 // DeprecatedField describes the replacement for a deprecated field.
 type DeprecatedField = deprecation.DeprecatedField
 

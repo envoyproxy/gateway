@@ -47,36 +47,6 @@ func TestCtpSpecHasClusterScopedFields(t *testing.T) {
 	}
 }
 
-func TestDeprecatedFieldsUsedInClientTrafficPolicy(t *testing.T) {
-	trueVal := new(bool)
-	*trueVal = true
-
-	tests := []struct {
-		name         string
-		policy       *egv1a1.ClientTrafficPolicy
-		wantKeys     []string
-		wantContains map[string]string // substring checks on values
-	}{
-		{
-			name:     "no deprecated fields",
-			policy:   &egv1a1.ClientTrafficPolicy{},
-			wantKeys: nil,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := deprecatedFieldsUsedInClientTrafficPolicy(tc.policy)
-			require.Len(t, got, len(tc.wantKeys))
-			for _, k := range tc.wantKeys {
-				require.Contains(t, got, k)
-			}
-			for k, substr := range tc.wantContains {
-				require.Contains(t, got[k], substr)
-			}
-		})
-	}
-}
-
 func TestHttp1BehaviorChangeWarningMessage(t *testing.T) {
 	trueVal := new(bool)
 	*trueVal = true
@@ -364,21 +334,20 @@ func TestCTPClusterSettingsIndex(t *testing.T) {
 // ctpSpecHasClusterScopedFields, so a new field must be explicitly classified here too.
 func TestCtpSpecHasClusterScopedFieldsExhaustive(t *testing.T) {
 	expected := map[string]bool{
-		"TCPKeepalive":        false,
-		"EnableProxyProtocol": false,
-		"ProxyProtocol":       false,
-		"ClientIPDetection":   false,
-		"TLS":                 false,
-		"Path":                false,
-		"Headers":             false,
-		"Timeout":             false,
-		"Connection":          false,
-		"HTTP1":               true, // any http1 block on a listener-level CTP masks whatever a gateway-wide CTP set
-		"HTTP2":               false,
-		"HTTP3":               false,
-		"GRPC":                false,
-		"HealthCheck":         false,
-		"Scheme":              false,
+		"TCPKeepalive":      false,
+		"ProxyProtocol":     false,
+		"ClientIPDetection": false,
+		"TLS":               false,
+		"Path":              false,
+		"Headers":           false,
+		"Timeout":           false,
+		"Connection":        false,
+		"HTTP1":             true, // any http1 block on a listener-level CTP masks whatever a gateway-wide CTP set
+		"HTTP2":             false,
+		"HTTP3":             false,
+		"GRPC":              false,
+		"HealthCheck":       false,
+		"Scheme":            false,
 	}
 
 	actualFields := structFieldNames(reflect.TypeOf(egv1a1.ClientTrafficPolicySpec{}), map[string]bool{"PolicyTargetReferences": true})

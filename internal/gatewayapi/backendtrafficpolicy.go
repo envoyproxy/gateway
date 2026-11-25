@@ -26,7 +26,6 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/deprecation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -243,19 +242,6 @@ func BuildBTPIndexes(
 		ClusterSettings:  clusterSettingsIdx,
 		RejectedPolicies: rejected,
 	}
-}
-
-// deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]status.DeprecatedField {
-	deprecatedFields := make(map[string]status.DeprecatedField)
-	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
-	}
-	if len(policy.Spec.Compression) > 0 {
-		deprecatedFields["spec.compression"] = deprecatedFieldScheduledForRemoval("spec.compressor")
-	}
-	deprecation.AddDeprecatedLoadBalancerFields(deprecatedFields, "spec.loadBalancer", policy.Spec.LoadBalancer)
-	return deprecatedFields
 }
 
 func (t *Translator) ProcessBackendTrafficPolicies(
@@ -706,9 +692,6 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 		}
 	}
 
-	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
 	return matchedGWs, notMerged
 }
 
@@ -746,17 +729,11 @@ const (
 	rejectionMixed
 )
 
-// allPolicyTargetRefs resolves targetRef and targetRefs together; GetTargetRefs drops targetRefs when the singular targetRef is set.
+// allPolicyTargetRefs returns the non-empty targetRefs of the policy.
 func allPolicyTargetRefs(policy *egv1a1.BackendTrafficPolicy) []policyTargetReferenceWithSectionName {
-	raw := make([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, 0, len(policy.Spec.TargetRefs)+1)
-	if policy.Spec.TargetRef != nil {
-		raw = append(raw, *policy.Spec.TargetRef)
-	}
-	raw = append(raw, policy.Spec.TargetRefs...)
-
 	var empty gwapiv1.LocalPolicyTargetReferenceWithSectionName
-	refs := make([]policyTargetReferenceWithSectionName, 0, len(raw))
-	for _, v := range raw {
+	refs := make([]policyTargetReferenceWithSectionName, 0, len(policy.Spec.TargetRefs))
+	for _, v := range policy.Spec.TargetRefs {
 		if v == empty {
 			continue
 		}
@@ -837,7 +814,7 @@ func (t *Translator) reportRejectedBackendPolicy(xdsIR resource.XdsIRMap, gatewa
 func backendRejectionMessage(reason backendPolicyRejection) string {
 	switch reason {
 	case rejectionSelector:
-		return "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRef or targetRefs instead"
+		return "targetSelectors is not supported for Service, ServiceImport, or Backend kinds; use targetRefs instead"
 	case rejectionMixed:
 		return "Service, ServiceImport, and Backend targets cannot be combined with other target kinds in the same BackendTrafficPolicy"
 	}
@@ -1079,10 +1056,6 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			policy.Generation,
 			resolveErr,
 		)
-		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -1228,11 +1201,6 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
-	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
-
 	// Check if this policy is overridden by other policies targeting at route rule levels
 	// If policy target is route rule, we can skip the check
 	if currTarget.SectionName != nil {
@@ -1301,10 +1269,6 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 			policy.Generation,
 			resolveErr,
 		)
-		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -1370,10 +1334,6 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 		)
 	}
 
-	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
 }
 
 func (t *Translator) processBackendTrafficPolicyForGateway(
@@ -1407,10 +1367,6 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 			policy.Generation,
 			resolveErr,
 		)
-		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
-			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-		}
 		return
 	}
 
@@ -1435,11 +1391,6 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 
 	// Set Accepted condition if it is unset
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
-
-	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
-		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
-	}
 
 	// Determine this policy's own scope so we can look up merged and overriding
 	// child scopes from the relation maps.
@@ -2104,7 +2055,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, o
 		errs = errors.Join(errs, err)
 	}
 
-	if cp, err = buildCompression(policy.Spec.Compression, policy.Spec.Compressor); err != nil {
+	if cp, err = buildCompression(policy.Spec.Compressor); err != nil {
 		err = perr.WithMessage(err, "Compression")
 		errs = errors.Join(errs, err)
 	}
@@ -3277,64 +3228,37 @@ func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index 
 		strconv.Itoa(index))
 }
 
-func buildCompression(compression, compressor []*egv1a1.Compression) ([]*ir.Compression, error) {
-	// Handle the Compressor field first (higher priority)
-	if len(compressor) > 0 {
-		result := make([]*ir.Compression, 0, len(compressor))
-		types := sets.New[egv1a1.CompressorType]()
-		for i, c := range compressor {
-			// Duplicate types are rejected by the API, but stored or file-provided policies
-			// may still contain them, so only the first compressor of each type is used.
-			if types.Has(c.Type) {
-				continue
-			}
-			types.Insert(c.Type)
-
-			// Only add compression if the corresponding compressor not null
-			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
-				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
-				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
-				irCompression := ir.Compression{
-					Type:        c.Type,
-					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
-				}
-				setCompressorSettings(&irCompression, c)
-				minContentLength, err := minContentLengthToUint32(c.MinContentLength)
-				if err != nil {
-					return nil, err
-				}
-				irCompression.MinContentLength = minContentLength
-				result = append(result, &irCompression)
-			}
-		}
-		return result, nil
-	}
-
-	// Fallback to the deprecated Compression field
-	if compression == nil {
+func buildCompression(compressor []*egv1a1.Compression) ([]*ir.Compression, error) {
+	if len(compressor) == 0 {
 		return nil, nil
 	}
-	result := make([]*ir.Compression, 0, len(compression))
+	result := make([]*ir.Compression, 0, len(compressor))
 	types := sets.New[egv1a1.CompressorType]()
-	for i, c := range compression {
+	for i, c := range compressor {
+		// Duplicate types are rejected by the API, but stored or file-provided policies
+		// may still contain them, so only the first compressor of each type is used.
 		if types.Has(c.Type) {
 			continue
 		}
 		types.Insert(c.Type)
 
-		irCompression := ir.Compression{
-			Type:        c.Type,
-			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
+		// Only add compression if the corresponding compressor not null
+		if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
+			(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
+			(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
+			irCompression := ir.Compression{
+				Type:        c.Type,
+				ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
+			}
+			setCompressorSettings(&irCompression, c)
+			minContentLength, err := minContentLengthToUint32(c.MinContentLength)
+			if err != nil {
+				return nil, err
+			}
+			irCompression.MinContentLength = minContentLength
+			result = append(result, &irCompression)
 		}
-		setCompressorSettings(&irCompression, c)
-		minContentLength, err := minContentLengthToUint32(c.MinContentLength)
-		if err != nil {
-			return nil, err
-		}
-		irCompression.MinContentLength = minContentLength
-		result = append(result, &irCompression)
 	}
-
 	return result, nil
 }
 

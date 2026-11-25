@@ -1036,17 +1036,6 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 					LogType: accessLogType,
 				}
 
-				if len(ds) == 0 {
-					// fallback to host and port
-					var host string
-					var port uint32
-					if sink.OpenTelemetry.Host != nil {
-						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
-					}
-					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
-					al.Authority = strings.TrimSuffix(host, ".")
-				}
-
 				// For OpenTelemetry, text (body) and attributes can be used together.
 				// When format.Type is nil, both text and json from format can be used.
 				if format.Type == nil || *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
@@ -1088,18 +1077,6 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	authority := getAuthorityFromDestination(ds)
-
-	// fallback to host and port
-	// TODO: remove support for Host/Port in v1.2
-	if len(ds) == 0 {
-		var host string
-		var port uint32
-		if tracing.Provider.Host != nil {
-			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
-		}
-		ds = destinationSettingFromHostAndPort(settingName, host, port)
-		authority = strings.TrimSuffix(host, ".")
-	}
 
 	gw := gwCtx.Gateway
 	serviceName := naming.ServiceName(utils.NamespacedName(gw))
@@ -1289,12 +1266,6 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 
 		authority := getAuthorityFromDestination(ds)
 
-		// Fallback to deprecated host/port
-		if len(ds) == 0 && sink.OpenTelemetry.Host != nil {
-			ds = destinationSettingFromHostAndPort(settingName, *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port))
-			authority = strings.TrimSuffix(*sink.OpenTelemetry.Host, ".")
-		}
-
 		if len(ds) > 0 && len(ds[0].Endpoints) > 0 {
 			// Skip duplicate sinks (same address:port)
 			ep := ds[0].Endpoints[0]
@@ -1414,24 +1385,6 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 		return nil, traffic, nil
 	}
 	return result, traffic, nil
-}
-
-func destinationSettingFromHostAndPort(name, host string, port uint32) []*ir.DestinationSetting {
-	// check if host is an IP address or a hostname
-	addressType := ir.FQDN
-	if net.ParseIP(host) != nil {
-		addressType = ir.IP
-	}
-
-	return []*ir.DestinationSetting{
-		{
-			Name:        name,
-			Weight:      new(uint32(1)),
-			Protocol:    ir.GRPC,
-			AddressType: new(addressType),
-			Endpoints:   []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
-		},
-	}
 }
 
 var celEnv, _ = cel.NewEnv()

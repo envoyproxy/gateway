@@ -1,0 +1,48 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ext-auth
+  namespace: default
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  extAuth:
+    grpc:
+      backendRef:
+        name: ext-auth
+        port: 9002
+      backendSettings:
+        loadBalancer:
+          type: ConsistentHash
+          consistentHash:
+            type: Header
+            header:
+              name: x-user
+    http:
+      # backendRef is ignored when backendRefs is set.
+      backendRef:
+        name: old-auth
+        port: 8080
+      backendRefs:
+      - name: http-auth
+        port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  extProc:
+  - backendRefs:
+    - name: ok
+      port: 9002
+  - backendRef:
+      name: ext-proc
+      port: 9002

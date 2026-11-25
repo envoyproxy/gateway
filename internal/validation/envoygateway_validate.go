@@ -483,12 +483,12 @@ func validateExtensionService(extensionService *egv1a1.ExtensionService) error {
 	}
 
 	switch {
-	case extensionService.Host == "" && extensionService.FQDN == nil && extensionService.Unix == nil && extensionService.IP == nil:
+	case extensionService.FQDN == nil && extensionService.Unix == nil && extensionService.IP == nil:
 		return fmt.Errorf("extension service must contain a configured target")
 
-	case extensionService.FQDN != nil && (extensionService.IP != nil || extensionService.Unix != nil || extensionService.Host != ""),
-		extensionService.IP != nil && (extensionService.FQDN != nil || extensionService.Unix != nil || extensionService.Host != ""),
-		extensionService.Unix != nil && (extensionService.IP != nil || extensionService.FQDN != nil || extensionService.Host != ""):
+	case extensionService.FQDN != nil && (extensionService.IP != nil || extensionService.Unix != nil),
+		extensionService.IP != nil && (extensionService.FQDN != nil || extensionService.Unix != nil),
+		extensionService.Unix != nil && (extensionService.IP != nil || extensionService.FQDN != nil):
 		return fmt.Errorf("only one backend target can be configured for the extension manager")
 	}
 

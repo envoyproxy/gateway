@@ -110,7 +110,7 @@ func TestBuildDeprecationWarningMessage(t *testing.T) {
 		{
 			name: "entries scheduled for removal",
 			deprecatedFields: map[string]DeprecatedField{
-				"spec.targetRef":                     {Replacement: "spec.targetRefs", RemovedIn: DeprecatedFieldsRemovalRelease},
+				"spec.targetRef":                     {Replacement: "spec.targetRefs", RemovedIn: "v1.11"},
 				"spec.tls.clientValidation.optional": {Replacement: "spec.tls.clientValidation.mode"},
 			},
 			expected: "spec.targetRef is deprecated and will be removed in v1.11, use spec.targetRefs instead; spec.tls.clientValidation.optional is deprecated, use spec.tls.clientValidation.mode instead",
