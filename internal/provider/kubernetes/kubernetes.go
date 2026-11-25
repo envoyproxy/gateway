@@ -132,6 +132,11 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 
 	if !ptr.Deref(kubernetesConfigParams.LeaderElection.Disable, false) {
 		mgrOpts.LeaderElection = true
+		// Release the lease when the manager stops, so that the next leader does not wait
+		// for it to expire. The manager stops on shutdown and on every configuration
+		// reload; controller-runtime releases the lease only after the leader election
+		// runnables and the caches have stopped.
+		mgrOpts.LeaderElectionReleaseOnCancel = true
 		if kubernetesConfigParams.LeaderElection.LeaseDuration != nil {
 			ld, err := time.ParseDuration(string(*kubernetesConfigParams.LeaderElection.LeaseDuration))
 			if err != nil {
