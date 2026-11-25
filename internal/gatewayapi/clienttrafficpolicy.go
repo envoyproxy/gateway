@@ -712,10 +712,11 @@ func shouldDisableHTTP3ForClientValidation(policy *egv1a1.ClientTrafficPolicy, h
 	if policy.Spec.HTTP3 == nil {
 		return false
 	}
-	if policy.Spec.TLS == nil || policy.Spec.TLS.ClientValidation == nil {
-		return false
+	// Client validation may already be configured by Gateway.spec.tls.frontend.
+	if httpIR.TLS.ClientValidationEnabled || httpIR.TLS.CACertificate != nil || httpIR.TLS.RequireClientCertificate {
+		return true
 	}
-	return true
+	return policy.Spec.TLS != nil && policy.Spec.TLS.ClientValidation != nil
 }
 
 func disabledHTTP3WarningMessage(listenerNames []string) string {

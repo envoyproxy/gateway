@@ -335,16 +335,15 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			}
 			ports = append(ports, p)
 
-			if port.Protocol == ir.HTTPSProtocolType {
-				if listener.HTTP3 != nil {
-					p := corev1.ServicePort{
-						Name:       port.Name + "-h3",
-						Protocol:   corev1.ProtocolUDP,
-						Port:       port.ServicePort,
-						TargetPort: target,
-					}
-					ports = append(ports, p)
-				}
+			// A TLS listener may own the deduplicated TCP port shared with an
+			// HTTPS listener. Its HTTP/3 marker still requires UDP exposure.
+			if listener.HTTP3 != nil && (port.Protocol == ir.HTTPSProtocolType || port.Protocol == ir.TLSProtocolType) {
+				ports = append(ports, corev1.ServicePort{
+					Name:       port.Name + "-h3",
+					Protocol:   corev1.ProtocolUDP,
+					Port:       port.ServicePort,
+					TargetPort: target,
+				})
 			}
 		}
 	}

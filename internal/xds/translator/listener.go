@@ -661,8 +661,8 @@ func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listener
 		xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP
 
 	// Envoy’s QUIC stack parses SNI itself, so filter_chain_match.server_names works without TLS Inspector.
-	// TLS Inspector is only needed for TCP/TLS listeners.
-	if len(fingerprints) > 0 || (hasSNIs && !isQUICListener) {
+	// TLS Inspector supports SNI inspection and fingerprinting only on TCP/TLS listeners.
+	if !isQUICListener && (len(fingerprints) > 0 || hasSNIs) {
 		if err := addXdsTLSInspectorFilter(xdsListener, fingerprints); err != nil {
 			return err
 		}
