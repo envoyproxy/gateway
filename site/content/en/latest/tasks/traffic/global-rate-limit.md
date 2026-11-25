@@ -1580,9 +1580,7 @@ that are currently open for each descriptor, and new requests are rate limited o
 
 Here is an example that allows each distinct user, identified by the `x-user-id` header, to have at most 2 requests in flight.
 
-**Note:** This requires Envoy Proxy 1.38 or later and a rate limit service that supports negative hits. The images that
-Envoy Gateway deploys by default meet both. If you set an older Envoy Proxy image through the `EnvoyProxy` resource,
-the refund is not supported.
+**Note:** The rate limit service must support negative hits. The rate limit image that Envoy Gateway deploys by default does.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}

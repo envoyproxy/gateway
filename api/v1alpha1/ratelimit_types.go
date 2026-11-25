@@ -175,8 +175,6 @@ type RateLimitCost struct {
 	//
 	// This is only supported for a Number request cost and HTTP Global Rate Limits.
 	//
-	// It requires Envoy Proxy 1.38 or later and a rate limit service that supports negative hits.
-	//
 	// +optional
 	RefundOnResponse *bool `json:"refundOnResponse,omitempty"`
 }
