@@ -115,7 +115,7 @@ var EndpointFastPathTest = suite.ConformanceTest{
 				// path can switch traffic before then.
 				elapsed := timeUntilBackend(t, s, address, "/endpoint-fast-path", step.backend, fullPathDelay)
 				tlog.Logf(t, "the fast path switched traffic to %s in %v", step.backend, elapsed)
-				require.Less(t, elapsed, fullPathDelay, "traffic switched only after the debounced full path could have run")
+				require.Less(t, elapsed, fullPathDelay, "the fast path was slower than the full path")
 			}
 			expect(step.backend, step.code)
 			if step.fast {
