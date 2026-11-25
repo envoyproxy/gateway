@@ -30,11 +30,11 @@ func trackerSlices(address string) []*discoveryv1.EndpointSlice {
 func TestRevisionTrackerKeepsEntryOnError(t *testing.T) {
 	var tracker revisionTracker
 	key := ir.ServiceKey{Kind: "Service", Namespace: "default", Name: "orders"}
-	stored, err := tracker.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
+	stored, err := tracker.track(key, func() ([]*discoveryv1.EndpointSlice, error) {
 		return trackerSlices("10.0.0.1"), nil
 	})
 	require.NoError(t, err)
-	_, err = tracker.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
+	_, err = tracker.track(key, func() ([]*discoveryv1.EndpointSlice, error) {
 		return nil, errors.New("collection failed")
 	})
 	require.Error(t, err)
@@ -47,7 +47,7 @@ func TestRevisionTrackerSerializesCaptureWithRevision(t *testing.T) {
 	entered, release := make(chan struct{}), make(chan struct{})
 	results := make(chan *endpoint.BackendEndpoints, 2)
 	go func() {
-		backendEndpoints, err := tracker.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
+		backendEndpoints, err := tracker.track(key, func() ([]*discoveryv1.EndpointSlice, error) {
 			close(entered)
 			<-release
 			return trackerSlices("10.0.0.1"), nil
@@ -60,7 +60,7 @@ func TestRevisionTrackerSerializesCaptureWithRevision(t *testing.T) {
 	started := make(chan struct{})
 	go func() {
 		close(started)
-		backendEndpoints, err := tracker.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
+		backendEndpoints, err := tracker.track(key, func() ([]*discoveryv1.EndpointSlice, error) {
 			return trackerSlices("10.0.0.2"), nil
 		})
 		if err == nil {
@@ -83,14 +83,14 @@ func TestRevisionTrackerPrunesUnreferencedBackends(t *testing.T) {
 	retained := ir.ServiceKey{Kind: "Service", Name: "retained"}
 	var retainedEndpoints *endpoint.BackendEndpoints
 	for _, backend := range []ir.ServiceKey{removed, retained} {
-		backendEndpoints, err := tracker.Track(backend, func() ([]*discoveryv1.EndpointSlice, error) {
+		backendEndpoints, err := tracker.track(backend, func() ([]*discoveryv1.EndpointSlice, error) {
 			return trackerSlices("10.0.0.1"), nil
 		})
 		require.NoError(t, err)
 		retainedEndpoints = backendEndpoints
 	}
 	revision := tracker.lastRevision
-	tracker.PruneBackends([]ir.ServiceKey{retained, retained})
+	tracker.pruneBackends([]ir.ServiceKey{retained, retained})
 	require.NotContains(t, tracker.lastLoaded, removed)
 	require.Same(t, retainedEndpoints, tracker.lastLoaded[retained])
 	require.Equal(t, revision, tracker.lastRevision)
@@ -102,15 +102,15 @@ func TestRevisionTrackerReusesUnchangedSlices(t *testing.T) {
 	slices := trackerSlices("10.0.0.1")
 	slices[0].ResourceVersion = "1"
 	load := func() ([]*discoveryv1.EndpointSlice, error) { return slices, nil }
-	first, err := tracker.Track(key, load)
+	first, err := tracker.track(key, load)
 	require.NoError(t, err)
-	again, err := tracker.Track(key, load)
+	again, err := tracker.track(key, load)
 	require.NoError(t, err)
 	require.Same(t, first, again, "unchanged slices must reuse the stored entry")
 
 	slices = trackerSlices("10.0.0.2")
 	slices[0].ResourceVersion = "2"
-	changed, err := tracker.Track(key, load)
+	changed, err := tracker.track(key, load)
 	require.NoError(t, err)
 	require.Greater(t, changed.Revision, first.Revision)
 }

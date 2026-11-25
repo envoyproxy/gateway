@@ -22,7 +22,7 @@ import (
 type revisionTracker struct {
 	once sync.Once
 
-	// mu protects the fields below. Track holds it across the load, so loads
+	// mu protects the fields below. track holds it across the load, so loads
 	// get revisions in the order they read Kubernetes.
 	mu sync.Mutex
 
@@ -32,7 +32,7 @@ type revisionTracker struct {
 	lastRevision uint64
 
 	// lastLoaded holds the endpoints last loaded for each referenced backend.
-	// Track compares against it to keep the revision when nothing changed.
+	// track compares against it to keep the revision when nothing changed.
 	lastLoaded map[ir.ServiceKey]*endpoint.BackendEndpoints
 }
 
@@ -40,10 +40,10 @@ func (s *revisionTracker) init() {
 	s.once.Do(func() { s.lastLoaded = make(map[ir.ServiceKey]*endpoint.BackendEndpoints) })
 }
 
-// Track loads a backend's EndpointSlices and returns its endpoints with a
+// track loads a backend's EndpointSlices and returns its endpoints with a
 // revision: the stored one if the slices are unchanged, otherwise the next
 // one. On error the stored entry is left as is.
-func (s *revisionTracker) Track(key ir.ServiceKey, load func() ([]*discoveryv1.EndpointSlice, error)) (*endpoint.BackendEndpoints, error) {
+func (s *revisionTracker) track(key ir.ServiceKey, load func() ([]*discoveryv1.EndpointSlice, error)) (*endpoint.BackendEndpoints, error) {
 	s.init()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -65,9 +65,9 @@ func (s *revisionTracker) Track(key ir.ServiceKey, load func() ([]*discoveryv1.E
 	return current, nil
 }
 
-// Tracks reports whether the backend's endpoints are stored. Full reconciliation
+// has reports whether the backend's endpoints are stored. Full reconciliation
 // stores every referenced backend, so this tells whether a backend is in use.
-func (s *revisionTracker) Tracks(key ir.ServiceKey) bool {
+func (s *revisionTracker) has(key ir.ServiceKey) bool {
 	s.init()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -75,11 +75,11 @@ func (s *revisionTracker) Tracks(key ir.ServiceKey) bool {
 	return found
 }
 
-// PruneBackends removes stored endpoints for backends absent from full
-// Kubernetes collection. It waits for an in-flight Track. A Track that
+// pruneBackends removes stored endpoints for backends absent from full
+// Kubernetes collection. It waits for an in-flight track. A track that
 // starts afterwards can restore an entry until the next full collection prunes
 // it. Revisions never reset.
-func (s *revisionTracker) PruneBackends(keys []ir.ServiceKey) {
+func (s *revisionTracker) pruneBackends(keys []ir.ServiceKey) {
 	s.init()
 	next := make(map[ir.ServiceKey]struct{}, len(keys))
 	for _, key := range keys {

@@ -33,7 +33,7 @@ func (r *gatewayAPIReconciler) endpointFastPathEnabled() bool {
 
 func (r *gatewayAPIReconciler) watchEndpointUpdates(mgr manager.Manager, name string) error {
 	c, err := controller.NewTyped(name, mgr, controller.TypedOptions[ir.ServiceKey]{
-		// One worker: revisionTracker.Track serializes loads anyway, so more workers
+		// One worker: revisionTracker.track serializes loads anyway, so more workers
 		// would only wait on its lock.
 		Reconciler:         reconcile.TypedFunc[ir.ServiceKey](r.reconcileBackendEndpoints),
 		SkipNameValidation: skipNameValidation(),
@@ -54,7 +54,10 @@ func (r *gatewayAPIReconciler) watchEndpointUpdates(mgr manager.Manager, name st
 			} {
 				if name := slice.Labels[backend.label]; name != "" {
 					key := ir.ServiceKey{Kind: backend.kind, Namespace: slice.Namespace, Name: name}
-					if r.endpointRevisions.Tracks(key) {
+					// Full reconciliation loads every backend it uses (route and
+					// policy backends, etc.) into the tracker, so this skips
+					// unused backends.
+					if r.endpointRevisions.has(key) {
 						keys = append(keys, key)
 					}
 				}
@@ -66,10 +69,10 @@ func (r *gatewayAPIReconciler) watchEndpointUpdates(mgr manager.Manager, name st
 func (r *gatewayAPIReconciler) reconcileBackendEndpoints(ctx context.Context, key ir.ServiceKey) (reconcile.Result, error) {
 	// Skip backends full reconciliation has pruned since this key was queued.
 	// They're no longer referenced, and loading one would store it again.
-	if !r.endpointRevisions.Tracks(key) {
+	if !r.endpointRevisions.has(key) {
 		return reconcile.Result{}, nil
 	}
-	backendEndpoints, err := r.refreshBackendEndpoints(ctx, key)
+	backendEndpoints, err := r.trackBackendEndpoints(ctx, key)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -80,12 +83,12 @@ func (r *gatewayAPIReconciler) reconcileBackendEndpoints(ctx context.Context, ke
 	return reconcile.Result{}, nil
 }
 
-// refreshBackendEndpoints reloads one backend's EndpointSlices from Kubernetes
-// through the revision tracker, which assigns a new revision only when the
-// slices changed. Both the endpoint controller and full reconciliation call
-// it, and the tracker keeps their loads of a backend in order.
-func (r *gatewayAPIReconciler) refreshBackendEndpoints(ctx context.Context, key ir.ServiceKey) (*endpoint.BackendEndpoints, error) {
-	return r.endpointRevisions.Track(key, func() ([]*discoveryv1.EndpointSlice, error) {
+// trackBackendEndpoints loads one backend's EndpointSlices from Kubernetes
+// through the revision tracker, which stores them and assigns a new revision
+// only when the slices changed. Both the endpoint controller and full
+// reconciliation call it, and the tracker keeps their loads of a backend in order.
+func (r *gatewayAPIReconciler) trackBackendEndpoints(ctx context.Context, key ir.ServiceKey) (*endpoint.BackendEndpoints, error) {
+	return r.endpointRevisions.track(key, func() ([]*discoveryv1.EndpointSlice, error) {
 		return r.listBackendEndpointSlices(ctx, key)
 	})
 }
@@ -135,7 +138,7 @@ func (r *gatewayAPIReconciler) loadBackendEndpoints(ctx context.Context, resourc
 
 	// Remove any backends that are no longer referenced by the current resource trees from the endpoint source.
 	// This ensures that the source only retains endpoints for backends that are still relevant.
-	r.endpointRevisions.PruneBackends(keys)
+	r.endpointRevisions.pruneBackends(keys)
 
 	// Load each backend's endpoints through the revision tracker, which gives
 	// them a revision, and capture the result.
@@ -144,7 +147,7 @@ func (r *gatewayAPIReconciler) loadBackendEndpoints(ctx context.Context, resourc
 		if _, found := captured[key]; found {
 			continue
 		}
-		backendEndpoints, err := r.refreshBackendEndpoints(ctx, key)
+		backendEndpoints, err := r.trackBackendEndpoints(ctx, key)
 		if err != nil {
 			return err
 		}

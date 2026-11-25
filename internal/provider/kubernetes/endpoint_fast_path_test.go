@@ -135,7 +135,7 @@ func TestEndpointCacheClearedWithoutManagedGatewayClasses(t *testing.T) {
 	_, err := r.Reconcile(t.Context(), reconcile.Request{})
 	require.NoError(t, err)
 	key := ir.ServiceKey{Kind: resource.KindService, Namespace: service.Namespace, Name: service.Name}
-	recaptured, err := r.refreshBackendEndpoints(t.Context(), key)
+	recaptured, err := r.trackBackendEndpoints(t.Context(), key)
 	require.NoError(t, err)
 	require.Greater(t, recaptured.Revision, tree.BackendEndpoints[0].Revision)
 }

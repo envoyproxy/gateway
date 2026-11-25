@@ -392,7 +392,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	if managedGCs == nil {
 		if r.endpointFastPathEnabled() {
-			r.endpointRevisions.PruneBackends(nil)
+			r.endpointRevisions.pruneBackends(nil)
 		}
 		r.resources.GatewayAPIResources.Delete(string(r.classController))
 		logger.Info("no accepted gatewayclass")
