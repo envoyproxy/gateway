@@ -133,7 +133,9 @@ func detectSecurityPolicy(fs fields, spec *yaml.Node) {
 // detectBackendCluster records the deprecated fields of the BackendCluster at path: the host and
 // port of a telemetry sink if isSink, and the consistent hash fields of backendSettings, which is
 // inlined into the BackendCluster. backendRef isn't reported: the CRD rejects it on every
-// BackendCluster but the external auth ones, and the translator never reads it there.
+// BackendCluster but the external auth ones, and the translator never reads it there. The default
+// EnvoyProxy spec of the EnvoyGateway configuration was added after backendRef was deprecated, so
+// it never supported it either.
 //
 // A port is reported whenever it is set, including to its CRD default, 4317, which every sink read
 // from a cluster has: the field is removed from the API, so a manifest that still sets it fails

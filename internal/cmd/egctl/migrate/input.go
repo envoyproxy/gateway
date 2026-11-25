@@ -210,6 +210,11 @@ var (
 )
 
 // parseDocuments splits data into YAML documents.
+//
+// The split is line based and doesn't support directives such as "%YAML 1.1": a directive is kept
+// with the preceding document rather than the one its "---" starts, so the input is rejected with
+// a parse error. Directives are rare in Kubernetes manifests, and failing to parse never rewrites
+// anything, so handling them isn't worth the complexity.
 func parseDocuments(source string, data []byte) ([]*document, error) {
 	var (
 		docs []*document
