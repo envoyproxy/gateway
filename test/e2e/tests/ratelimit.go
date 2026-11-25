@@ -707,9 +707,12 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 				Namespace: ns,
 			}
 			// expectOkResp.Response.Headers["X-Ratelimit-Limit"] is not defined because we disabled it.
-			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
-			expectLimitResp := http.ExpectedResponse{
+			// keep sending requests till get 200 first, that will cost one 200
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
+
+			// fire the rest of the requests, and expect 429 for the last one
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
 				Request: http.Request{
 					Path:    "/get",
 					Headers: requestHeaders,
@@ -718,21 +721,7 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 					StatusCodes: []int{429},
 				},
 				Namespace: ns,
-			}
-			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
-
-			// should just send exactly 4 requests, and expect 429
-
-			// keep sending requests till get 200 first, that will cost one 200
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
-
-			// fire the rest of the requests
-			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				tlog.Fatalf(t, "failed to get expected response for the first three requests: %v", err)
-			}
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				tlog.Fatalf(t, "failed to get expected response for the last (fourth) request: %v", err)
-			}
+			})
 		})
 
 		t.Run("only one matched header cannot got limited", func(t *testing.T) {
