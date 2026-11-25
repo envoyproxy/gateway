@@ -1,15 +1,9 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: envoy-gateway-config
-  namespace: envoy-gateway-system
-data:
-  envoy-gateway.yaml: |
-    apiVersion: gateway.envoyproxy.io/v1alpha1
-    kind: EnvoyGateway
-    debounce:
-      after: 1s
-      max: 10s
+# Envoy Gateway config shared by every e2e profile. e2e-prepare renders the
+# envoy-gateway-config ConfigMap from this file, then the profile's helm values
+# (test/config/helm/<profile>.yaml), then <profile>.yaml in this directory if it
+# exists. Later files win; set a key to null to clear it.
+config:
+  envoyGateway:
     provider:
       type: Kubernetes
     gateway:
