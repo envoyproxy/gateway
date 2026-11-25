@@ -41,10 +41,10 @@ backendTrafficPolicies:
       namespace: envoy-gateway
       name: gateway-compressor-policy
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
   # Route-level policy - Enable only Gzip
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
@@ -52,10 +52,10 @@ backendTrafficPolicies:
       namespace: default
       name: route-compressor-policy-enable-gzip
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       compressor:
         - type: Gzip
           gzip: {}

@@ -135,10 +135,10 @@ securityPolicies:
       namespace: default
       name: policy-for-route-1
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       cors:
         allowOrigins:
           - "*"
@@ -158,10 +158,10 @@ securityPolicies:
       namespace: default
       name: policy-for-route-2
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-3
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-3
       cors:
         allowOrigins:
           - "*"
@@ -182,11 +182,11 @@ clientTrafficPolicies:
       namespace: default
       name: target-gateway-2
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-2
-        sectionName: http
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-2
+          sectionName: http
       timeout:
         http:
           requestReceivedTimeout: "5s"
@@ -196,10 +196,10 @@ clientTrafficPolicies:
       namespace: default
       name: target-gateway
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       timeout:
         http:
           requestReceivedTimeout: "5s"
@@ -210,10 +210,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-gateway
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       tcpKeepalive:
         probes: 3
         idleTime: 20m

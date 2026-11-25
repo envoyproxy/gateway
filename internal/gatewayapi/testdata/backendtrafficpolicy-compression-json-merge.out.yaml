@@ -5,12 +5,14 @@ backendTrafficPolicies:
     name: route-compression-policy
     namespace: default
   spec:
-    compression:
-    - type: Brotli
+    compressor:
+    - brotli: {}
+      type: Brotli
     - type: Zstd
+      zstd: {}
     mergeType: JSONMerge
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -32,13 +34,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.compression is deprecated and will be removed in v1.11, use
-          spec.compressor instead; spec.targetRef is deprecated and will be removed
-          in v1.11, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -46,10 +41,11 @@ backendTrafficPolicies:
     name: gateway-compression-policy
     namespace: envoy-gateway
   spec:
-    compression:
-    - type: Gzip
-    targetRef:
-      group: gateway.networking.k8s.io
+    compressor:
+    - gzip: {}
+      type: Gzip
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -65,13 +61,6 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.compression is deprecated and will be removed in v1.11, use
-          spec.compressor instead; spec.targetRef is deprecated and will be removed
-          in v1.11, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       - lastTransitionTime: null
         message: 'This policy is being merged by other backendTrafficPolicies for
           these routes: [default/httproute-1]'

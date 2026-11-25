@@ -97,8 +97,8 @@ securityPolicies:
     namespace: default
     name: securitypolicy-with-jwt-local-jwks-inline
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     jwt:
@@ -124,8 +124,8 @@ securityPolicies:
     namespace: default
     name: securitypolicy-with-jwt-local-jwks-valueref
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
     jwt:
@@ -144,8 +144,8 @@ securityPolicies:
     namespace: default
     name: securitypolicy-with-jwt-local-jwks-valueref-missing-key
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
     jwt:
@@ -164,8 +164,8 @@ securityPolicies:
     namespace: default
     name: securitypolicy-with-jwt-local-jwks-valueref-missing-configmap
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-4
     jwt:

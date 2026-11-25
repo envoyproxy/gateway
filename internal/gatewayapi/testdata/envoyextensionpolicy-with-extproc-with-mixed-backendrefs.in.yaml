@@ -76,8 +76,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-ip-fqdn-mix
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     extProc:
@@ -96,8 +96,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-ip-uds-mix
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
     extProc:

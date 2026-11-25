@@ -28,10 +28,10 @@ kind: SecurityPolicy
 metadata:
   name: header-auth
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-1
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
   authorization:
     defaultAction: Deny
     rules:
@@ -61,10 +61,10 @@ kind: SecurityPolicy
 metadata:
   name: method-auth
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-1
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
   authorization:
     defaultAction: Deny
     rules:
@@ -91,10 +91,10 @@ kind: SecurityPolicy
 metadata:
   name: combined-auth
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-1
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
   authorization:
     defaultAction: Deny
     rules:

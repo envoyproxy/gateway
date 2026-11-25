@@ -86,8 +86,8 @@ securityPolicies:
     name: cors-example
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: mfqjpuycbgjrtdww
     cors:
@@ -109,8 +109,8 @@ clientTrafficPolicies:
     namespace: default
     name: target-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: mfqjpuycbgjrtdww
     timeout:

@@ -31,10 +31,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: response-override
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   responseOverride:
     - match:
         statusCodes:
@@ -93,10 +93,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: response-override
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   responseOverride:
     - match:
         statusCodes:
