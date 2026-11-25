@@ -93,7 +93,8 @@ func Replace(m *yaml.Node, key, newKey string, value *yaml.Node) bool {
 	}
 	old := m.Content[i+1]
 	if value.LineComment == "" && old != value && old.Kind == yaml.ScalarNode {
-		// Keep a trailing comment like `enabled: true # why`.
+		// Keep a trailing comment like `enabled: true # why`. The comment of an alias value like
+		// `enabled: *on # why` isn't kept: aliased deprecated fields are rare in manifests.
 		value.LineComment = old.LineComment
 	}
 	m.Content[i+1] = value
