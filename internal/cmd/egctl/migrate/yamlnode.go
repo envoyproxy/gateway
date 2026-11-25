@@ -82,7 +82,15 @@ func Replace(m *yaml.Node, key, newKey string, value *yaml.Node) bool {
 	if i < 0 {
 		return false
 	}
-	m.Content[i].Value = newKey
+	if k := m.Content[i]; k.Kind == yaml.AliasNode {
+		// Renaming the alias would point it to another anchor; replace it with a plain key.
+		m.Content[i] = &yaml.Node{
+			Kind: yaml.ScalarNode, Tag: "!!str", Value: newKey,
+			HeadComment: k.HeadComment, LineComment: k.LineComment, FootComment: k.FootComment,
+		}
+	} else {
+		m.Content[i].Value = newKey
+	}
 	old := m.Content[i+1]
 	if value.LineComment == "" && old != value && old.Kind == yaml.ScalarNode {
 		// Keep a trailing comment like `enabled: true # why`.
@@ -248,7 +256,8 @@ func keyIndex(m *yaml.Node, key string) int {
 		return -1
 	}
 	for i := 0; i+1 < len(m.Content); i += 2 {
-		if m.Content[i].Value == key {
+		// A key can be an alias of an anchored scalar, such as `*name: value`.
+		if k := Resolve(m.Content[i]); k != nil && k.Kind == yaml.ScalarNode && k.Value == key {
 			return i
 		}
 	}

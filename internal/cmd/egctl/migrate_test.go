@@ -426,6 +426,19 @@ spec:
 			want:  "eg",
 		},
 		{
+			name: "aliased key",
+			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  annotations:
+    field: &field targetRef
+spec:
+  *field : {name: eg}
+`,
+			field: "spec.targetRefs[0].name",
+			want:  "eg",
+		},
+		{
 			name: "null policy fields",
 			input: `apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
