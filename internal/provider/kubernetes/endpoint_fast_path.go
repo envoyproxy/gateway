@@ -141,7 +141,7 @@ func (r *gatewayAPIReconciler) loadBackendEndpoints(ctx context.Context, resourc
 	r.endpointRevisions.pruneBackends(keys)
 
 	// Load each backend's endpoints through the revision tracker, which gives
-	// them a revision, and capture the result.
+	// them a revision.
 	captured := make(map[ir.ServiceKey]*endpoint.BackendEndpoints, len(keys))
 	for _, key := range keys {
 		if _, found := captured[key]; found {

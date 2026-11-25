@@ -26,8 +26,9 @@ import (
 // The provider publishes resources and endpoint updates for the Gateway API and
 // xDS runners, and the runners write statuses back for the provider to update.
 type ProviderResources struct {
-	// EndpointUpdates carries fast-path endpoint updates from the endpoint
-	// controller to the xDS publisher, which takes them in batches.
+	// EndpointUpdates passes changed backend endpoints from the provider to the
+	// xDS runner, which pushes them to Envoy without waiting for full translation.
+	// Only the newest endpoints of each backend are kept until the runner takes them.
 	EndpointUpdates endpoint.UpdateQueue
 
 	// GatewayAPIResources is a map from a GatewayClass name to
