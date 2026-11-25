@@ -9,6 +9,7 @@ package tests
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -31,6 +32,10 @@ import (
 func init() {
 	ConformanceTests = append(ConformanceTests, EndpointFastPathTest)
 }
+
+// fullPathDelay is how long the endpoint-fast-path profile debounces full
+// reconciliation. It must match debounce.after in that profile.
+const fullPathDelay = 5 * time.Second
 
 var EndpointFastPathTest = suite.ConformanceTest{
 	ShortName:   "EndpointFastPath",
@@ -92,9 +97,9 @@ var EndpointFastPathTest = suite.ConformanceTest{
 			// the cluster was removed with the 503, so the fast path has nothing to update.
 			{index: 0, code: 200, backend: "infra-backend-v1", full: true},
 		} {
-			var before, fullBefore float64
+			var fastBefore, fullBefore float64
 			if step.fast {
-				before = fastPathHandled(t, s)
+				fastBefore = fastPublications(t, s)
 			}
 			if step.full {
 				fullBefore = fullPublications(t, s)
@@ -105,16 +110,17 @@ var EndpointFastPathTest = suite.ConformanceTest{
 				slice.Endpoints = []discoveryv1.Endpoint{endpoints[step.index]}
 			}
 			require.NoError(t, s.Client.Update(t.Context(), slice))
+			if step.fast {
+				// Full reconciliation is debounced for fullPathDelay, so only the fast
+				// path can switch traffic before then.
+				elapsed := timeUntilBackend(t, s, address, "/endpoint-fast-path", step.backend, fullPathDelay)
+				tlog.Logf(t, "the fast path switched traffic to %s in %v", step.backend, elapsed)
+			}
 			expect(step.backend, step.code)
 			if step.fast {
-				// Both paths react to the same EndpointSlice update, and with a small
-				// configuration full translation is quick. If the full result is
-				// published first, the fast update is skipped as not newer instead
-				// of published. Either way the fast path handled the update, which
-				// the refresh histogram counts. Other tests can also move it.
 				require.NoError(t, wait.PollUntilContextTimeout(t.Context(), 3*time.Second, 2*time.Minute, true,
-					func(context.Context) (bool, error) { return fastPathHandled(t, s) > before, nil }),
-					"the fast path did not publish or skip the endpoint update")
+					func(context.Context) (bool, error) { return fastPublications(t, s) > fastBefore, nil }),
+					"the fast path did not publish the endpoint update")
 			}
 			if step.full {
 				require.NoError(t, wait.PollUntilContextTimeout(t.Context(), 3*time.Second, 2*time.Minute, true,
@@ -125,11 +131,27 @@ var EndpointFastPathTest = suite.ConformanceTest{
 	},
 }
 
-// fastPathHandled returns how many times the fast path has applied endpoint
-// updates to a snapshot, as scraped by Prometheus, whether or not it published
-// a new one. A missing histogram counts as 0.
-func fastPathHandled(t *testing.T, s *suite.ConformanceTestSuite) float64 {
-	return queryCount(t, s, `sum(xds_endpoint_refresh_duration_seconds_count) or vector(0)`)
+// timeUntilBackend polls path until a 200 comes from backend and returns how
+// long that took. It fails the test if that doesn't happen within limit.
+func timeUntilBackend(t *testing.T, s *suite.ConformanceTestSuite, address, path, backend string, limit time.Duration) time.Duration {
+	t.Helper()
+	expected := http.ExpectedResponse{Request: http.Request{Path: path}}
+	req := http.MakeRequest(t, &expected, address, "HTTP", "http")
+	start := time.Now()
+	for time.Since(start) < limit {
+		cReq, cResp, err := s.RoundTripper.CaptureRoundTrip(req)
+		if err == nil && cResp.StatusCode == 200 && strings.HasPrefix(cReq.Pod, backend) {
+			return time.Since(start)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	require.FailNowf(t, "traffic did not switch in time", "no response from %s within %v", backend, limit)
+	return 0
+}
+
+// fastPublications returns how many snapshots the fast path has published.
+func fastPublications(t *testing.T, s *suite.ConformanceTestSuite) float64 {
+	return queryCount(t, s, `sum(xds_snapshot_publications_total{path="fast"}) or vector(0)`)
 }
 
 // fullPublications returns how many snapshots the full path has published.
