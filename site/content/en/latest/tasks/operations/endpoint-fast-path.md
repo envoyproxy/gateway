@@ -36,10 +36,6 @@ For a Helm installation, set `config.envoyGateway.runtimeFlags.enabled` to inclu
 `EndpointFastPath`. Keep any other runtime flags you already enabled. Restart the
 Envoy Gateway deployment after changing its configuration.
 
-If you use an extension server, enable the fast path only if the server does not
-implement the Endpoints hook. Fast updates rebuild endpoint assignments without
-calling the hook, so its changes would be lost until the next full translation.
-
 ## Behavior
 
 With the fast path on, Envoy Gateway publishes endpoint changes right away, using
@@ -56,9 +52,11 @@ The following cases use full reconciliation:
 
 - A backend changes between zero and nonzero endpoints.
 - The endpoint address type changes, such as from IP to DNS.
-- An EnvoyPatchPolicy targets the endpoint assignment, or a patch or the extension
-  server's Translation hook changes it. Other patches, such as a cluster timeout,
-  keep the fast path.
+- An extension server registers the Endpoints hook. The fast path is then turned off
+  for all clusters, since fast updates would rebuild endpoints without calling the hook.
+- An EnvoyPatchPolicy patches a cluster's endpoint assignment. Only that cluster
+  falls back to full reconciliation; patches to other resources, such as a cluster
+  timeout, keep the fast path.
 - A destination uses ClusterIP routing, static Backend addresses, or DNS resolution.
 - No successful full configuration with an eligible endpoint assignment exists yet.
 
