@@ -226,12 +226,15 @@ func GetTLSSecret(client client.Client, secretName types.NamespacedName) ([]byte
 }
 
 func dialWithTLSVersion(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, version uint16, expectedError bool) {
+	t.Helper()
 	tlsConfig := baseTLSConfig.Clone()
 	tlsConfig.MinVersion = version
 	tlsConfig.MaxVersion = version
 	tlsConfig.CipherSuites = []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}
 
-	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+	conn, err := dialUntilConnected(t, func() (*tls.Conn, error) {
+		return tls.Dial("tcp", gwAddr, tlsConfig)
+	})
 
 	if expectedError {
 		require.Error(t, err, "protocol version not supported")
@@ -244,10 +247,13 @@ func dialWithTLSVersion(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, 
 }
 
 func dialAndExpectALPN(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, expectedALPN string) {
+	t.Helper()
 	tlsConfig := baseTLSConfig.Clone()
 	tlsConfig.NextProtos = []string{"h2", "http/1.1"}
 
-	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+	conn, err := dialUntilConnected(t, func() (*tls.Conn, error) {
+		return tls.Dial("tcp", gwAddr, tlsConfig)
+	})
 
 	require.NoError(t, err)
 	require.NotNil(t, conn)
@@ -256,9 +262,12 @@ func dialAndExpectALPN(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, e
 }
 
 func dialWithCipher(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, cipher uint16, expectedError bool) {
+	t.Helper()
 	tlsConfig := baseTLSConfig.Clone()
 	tlsConfig.CipherSuites = []uint16{cipher}
-	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+	conn, err := dialUntilConnected(t, func() (*tls.Conn, error) {
+		return tls.Dial("tcp", gwAddr, tlsConfig)
+	})
 
 	if expectedError {
 		require.Error(t, err, "remote error: tls: handshake failure")
@@ -271,9 +280,12 @@ func dialWithCipher(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, ciph
 }
 
 func dialWithCurve(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, curve tls.CurveID, expectedError bool) {
+	t.Helper()
 	tlsConfig := baseTLSConfig.Clone()
 	tlsConfig.CurvePreferences = []tls.CurveID{curve}
-	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+	conn, err := dialUntilConnected(t, func() (*tls.Conn, error) {
+		return tls.Dial("tcp", gwAddr, tlsConfig)
+	})
 
 	if expectedError {
 		require.Error(t, err, "remote error: tls: handshake failure")
@@ -285,10 +297,13 @@ func dialWithCurve(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, curve
 }
 
 func dialAndCheckSessionTicketAssignment(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, expectedSessionTickets int) {
+	t.Helper()
 	tlsConfig := baseTLSConfig.Clone()
 	sessionCache := newClientSessionCache(tls.NewLRUClientSessionCache(100))
 	tlsConfig.ClientSessionCache = sessionCache
-	conn, err := tls.Dial("tcp", gwAddr, tlsConfig)
+	conn, err := dialUntilConnected(t, func() (*tls.Conn, error) {
+		return tls.Dial("tcp", gwAddr, tlsConfig)
+	})
 
 	require.NoError(t, err)
 	require.NotNil(t, conn)

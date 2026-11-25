@@ -81,8 +81,14 @@ func testTCPRouteWithBackendBlocked(t *testing.T, suite *suite.ConformanceTestSu
 }
 
 func testTCPConnectionBlocked(t *testing.T, gwAddr string) {
-	// Try to establish a raw TCP connection
-	conn, err := net.DialTimeout("tcp", gwAddr, 5*time.Second)
+	t.Helper()
+
+	// Try to establish a raw TCP connection. The authorization policy works at the
+	// network filter level, so Envoy accepts the TCP connection and then closes it.
+	// A dial error means the Gateway is not reachable yet, not that it blocked us.
+	conn, err := dialUntilConnected(t, func() (net.Conn, error) {
+		return net.DialTimeout("tcp", gwAddr, 5*time.Second)
+	})
 	if err != nil {
 		t.Logf("Connection blocked as expected: %v", err)
 		return

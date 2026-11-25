@@ -12,7 +12,6 @@ package tests
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"net"
 	"testing"
 	"time"
@@ -133,12 +132,4 @@ func dialListenerSetTLS(addr string, baseTLSConfig *tls.Config, version uint16) 
 	}
 	defer conn.Close()
 	return conn.ConnectionState().Version, nil
-}
-
-// isDialError reports whether err happened while opening the TCP connection
-// (for example "no route to host" or "connection refused"), as opposed to
-// during the TLS handshake.
-func isDialError(err error) bool {
-	var opErr *net.OpError
-	return errors.As(err, &opErr) && opErr.Op == "dial"
 }
