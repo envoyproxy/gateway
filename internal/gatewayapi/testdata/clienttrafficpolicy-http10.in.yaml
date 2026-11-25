@@ -7,8 +7,8 @@ clientTrafficPolicies:
   spec:
     http1:
       http10: {}
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-1
@@ -21,8 +21,8 @@ clientTrafficPolicies:
     http1:
       http10:
         useDefaultHost: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-2
@@ -35,8 +35,8 @@ clientTrafficPolicies:
     http1:
       http10:
         useDefaultHost: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-3
@@ -49,8 +49,8 @@ clientTrafficPolicies:
     http1:
       http10:
         useDefaultHost: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-4
@@ -63,8 +63,8 @@ clientTrafficPolicies:
     http1:
       http10:
         useDefaultHost: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-5

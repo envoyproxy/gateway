@@ -11,8 +11,8 @@ clientTrafficPolicies:
         timeout: 10s
         intervalJitter: 20
         idleInterval: 30s
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-1

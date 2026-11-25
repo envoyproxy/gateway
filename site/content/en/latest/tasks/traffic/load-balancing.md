@@ -609,9 +609,9 @@ spec:
   loadBalancer:
     type: ConsistentHash
     consistentHash:
-      type: Header
-      header:
-        name: FooBar
+      type: Headers
+      headers:
+        - name: FooBar
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -653,9 +653,9 @@ spec:
   loadBalancer:
     type: ConsistentHash
     consistentHash:
-      type: Header
-      header:
-        name: FooBar
+      type: Headers
+      headers:
+        - name: FooBar
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

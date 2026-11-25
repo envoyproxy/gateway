@@ -14,8 +14,8 @@ clientTrafficPolicies:
         httpDestinationPorts:
         - 80
         - 8080
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-1

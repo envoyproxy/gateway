@@ -92,10 +92,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route-1
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       healthCheck:
         panicThreshold: 66
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -104,10 +104,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route-2
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-2
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-2
       healthCheck:
         panicThreshold: 10
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -116,9 +116,9 @@ backendTrafficPolicies:
       namespace: envoy-gateway
       name: policy-for-all-routes-in-gateway-1
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       healthCheck:
         panicThreshold: 80

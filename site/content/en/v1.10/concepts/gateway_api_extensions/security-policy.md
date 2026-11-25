@@ -133,10 +133,10 @@ kind: SecurityPolicy
 metadata:
   name: rule-policy
 spec:
-  targetRef:
-    kind: HTTPRoute
-    name: my-route
-    sectionName: rule-1  # Targets specific named rule
+  targetRefs:
+    - kind: HTTPRoute
+      name: my-route
+      sectionName: rule-1  # Targets specific named rule
   cors:
     allowOrigins:
     - exact: https://rule.example.com
@@ -148,9 +148,9 @@ kind: SecurityPolicy
 metadata:
   name: route-policy
 spec:
-  targetRef:
-    kind: HTTPRoute
-    name: my-route  # No sectionName = entire route
+  targetRefs:
+    - kind: HTTPRoute
+      name: my-route  # No sectionName = entire route
   cors:
     allowOrigins:
     - exact: https://route.example.com
@@ -162,10 +162,10 @@ kind: SecurityPolicy
 metadata:
   name: listener-policy
 spec:
-  targetRef:
-    kind: Gateway
-    name: my-gateway
-    sectionName: https-listener  # Targets specific listener
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway
+      sectionName: https-listener  # Targets specific listener
   cors:
     allowOrigins:
     - exact: https://listener.example.com
@@ -177,9 +177,9 @@ kind: SecurityPolicy
 metadata:
   name: gateway-policy
 spec:
-  targetRef:
-    kind: Gateway
-    name: my-gateway  # No sectionName = entire gateway
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway  # No sectionName = entire gateway
   cors:
     allowOrigins:
     - exact: https://gateway.example.com

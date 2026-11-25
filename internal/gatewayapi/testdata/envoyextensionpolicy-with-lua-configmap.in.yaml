@@ -153,8 +153,8 @@ envoyextensionpolicies:
     namespace: envoy-gateway
     name: policy-for-gateway  # This policy should attach httproute-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     lua:
@@ -169,8 +169,8 @@ envoyextensionpolicies:
     namespace: default
     name: policy-for-http-route   # This policy should attach httproute-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     lua:
@@ -187,8 +187,8 @@ envoyextensionpolicies:
     namespace: default
     name: policy-for-http-route-4
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
     lua:
@@ -203,8 +203,8 @@ envoyextensionpolicies:
     namespace: default
     name: policy-for-http-route-4
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-4
     lua:
@@ -219,8 +219,8 @@ envoyextensionpolicies:
     namespace: default
     name: policy-for-http-route-5
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-5
     lua:

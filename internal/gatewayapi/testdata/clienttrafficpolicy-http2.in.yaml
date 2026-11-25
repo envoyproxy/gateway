@@ -10,8 +10,8 @@ clientTrafficPolicies:
       initialConnectionWindowSize: 32Mi
       maxConcurrentStreams: 200
       onInvalidMessage: TerminateConnection
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-1
@@ -25,8 +25,8 @@ clientTrafficPolicies:
       initialStreamWindowSize: 1Ki
       initialConnectionWindowSize: 1Ti
       maxConcurrentStreams: 200
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-2

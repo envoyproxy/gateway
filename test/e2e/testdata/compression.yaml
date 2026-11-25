@@ -46,10 +46,10 @@ metadata:
   name: compression-all
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: compression-all
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: compression-all
   compressor:
     - type: Brotli
       brotli: {}
