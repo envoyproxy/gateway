@@ -24,8 +24,11 @@ spec:
     {{- include "eg.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.deployment.pod.annotations }}
       annotations:
+        {{- /* A configuration change rolls the controller, so it is applied when the
+               rollout completes instead of when the kubelet refreshes the mounted ConfigMap. */}}
+        checksum/config: {{ include (print $.Template.BasePath "/envoy-gateway-config.yaml") . | sha256sum }}
+      {{- with .Values.deployment.pod.annotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:

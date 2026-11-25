@@ -10,7 +10,9 @@ data:
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
     {{- $baseEnvoyGatewayConfig := include "eg.default-envoy-gateway-config" . | fromYaml }}
-    {{- $userEnvoyGatewayConfig := .Values.config.envoyGateway }}
+    {{- /* A copy: merge and set below must not write into .Values, so that this template
+           renders the same each time it is included (the Deployment's checksum/config). */}}
+    {{- $userEnvoyGatewayConfig := deepCopy .Values.config.envoyGateway }}
     {{- $mergedEnvoyGatewayConfig := merge $userEnvoyGatewayConfig $baseEnvoyGatewayConfig }}
     {{- if .Values.extensionManagersMap }}
     {{- if or $mergedEnvoyGatewayConfig.extensionManagers $mergedEnvoyGatewayConfig.extensionManager }}
