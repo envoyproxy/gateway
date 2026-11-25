@@ -14,6 +14,13 @@ This task will walk you through the steps required to configure TLS Termination 
 
 ## Prerequisites
 
+__Note:__ Both private key providers depend on CPU instructions that are not available on
+ARM64. The QAT provider additionally needs an Intel QuickAssist Technology device, which is
+not present on Apple silicon. The steps below therefore apply to x86_64 nodes only. On an
+ARM64 cluster, such as one running on M1 Macs, use the standard Envoy TLS private key
+handling instead, and refer to [TLS Termination for TCP](./tls-termination) for a setup that
+does not depend on a private key provider.
+
 {{< tabpane text=true >}}
 
 {{% tab header="QAT (Intel QuickAssist Technology)" %}}
