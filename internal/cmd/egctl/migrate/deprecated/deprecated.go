@@ -128,7 +128,7 @@ func migrateEnvoyGatewayResource(obj *migrate.Object) ([]migrate.Finding, error)
 		}
 	}
 	fields := detect(obj.Kind, obj.Root)
-	rewritten, unmigrated := rewrite(obj.Kind, obj.Root, slices.Collect(maps.Keys(fields)))
+	rewritten, unmigrated := rewrite(obj.Root, slices.Collect(maps.Keys(fields)))
 
 	findings = append(findings, rewritten...)
 	slices.SortStableFunc(findings, func(a, b migrate.Finding) int { return cmp.Compare(a.Field, b.Field) })
@@ -245,7 +245,7 @@ func classify(path string) (rule, string) {
 
 // rewrite applies the rules for the deprecated field paths to root. It returns the findings, and
 // the paths that were left unchanged because they couldn't be migrated.
-func rewrite(kind string, root *yaml.Node, paths []string) ([]migrate.Finding, map[string]bool) {
+func rewrite(root *yaml.Node, paths []string) ([]migrate.Finding, map[string]bool) {
 	groups := map[string]*group{}
 	for _, p := range paths {
 		r, base := classify(p)
@@ -262,7 +262,7 @@ func rewrite(kind string, root *yaml.Node, paths []string) ([]migrate.Finding, m
 	findings := make([]migrate.Finding, 0, len(ordered))
 	unmigrated := map[string]bool{}
 	for _, g := range ordered {
-		f := apply(kind, root, g)
+		f := apply(root, g)
 		if f.Result == migrate.ResultError {
 			for _, k := range g.keys {
 				unmigrated[k] = true
@@ -274,7 +274,7 @@ func rewrite(kind string, root *yaml.Node, paths []string) ([]migrate.Finding, m
 	return findings, unmigrated
 }
 
-func apply(kind string, root *yaml.Node, g *group) migrate.Finding {
+func apply(root *yaml.Node, g *group) migrate.Finding {
 	n := migrate.Lookup(root, g.base)
 	if g.rule == ruleUnknown {
 		return errorf(g.base, "deprecated, but there is no automatic migration for it")
