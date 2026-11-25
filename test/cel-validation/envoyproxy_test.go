@@ -208,7 +208,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 		{
 			desc: "loadBalancerSourceRanges-too-many-items",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				sourceRanges := make([]string, 65)
+				sourceRanges := make([]string, 501)
 				for i := range sourceRanges {
 					sourceRanges[i] = "10.0.0.0/8"
 				}
@@ -224,7 +224,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"Too many: 65: must have at most 64 items"},
+			wantErrors: []string{"Too many: 501: must have at most 500 items"},
 		},
 		{
 			desc: "ServiceTypeLoadBalancer-with-valid-IP",

@@ -48308,7 +48308,7 @@ spec:
                             items:
                               format: cidr
                               type: string
-                            maxItems: 64
+                            maxItems: 500
                             type: array
                           name:
                             description: |-
