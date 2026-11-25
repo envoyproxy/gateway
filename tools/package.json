@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "linkinator": "8.1.0",
-    "markdownlint-cli": "0.50.0"
+    "markdownlint-cli": "0.50.1"
   },
   "overrides": {
     "js-yaml": "^5.4.1",
