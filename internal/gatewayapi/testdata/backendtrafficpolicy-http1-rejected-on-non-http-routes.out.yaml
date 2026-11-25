@@ -7,8 +7,8 @@ backendTrafficPolicies:
   spec:
     http1:
       enableTrailers: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: TCPRoute
       name: tcp-app-1
   status:
@@ -21,9 +21,8 @@ backendTrafficPolicies:
         sectionName: tcp
       conditions:
       - lastTransitionTime: null
-        message: HTTP/1 settings have no effect when targeting a TCPRoute; spec.targetRef
-          is deprecated and will be removed in v1.11, use spec.targetRefs instead
-        reason: Warnings
+        message: HTTP/1 settings have no effect when targeting a TCPRoute
+        reason: UnsupportedField
         status: "True"
         type: Warning
       - lastTransitionTime: null
@@ -40,8 +39,8 @@ backendTrafficPolicies:
   spec:
     http1:
       enableTrailers: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: UDPRoute
       name: udp-app-1
   status:
@@ -54,9 +53,8 @@ backendTrafficPolicies:
         sectionName: udp
       conditions:
       - lastTransitionTime: null
-        message: HTTP/1 settings have no effect when targeting a UDPRoute; spec.targetRef
-          is deprecated and will be removed in v1.11, use spec.targetRefs instead
-        reason: Warnings
+        message: HTTP/1 settings have no effect when targeting a UDPRoute
+        reason: UnsupportedField
         status: "True"
         type: Warning
       - lastTransitionTime: null
@@ -73,8 +71,8 @@ backendTrafficPolicies:
   spec:
     http1:
       enableTrailers: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: TLSRoute
       name: tls-app-1
   status:
@@ -87,9 +85,8 @@ backendTrafficPolicies:
         sectionName: tls
       conditions:
       - lastTransitionTime: null
-        message: HTTP/1 settings have no effect when targeting a TLSRoute; spec.targetRef
-          is deprecated and will be removed in v1.11, use spec.targetRefs instead
-        reason: Warnings
+        message: HTTP/1 settings have no effect when targeting a TLSRoute
+        reason: UnsupportedField
         status: "True"
         type: Warning
       - lastTransitionTime: null
@@ -106,8 +103,8 @@ backendTrafficPolicies:
   spec:
     http1:
       enableTrailers: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpc-app-1
   status:
@@ -121,9 +118,8 @@ backendTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: HTTP/1 settings have no effect when targeting a GRPCRoute (gRPC always
-          uses HTTP/2); spec.targetRef is deprecated and will be removed in v1.11,
-          use spec.targetRefs instead
-        reason: Warnings
+          uses HTTP/2)
+        reason: UnsupportedField
         status: "True"
         type: Warning
       - lastTransitionTime: null

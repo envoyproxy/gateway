@@ -27,7 +27,7 @@ metadata:
   name: enable-proxy-protocol-policy
   namespace: gateway-conformance-infra
 spec:
-  enableProxyProtocol: true
+  proxyProtocol: {}
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway

@@ -5,8 +5,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     headers:
@@ -25,8 +25,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
     headers:
@@ -46,8 +46,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-3
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-3
     headers:
@@ -67,8 +67,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-4
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-4
     headers:
@@ -90,8 +90,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-5
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-5
     headers:

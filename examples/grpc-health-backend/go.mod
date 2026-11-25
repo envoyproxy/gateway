@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway-grpc-health-backend
 
-go 1.27.1
+go 1.27.4
 
 require google.golang.org/grpc v1.85.0
 

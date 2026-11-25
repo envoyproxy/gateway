@@ -11,6 +11,9 @@ REGRESSION_THRESHOLD=${REGRESSION_THRESHOLD:-5}
 # branch PRs are not compared against main, which tracks a different Go
 # toolchain and feature set.
 BASE_REF=${BASE_REF:-origin/main}
+# Optional results of a previous `make go-benchmark` run on BASE_REF. When set and the
+# file was produced on the same CPU model, the base branch is not benchmarked again.
+BASE_BENCH_FILE=${BASE_BENCH_FILE:-}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BENCHSTAT=${BENCHSTAT:-go tool -modfile="$REPO_ROOT/tools/go.mod" benchstat}
@@ -28,6 +31,7 @@ OPTIONS:
 ENVIRONMENT VARIABLES:
     REGRESSION_THRESHOLD    Regression threshold percentage (default: 5)
     BASE_REF                Baseline git ref to compare against (default: origin/main)
+    BASE_BENCH_FILE         Saved benchmark results for BASE_REF to reuse (default: none)
 
 EXIT CODES:
     0    Success (no significant regressions)
@@ -136,28 +140,44 @@ if ! run_benchmark "pr-bench.txt" "$current_branch"; then
     exit 1
 fi
 
-# Switch to the base branch and run benchmarks
-if ! git rev-parse --verify --quiet "$BASE_REF^{commit}" >/dev/null; then
-    log "ERROR: Base ref $BASE_REF not found; ensure the checkout has full history"
-    exit 1
+# Reuse saved base results when they came from the same CPU model: results from
+# different hardware are not comparable.
+rm -f base-bench.txt
+if [[ -n "$BASE_BENCH_FILE" && -s "$BASE_BENCH_FILE" ]]; then
+    saved_cpu=$(grep -m1 '^cpu:' "$BASE_BENCH_FILE" || true)
+    current_cpu=$(grep -m1 '^cpu:' pr-bench.txt || true)
+    if [[ -n "$saved_cpu" && "$saved_cpu" == "$current_cpu" ]]; then
+        log "Reusing saved benchmark results for $BASE_REF from $BASE_BENCH_FILE"
+        cp "$BASE_BENCH_FILE" base-bench.txt
+    else
+        log "Saved results were produced on a different CPU (${saved_cpu:-unknown}), benchmarking $BASE_REF again"
+    fi
 fi
 
-log "Switching to base ref $BASE_REF..."
-if ! git checkout "$BASE_REF" --quiet; then
-    log "ERROR: Failed to checkout base ref $BASE_REF"
-    exit 1
-fi
+# Otherwise switch to the base branch and run benchmarks
+if [[ ! -s base-bench.txt ]]; then
+    if ! git rev-parse --verify --quiet "$BASE_REF^{commit}" >/dev/null; then
+        log "ERROR: Base ref $BASE_REF not found; ensure the checkout has full history"
+        exit 1
+    fi
 
-if ! run_benchmark "base-bench.txt" "$BASE_REF"; then
-    # Return to original state before failing
-    git checkout "$current_commit" --quiet || true
-    exit 1
-fi
+    log "Switching to base ref $BASE_REF..."
+    if ! git checkout "$BASE_REF" --quiet; then
+        log "ERROR: Failed to checkout base ref $BASE_REF"
+        exit 1
+    fi
 
-# Return to original commit
-log "Returning to original commit..."
-if ! git checkout "$current_commit" --quiet; then
-    log "WARNING: Failed to return to original commit"
+    if ! run_benchmark "base-bench.txt" "$BASE_REF"; then
+        # Return to original state before failing
+        git checkout "$current_commit" --quiet || true
+        exit 1
+    fi
+
+    # Return to original commit
+    log "Returning to original commit..."
+    if ! git checkout "$current_commit" --quiet; then
+        log "WARNING: Failed to return to original commit"
+    fi
 fi
 
 # Compare benchmarks using benchstat

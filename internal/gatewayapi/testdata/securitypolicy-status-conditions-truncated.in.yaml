@@ -28,8 +28,8 @@ securityPolicies:
     namespace: envoy-gateway
     name: target-httproute-with-accepted-truncated-ancestors
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
 httpRoutes:

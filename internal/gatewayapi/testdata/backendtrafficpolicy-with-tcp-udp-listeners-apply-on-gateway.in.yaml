@@ -58,10 +58,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-gateway
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: tcp-gateway
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: tcp-gateway
       circuitBreaker:
         maxConnections: 2048
         maxPendingRequests: 1

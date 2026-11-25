@@ -48406,6 +48406,18 @@ spec:
                 description: Shutdown defines configuration for graceful envoy shutdown
                   process.
                 properties:
+                  drainStrategy:
+                    description: |-
+                      DrainStrategy defines how Envoy drains HTTP connections during the graceful drain process.
+                      TCP and UDP proxy connections are not drained by either strategy.
+                      If unspecified, defaults to "Immediate".
+
+                      Switching to or from "Gradual" changes the listener configuration, which makes the running
+                      Envoy proxies replace their listeners and drain the existing connections.
+                    enum:
+                    - Gradual
+                    - Immediate
+                    type: string
                   drainTimeout:
                     description: |-
                       DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.
@@ -52287,6 +52299,9 @@ spec:
                           `%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section
                           `%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|...` format
                           Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
+                          A cluster shared by several routes through MergeBackends has no single route, so this
+                          pattern isn't applied to it. Its stats are named `<NAMESPACE>/<NAME>` after the backend
+                          instead, the value the `%BACKEND_REFS%` operator expands to for a rule with one backendRef.
                           Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
                           Example: `httproute/my-ns/my-route/rule/0`
                         maxLength: 1024
@@ -66097,23 +66112,30 @@ spec:
             - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
               rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
                 : true'
-            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute
+            - message: this policy can only have a targetRef.kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute/UDPRoute
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''ListenerSet'',
-                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''] : true'
+                ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'', ''UDPRoute'']
+                : true'
             - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
                 ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute
+            - message: this policy can only have a targetRefs[*].kind of Gateway/ListenerSet/HTTPRoute/GRPCRoute/TCPRoute/TLSRoute/UDPRoute
               rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''])
-                : true '
+                ''ListenerSet'', ''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'',
+                ''UDPRoute'']) : true '
             - message: mergeType can only be used with xRoute targets
               rule: '!has(self.mergeType) || ((!has(self.targetRef) || self.targetRef.kind
-                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''UDPRoute'']) &&
-                (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in [''HTTPRoute'',
-                ''GRPCRoute'', ''TCPRoute'', ''UDPRoute''])) && (!has(self.targetSelectors)
-                || self.targetSelectors.all(sel, sel.kind in [''HTTPRoute'', ''GRPCRoute'',
-                ''TCPRoute'', ''UDPRoute''])))'
+                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'', ''UDPRoute''])
+                && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in
+                [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'', ''UDPRoute'']))
+                && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind
+                in [''HTTPRoute'', ''GRPCRoute'', ''TCPRoute'', ''TLSRoute'', ''UDPRoute''])))'
+            - message: sectionName is not supported for TCPRoute/TLSRoute targets
+              rule: 'has(self.targetRef) ? !(self.targetRef.kind in [''TCPRoute'',
+                ''TLSRoute''] && has(self.targetRef.sectionName)) : true'
+            - message: sectionName is not supported for TCPRoute/TLSRoute targets
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, !(ref.kind in
+                [''TCPRoute'', ''TLSRoute''] && has(ref.sectionName))) : true'
             - message: if authorization.rules.principal.jwt is used, jwt must be defined,
                 unless mergeType is set and the jwt providers are inherited from the
                 parent policy

@@ -30,10 +30,10 @@ metadata:
   name: response-override
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: response-override
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: response-override
   responseOverride:
     - match:
         statusCodes:

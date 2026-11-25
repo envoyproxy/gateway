@@ -1,0 +1,87 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-tls
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: tls-passthrough
+      protocol: TLS
+      port: 8443
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: All
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    namespace: default
+    name: tlsroute-a
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-tls
+      sectionName: tls-passthrough
+    hostnames:
+    - "a.example.com"
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8443
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    namespace: default
+    name: tlsroute-b
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-tls
+      sectionName: tls-passthrough
+    hostnames:
+    - "b.example.com"
+    rules:
+    - backendRefs:
+      - name: service-2
+        port: 8443
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-tlsroute-a
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TLSRoute
+      name: tlsroute-a
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-route-a
+        principal:
+          clientCIDRs:
+          - 192.168.0.0/16
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-tlsroute-b
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: TLSRoute
+      name: tlsroute-b
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-route-b
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8

@@ -93,10 +93,14 @@ The hooks are executed in the following order during xDS translation:
 
 #### Cluster Hook (`PostClusterModifyHook`)
 
-- **When called**: During cluster generation for custom backend references only
-- **Input**: Single cluster and extension resources from the backend reference
+- **When called**: Once for each custom backendRef with a non-zero weight. Each custom backendRef gets its own
+  cluster. Clusters for Service, ServiceImport or Backend backendRefs in the same rule don't call the hook.
+- **Input**: Single cluster, and in `PostClusterContext.backend_extension_resources` the custom backend resource
+  for that cluster, plus any resources from the route's `extensionRef` filters
 - **Output**: Modified cluster
 - **Use cases**: Configure custom backend clusters, add health checks, modify load balancing
+
+See [How custom backends are translated](#how-custom-backends-are-translated) for how these clusters are routed.
 
 #### VirtualHost Hook (`PostVirtualHostModifyHook`)
 
@@ -324,6 +328,10 @@ extensionManager:
 reference as custom backends (for example an S3 bucket or a Lambda function). Envoy Gateway hands
 these backendRefs to the extension, which configures their clusters with the `Cluster` hook.
 
+Custom backends are supported only in HTTPRoute and GRPCRoute `backendRefs`. TCPRoute, UDPRoute and
+TLSRoute `backendRefs` and policy `backendRefs`, such as those in ExtAuth, ExtProc or telemetry
+sinks, accept only Service, ServiceImport and Backend.
+
 The backend kinds Envoy Gateway resolves itself can't be registered, and Envoy Gateway fails to
 start if `backendResources` lists any of them:
 
@@ -342,6 +350,63 @@ hook) on the clusters it generates instead.
 
 A custom resource that happens to share a built-in kind name in its own group, such as
 `custom.example.io/Service`, is allowed and is always handed to the extension.
+
+##### How custom backends are translated
+
+Envoy Gateway treats a custom backendRef like any other backendRef in the rule:
+
+- Each backendRef in the rule gets its own cluster, whether it is a custom backend, a Service, a
+  ServiceImport or a Backend.
+- A rule with more than one backendRef routes with Envoy `weighted_clusters`, using the backendRef
+  weights. A rule with a single backendRef routes to that cluster directly.
+- The `Cluster` hook is called once for each custom backend cluster. `backend_extension_resources`
+  holds the custom backend resource for that cluster only, plus any resources from the route's
+  `extensionRef` filters.
+- A custom backendRef with weight 0 gets no cluster and is not passed to the extension.
+
+For example, this rule sends 75% of the traffic to `pool-a` and 25% to `pool-b`. Envoy Gateway
+generates two clusters and calls the `Cluster` hook twice, once with `pool-a` and once with `pool-b`:
+
+```yaml
+rules:
+- backendRefs:
+  - group: inference.networking.x-k8s.io
+    kind: InferencePool
+    name: pool-a
+    weight: 3
+  - group: inference.networking.x-k8s.io
+    kind: InferencePool
+    name: pool-b
+    weight: 1
+```
+
+##### Migrating extensions that expect one cluster per rule
+
+{{% alert title="Breaking change" color="warning" %}}
+Earlier releases generated a single cluster for each rule with custom backends and called the
+`Cluster` hook once, with every custom backend resource in the rule. The backendRef weights were
+ignored, and a rule that mixed a Service or Backend with a custom backend sent all its traffic to
+one side.
+{{% /alert %}}
+
+Check your extension against these cases:
+
+- **The extension reads one custom backend resource per hook call.** No change is needed. The hook
+  now receives that resource on its own cluster.
+- **The extension loops over `backend_extension_resources` and configures one cluster for all of
+  them.** Configure the cluster from the single custom backend resource it receives. Resources from
+  the route's `extensionRef` filters are still included, so check the kind of each resource rather
+  than assuming every entry is a backend.
+- **The extension split the merged cluster itself**, for example by building its own weighted
+  clusters or endpoints from several backend resources. Remove that logic. Envoy Gateway now
+  creates one cluster per backendRef and routes between them with the backendRef weights.
+- **The extension needs to see several backends together**, for example to load balance across
+  them with its own logic, or to fail over between them. Define a custom resource that lists those
+  backends, register its kind in `backendResources`, and reference it from the rule as a single
+  backendRef. Envoy Gateway then generates one cluster for it and calls the `Cluster` hook with
+  that resource, which holds every backend the extension needs. If the extension instead needs to
+  change how Envoy Gateway's clusters are combined, use the `Translation` hook
+  (`PostTranslateModifyHook`), which receives all clusters and routes at once.
 
 This task sets up an example extension server that adds the Envoy Proxy Basic Authentication
 HTTP filter to all the listeners generated by Envoy Gateway. The example extension server
