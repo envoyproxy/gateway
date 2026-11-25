@@ -37,7 +37,17 @@ func TestWriteDirPermissions(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, fi.Mode().Perm()&0o007, "directory must not be accessible by others, got %v", fi.Mode().Perm())
 
-	fi, err = os.Stat(filepath.Join(dir, "tls.key"))
+	key := filepath.Join(dir, "tls.key")
+	fi, err = os.Stat(key)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o600), fi.Mode().Perm())
+
+	// A file left behind by an older release keeps its mode through O_TRUNC,
+	// so overwriting an existing 0644 secret has to tighten it as well.
+	require.NoError(t, os.Chmod(key, 0o644))
+	require.NoError(t, WriteDir([]byte("secret"), dir, "tls.key"))
+
+	fi, err = os.Stat(key)
 	require.NoError(t, err)
 	require.Equal(t, os.FileMode(0o600), fi.Mode().Perm())
 }

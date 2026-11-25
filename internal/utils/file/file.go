@@ -11,14 +11,20 @@ import (
 	"path/filepath"
 )
 
-// Write writes data into a given filepath. The file is created readable by
-// the owner only, since callers use it for private keys and secrets.
+// Write writes data into a given filepath. The file is readable by the owner
+// only, since callers use it for private keys and secrets.
 func Write(data, filepath string) error {
 	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	// The perm above only applies when the file is created, and O_TRUNC keeps
+	// the mode of an existing inode, so tighten it before writing: a file left
+	// behind by an older release can still be 0644.
+	if err := file.Chmod(0o600); err != nil {
+		return err
+	}
 	write := bufio.NewWriter(file)
 	_, err = write.WriteString(data)
 	if err != nil {
