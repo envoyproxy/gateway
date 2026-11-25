@@ -79,12 +79,9 @@ Envoy took to get the new endpoints after the EndpointSlice was written:
 | An HTTPRoute edited every 2 seconds, so full translation never stops | 10.2 s / 14.0 s | 47 ms / 88 ms |
 
 With the flag on, the new endpoints reached Envoy in under 100 ms in every case,
-150 to 240 times faster at the median. Changes between one and zero endpoints
-always go through full translation, so they took about 7.5 seconds with or without
-the flag.
+150 to 240 times faster at the median.
 
-In the same test, the flag added about 10% control plane CPU and 100 to 200 MiB of
-memory for the stored endpoint data.
+In the same test, the flag added about 10% control plane CPU and about 70 MiB of memory.
 
 ## Observability
 
