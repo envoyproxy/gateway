@@ -17,9 +17,8 @@ and during rollouts or autoscaling, when endpoints change often.
 The faster convergence costs more resources. Full translation still runs for every
 endpoint change, so the fast path's work is added on top of it. Envoy Gateway uses
 more CPU, and more memory to keep the latest endpoints of each referenced Service
-and the settings needed to rebuild each cluster's endpoints. Envoy may also receive
-more updates, since an endpoint change can be pushed once by the fast path and again
-by full translation. See [Performance](#performance) for measured numbers.
+and the settings needed to rebuild each cluster's endpoints. See [Performance](#performance)
+for measured numbers.
 
 Enable it in the Envoy Gateway configuration:
 
