@@ -511,6 +511,7 @@ var (
 		egv1a1.StatFormatterRouteRuleName:   true,
 		egv1a1.StatFormatterRouteRuleNumber: true,
 		egv1a1.StatFormatterBackendRefs:     true,
+		egv1a1.StatFormatterBackendKind:     true,
 	}
 )
 

@@ -1,0 +1,1 @@
+Added the `%BACKEND_KIND%` operator to the EnvoyProxy `telemetry.metrics.clusterStatName` pattern. It expands to the lowercase kinds of the backends referenced by the route rule (for example `service` or `backend`), in the same order as `%BACKEND_REFS%`.

@@ -1006,9 +1006,10 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				Spec: egv1a1.EnvoyProxySpec{
 					Telemetry: &egv1a1.ProxyTelemetry{
 						Metrics: &egv1a1.ProxyMetrics{
-							ClusterStatName: new(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", egv1a1.StatFormatterRouteName,
+							ClusterStatName: new(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s", egv1a1.StatFormatterRouteName,
 								egv1a1.StatFormatterRouteName, egv1a1.StatFormatterRouteNamespace, egv1a1.StatFormatterRouteKind,
-								egv1a1.StatFormatterRouteRuleName, egv1a1.StatFormatterRouteRuleNumber, egv1a1.StatFormatterBackendRefs)),
+								egv1a1.StatFormatterRouteRuleName, egv1a1.StatFormatterRouteRuleNumber, egv1a1.StatFormatterBackendRefs,
+								egv1a1.StatFormatterBackendKind)),
 						},
 					},
 				},
@@ -1346,6 +1347,11 @@ func TestValidateClusterStatName(t *testing.T) {
 		{
 			name:     "valid cluster stat name with supported operators",
 			statName: "%ROUTE_NAME%/%ROUTE_NAMESPACE%/%BACKEND_REFS%",
+			expected: true,
+		},
+		{
+			name:     "valid cluster stat name with backend kind operator",
+			statName: "%BACKEND_KIND%/%BACKEND_REFS%",
 			expected: true,
 		},
 		{
