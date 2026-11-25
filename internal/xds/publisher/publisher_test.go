@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"math/rand/v2"
 	"testing"
 	"time"
@@ -229,16 +230,28 @@ func TestPublisherTracksEachConsumerSeparately(t *testing.T) {
 	require.Empty(t, publishedSetting(p, testSnapshotKey, "empty").Endpoints)
 }
 
+// TestPublisherFastUpdateKeepsBackendIndex checks that a fast update leaves the
+// backend index as it was, since it stores contexts without reindexing.
+func TestPublisherFastUpdateKeepsBackendIndex(t *testing.T) {
+	p, _ := testPublisher(t)
+	applyFull(p, fullEndpointResult(t, 1, "10.0.0.1", 1))
+	before := maps.Clone(p.publishedEndpoints.clustersByBackend)
+	p.endpointUpdates.Add(endpointUpdate(2, "10.0.0.2"))
+	p.processEndpointUpdates()
+	require.Equal(t, uint64(2), publishedRevision(p))
+	require.Equal(t, before, p.publishedEndpoints.clustersByBackend)
+}
+
 func TestPublisherNoClusterDropsPreviouslyPublishedInputs(t *testing.T) {
 	p, _ := testPublisher(t)
-	require.Empty(t, p.publishedEndpoints.dependentsByBackend)
+	require.Empty(t, p.publishedEndpoints.clustersByBackend)
 	applyFull(p, fullEndpointResult(t, 1, "10.0.0.1", 1))
-	require.Contains(t, p.publishedEndpoints.dependentsByBackend, testBackend)
+	require.Contains(t, p.publishedEndpoints.clustersByBackend, testBackend)
 	// A full translation can replace forwarding with a direct response.
 	snapshot, err := cache.PrepareSnapshot(context.Background(), types.XdsResources{resourcev3.RouteType: {&routev3.RouteConfiguration{Name: "direct-response"}}})
 	require.NoError(t, err)
 	applyFull(p, &fullPublication{ctx: t.Context(), snapshot: snapshot})
-	require.NotContains(t, p.publishedEndpoints.dependentsByBackend, testBackend)
+	require.NotContains(t, p.publishedEndpoints.clustersByBackend, testBackend)
 	p.endpointUpdates.Add(endpointUpdate(2, "10.0.0.2"))
 	p.processEndpointUpdates()
 	require.Same(t, snapshot, p.snapshots[testSnapshotKey])
@@ -267,7 +280,7 @@ func TestPublisherSharedBackendAcrossKeys(t *testing.T) {
 
 	applyFull(p, &fullPublication{ctx: t.Context()})
 	require.NotContains(t, p.snapshots, testSnapshotKey)
-	require.Contains(t, p.publishedEndpoints.dependentsByBackend[testBackend], otherKey)
+	require.Contains(t, p.publishedEndpoints.clustersByBackend[testBackend], otherKey)
 	p.endpointUpdates.Add(endpointUpdate(3, "10.0.0.3"))
 	p.processEndpointUpdates()
 	require.Len(t, installed[testSnapshotKey], 3, "the deleted key must not receive endpoint publications")
@@ -278,7 +291,7 @@ func TestPublisherSharedBackendAcrossKeys(t *testing.T) {
 	p.processFullResults(watchable.Update[string, *fullPublication]{Key: otherKey, Value: &fullPublication{ctx: t.Context()}, Delete: true})
 	require.Empty(t, p.snapshots)
 	require.Empty(t, p.publishedEndpoints.byKey)
-	require.Empty(t, p.publishedEndpoints.dependentsByBackend)
+	require.Empty(t, p.publishedEndpoints.clustersByBackend)
 }
 
 func TestPublisherValidationFailurePreservesPublishedState(t *testing.T) {
@@ -333,7 +346,7 @@ func TestPublisherSerializesRefreshAndFullPublication(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("publisher did not stop")
 	}
-	require.Empty(t, publisher.publishedEndpoints.dependentsByBackend)
+	require.Empty(t, publisher.publishedEndpoints.clustersByBackend)
 }
 
 func TestPublisherCancellationUnblocksFullQueue(t *testing.T) {

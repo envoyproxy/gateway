@@ -144,7 +144,7 @@ func (p *Publisher) processFull(key string, publication *fullPublication) {
 		snapshot, contexts = publication.snapshot, publication.endpointContexts
 	}
 	p.snapshots[key] = snapshot
-	p.publishedEndpoints.set(key, contexts)
+	p.publishedEndpoints.replaceContexts(key, contexts)
 	p.publish(publication.ctx, pathFull, key, snapshot)
 }
 

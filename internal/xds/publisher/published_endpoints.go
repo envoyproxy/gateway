@@ -15,16 +15,19 @@ import (
 type publishedEndpointStore struct {
 	byKey map[string]types.EndpointContexts
 
-	// dependentsByBackend lists, per backend, the IR keys and EDS cluster names
-	// whose endpoints come from it, so an endpoint update finds the affected
-	// contexts without a scan. set and forget keep it in step with byKey.
-	dependentsByBackend map[ir.ServiceKey]map[string]map[string]struct{}
+	// clustersByBackend lists, per backend, the EDS clusters of each IR key whose
+	// endpoints come from it, so an endpoint update finds the affected clusters
+	// without a scan. replaceContexts and forget keep it in step with byKey.
+	clustersByBackend map[ir.ServiceKey]clustersByKey
 }
+
+// clustersByKey maps an IR key to a set of EDS cluster names.
+type clustersByKey map[string]map[string]struct{}
 
 func newPublishedEndpointStore() *publishedEndpointStore {
 	return &publishedEndpointStore{
-		byKey:               make(map[string]types.EndpointContexts),
-		dependentsByBackend: make(map[ir.ServiceKey]map[string]map[string]struct{}),
+		byKey:             make(map[string]types.EndpointContexts),
+		clustersByBackend: make(map[ir.ServiceKey]clustersByKey),
 	}
 }
 
@@ -32,9 +35,16 @@ func (a *publishedEndpointStore) get(key string) types.EndpointContexts {
 	return a.byKey[key]
 }
 
-// set replaces a key's published endpoint contexts and reindexes them.
-func (a *publishedEndpointStore) set(key string, updatedContexts types.EndpointContexts) {
+// replaceContexts replaces a key's published endpoint contexts and reindexes them.
+func (a *publishedEndpointStore) replaceContexts(key string, updatedContexts types.EndpointContexts) {
 	a.reindex(key, a.byKey[key], updatedContexts)
+	a.byKey[key] = updatedContexts
+}
+
+// updateEndpoints stores a key's updated endpoint contexts without reindexing.
+// Use it only when every cluster keeps its backends, as on the fast path, which
+// only swaps endpoints.
+func (a *publishedEndpointStore) updateEndpoints(key string, updatedContexts types.EndpointContexts) {
 	a.byKey[key] = updatedContexts
 }
 
@@ -44,35 +54,35 @@ func (a *publishedEndpointStore) forget(key string) {
 	delete(a.byKey, key)
 }
 
-// snapshotsUsing returns the IR keys whose published snapshot takes endpoints
-// from the backend, each with the EDS cluster names that use it. A backend no
-// snapshot uses yields nothing.
-func (a *publishedEndpointStore) snapshotsUsing(backend ir.ServiceKey) map[string]map[string]struct{} {
-	return a.dependentsByBackend[backend]
+// clustersUsing returns, per IR key, the EDS clusters whose endpoints come from
+// the backend. A backend no cluster uses yields nothing.
+func (a *publishedEndpointStore) clustersUsing(backend ir.ServiceKey) clustersByKey {
+	return a.clustersByBackend[backend]
 }
 
-// reindex swaps a key's index entries from the backends its old published
-// endpoints used to the backends its new ones use.
-func (a *publishedEndpointStore) reindex(key string, old, next types.EndpointContexts) {
+// reindex moves a key's index entries from the backends its old contexts used
+// to the backends its updated ones use.
+func (a *publishedEndpointStore) reindex(key string, old, updated types.EndpointContexts) {
 	for backend := range backendsOf(old) {
-		delete(a.dependentsByBackend[backend], key)
-		if len(a.dependentsByBackend[backend]) == 0 {
-			delete(a.dependentsByBackend, backend)
+		delete(a.clustersByBackend[backend], key)
+		if len(a.clustersByBackend[backend]) == 0 {
+			delete(a.clustersByBackend, backend)
 		}
 	}
-	for cluster, args := range next {
+	for cluster, args := range updated {
 		for _, setting := range args.Settings {
 			if setting.EndpointSource == nil {
 				continue
 			}
-			backend := setting.EndpointSource.Service
-			if a.dependentsByBackend[backend] == nil {
-				a.dependentsByBackend[backend] = make(map[string]map[string]struct{})
+			byKey := a.clustersByBackend[setting.EndpointSource.Service]
+			if byKey == nil {
+				byKey = make(clustersByKey)
+				a.clustersByBackend[setting.EndpointSource.Service] = byKey
 			}
-			if a.dependentsByBackend[backend][key] == nil {
-				a.dependentsByBackend[backend][key] = make(map[string]struct{})
+			if byKey[key] == nil {
+				byKey[key] = make(map[string]struct{})
 			}
-			a.dependentsByBackend[backend][key][cluster] = struct{}{}
+			byKey[key][cluster] = struct{}{}
 		}
 	}
 }

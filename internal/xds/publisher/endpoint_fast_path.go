@@ -23,7 +23,7 @@ func (p *Publisher) processEndpointUpdates() {
 	updatesByKey := make(map[string]map[ir.ServiceKey]*endpoint.BackendEndpoints)
 	for _, backendEndpoints := range p.endpointUpdates.Drain() {
 		// Find all the IR keys that are affected by each backend update.
-		for key := range p.publishedEndpoints.snapshotsUsing(backendEndpoints.Backend) {
+		for key := range p.publishedEndpoints.clustersUsing(backendEndpoints.Backend) {
 			if updatesByKey[key] == nil {
 				updatesByKey[key] = make(map[ir.ServiceKey]*endpoint.BackendEndpoints)
 			}
@@ -43,7 +43,7 @@ func (p *Publisher) applyEndpointUpdates(key string, updates map[ir.ServiceKey]*
 	published, current := p.publishedEndpoints.get(key), p.snapshots[key]
 	affected := make(map[string]struct{})
 	for backend := range updates {
-		for name := range p.publishedEndpoints.snapshotsUsing(backend)[key] {
+		for name := range p.publishedEndpoints.clustersUsing(backend)[key] {
 			affected[name] = struct{}{}
 		}
 	}
@@ -64,8 +64,9 @@ func (p *Publisher) applyEndpointUpdates(key string, updates map[ir.ServiceKey]*
 		p.snapshots[key] = snapshot
 
 		// Save the endpoints just applied, so the next update compares its
-		// revisions against them.
-		p.publishedEndpoints.set(key, updatedContexts)
+		// revisions against them. The fast path only swaps endpoints, so the
+		// backend index stays the same and isn't rebuilt.
+		p.publishedEndpoints.updateEndpoints(key, updatedContexts)
 	}
 	if snapshot != current {
 		p.publish(p.ctx, pathFast, key, snapshot)
