@@ -957,6 +957,21 @@ spec:
                 - StrategicMerge
                 - JSONMerge
                 type: string
+              overloadManager:
+                description: |-
+                  OverloadManager defines configuration for the Envoy overload manager, which sheds
+                  load before the proxy runs out of resources.
+                properties:
+                  maxConnections:
+                    description: |-
+                      MaxConnections is the maximum number of active downstream connections, shared by
+                      all listeners of an Envoy proxy. Once the limit is reached, Envoy rejects new
+                      connections until existing ones close.
+                      If unspecified, defaults to 50000.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                type: object
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API

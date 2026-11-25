@@ -165,6 +165,11 @@ func validateEnvoyProxySpecFatal(spec *egv1a1.EnvoyProxySpec) []error {
 		errs = append(errs, errors.New("mergeGateways and mergeBackends cannot both be enabled"))
 	}
 
+	// Mirrors the Minimum=1 marker on OverloadManager.MaxConnections for the same reason as spec.MergeGateways and spec.MergeBackends
+	if spec != nil && spec.OverloadManager != nil && ptr.Deref(spec.OverloadManager.MaxConnections, 1) < 1 {
+		errs = append(errs, errors.New("overloadManager.maxConnections must be at least 1"))
+	}
+
 	return errs
 }
 
