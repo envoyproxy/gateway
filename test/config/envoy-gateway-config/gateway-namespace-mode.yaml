@@ -1,0 +1,9 @@
+config:
+  envoyGateway:
+    envoyProxy: null
+    provider:
+      kubernetes:
+        # increase the replicas of the rate limit deployment to 2,
+        # this is to test the rate limit service discovery with multiple replicas.
+        rateLimitDeployment:
+          replicas: 2

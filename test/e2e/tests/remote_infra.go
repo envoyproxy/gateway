@@ -33,7 +33,7 @@ func init() {
 }
 
 // Prerequisites the make target sets up:
-//   - test/config/envoy-gateaway-config/remote-infra.yaml configures EG to
+//   - test/e2e/remote_infra/envoy-gateway-config.yaml configures EG to
 //     dial the sidecar over a Unix domain socket.
 //   - test/e2e/remote_infra/sidecar-patch.yaml injects the remote-infra
 //     server as a native sidecar into the envoy-gateway Deployment.
