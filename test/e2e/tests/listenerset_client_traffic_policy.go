@@ -91,28 +91,32 @@ var ListenerSetClientTrafficPolicyTest = suite.ConformanceTest{
 		// LoadBalancer IP. Right after a test starts, connections can fail with "no route to
 		// host", or can reach the previous test's Envoy, which has no ClientTrafficPolicy.
 		// Poll until the new Envoy enforces the policy: TLS 1.3 handshakes succeed and
-		// TLS 1.2 handshakes are rejected by the server rather than failing to connect.
+		// TLS 1.2 handshakes are rejected with a protocol_version alert. Any other
+		// failure, such as a dial error or a handshake timeout, says nothing about the
+		// policy and is retried.
 		require.Eventually(t, func() bool {
 			if _, err := dialListenerSetTLS(listenerAddr, baseTLSConfig, tls.VersionTLS13); err != nil {
 				return false
 			}
 			_, err := dialListenerSetTLS(listenerAddr, baseTLSConfig, tls.VersionTLS12)
-			return err != nil && !isDialError(err)
+			return isTLSAlert(err, tlsAlertProtocolVersion)
 		}, suite.TimeoutConfig.DefaultTestTimeout, time.Second)
 
 		t.Run("tls 1.3 succeeds", func(t *testing.T) {
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
 				version, err := dialListenerSetTLS(listenerAddr, baseTLSConfig, tls.VersionTLS13)
-				require.NoError(c, err)
-				require.Equal(c, uint16(tls.VersionTLS13), version)
+				if !assert.NoError(c, err) {
+					return
+				}
+				assert.Equal(c, uint16(tls.VersionTLS13), version)
 			}, suite.TimeoutConfig.DefaultTestTimeout, time.Second)
 		})
 
 		t.Run("tls 1.2 rejected by min version policy", func(t *testing.T) {
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
 				_, err := dialListenerSetTLS(listenerAddr, baseTLSConfig, tls.VersionTLS12)
-				require.Error(c, err)
-				require.False(c, isDialError(err), "expected the TLS handshake to be rejected, got a connection error: %v", err)
+				assert.True(c, isTLSAlert(err, tlsAlertProtocolVersion),
+					"expected the server to reject the TLS 1.2 handshake with a protocol_version alert, got: %v", err)
 			}, suite.TimeoutConfig.DefaultTestTimeout, time.Second)
 		})
 	},

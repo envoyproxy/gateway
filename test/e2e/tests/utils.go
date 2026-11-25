@@ -1357,3 +1357,19 @@ func dialUntilConnected[C net.Conn](t *testing.T, dial func() (C, error)) (C, er
 	}
 	return conn, err
 }
+
+// TLS alert descriptions, as crypto/tls prints them. crypto/tls does not export
+// its alert type, so isTLSAlert matches an alert by this text.
+const (
+	tlsAlertProtocolVersion  = "protocol version not supported"
+	tlsAlertHandshakeFailure = "handshake failure"
+)
+
+// isTLSAlert reports whether err is the given TLS alert sent by the server. Use it
+// for checks that expect the server to reject a handshake: other errors, such as a
+// handshake timeout or a reset connection, do not show that a policy was enforced.
+func isTLSAlert(err error, alert string) bool {
+	var opErr *net.OpError
+	return errors.As(err, &opErr) && opErr.Op == "remote error" &&
+		strings.Contains(opErr.Err.Error(), alert)
+}

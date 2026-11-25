@@ -237,7 +237,8 @@ func dialWithTLSVersion(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, 
 	})
 
 	if expectedError {
-		require.Error(t, err, "protocol version not supported")
+		require.Truef(t, isTLSAlert(err, tlsAlertProtocolVersion),
+			"expected the server to reject TLS version %s with a protocol_version alert, got: %v", tls.VersionName(version), err)
 	} else { // not error
 		require.NoError(t, err)
 		require.NotNil(t, conn)
@@ -270,7 +271,8 @@ func dialWithCipher(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, ciph
 	})
 
 	if expectedError {
-		require.Error(t, err, "remote error: tls: handshake failure")
+		require.Truef(t, isTLSAlert(err, tlsAlertHandshakeFailure),
+			"expected the server to reject cipher %s with a handshake_failure alert, got: %v", tls.CipherSuiteName(cipher), err)
 	} else { // not error
 		require.NoError(t, err)
 		require.NotNil(t, conn)
@@ -288,7 +290,8 @@ func dialWithCurve(t *testing.T, gwAddr string, baseTLSConfig *tls.Config, curve
 	})
 
 	if expectedError {
-		require.Error(t, err, "remote error: tls: handshake failure")
+		require.Truef(t, isTLSAlert(err, tlsAlertHandshakeFailure),
+			"expected the server to reject curve %s with a handshake_failure alert, got: %v", curve, err)
 	} else { // not error
 		require.NoError(t, err)
 		require.NotNil(t, conn)
