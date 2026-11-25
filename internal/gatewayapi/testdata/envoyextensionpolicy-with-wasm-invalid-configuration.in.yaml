@@ -183,8 +183,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-for-httproute-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     wasm:
@@ -203,8 +203,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-for-httproute-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
     wasm:
@@ -224,8 +224,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-for-httproute-3
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
     wasm:
@@ -255,8 +255,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-for-httproute-4
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-4
     wasm:
@@ -281,8 +281,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-for-gateway-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
     wasm:
@@ -302,8 +302,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-for-gateway-3
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-3
     wasm:

@@ -96,8 +96,8 @@ securityPolicies:
     namespace: default
     name: policy-for-route
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     jwt:

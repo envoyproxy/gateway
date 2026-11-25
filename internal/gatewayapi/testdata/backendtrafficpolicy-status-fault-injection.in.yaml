@@ -88,8 +88,8 @@ backendTrafficPolicies:
     namespace: envoy-gateway
     name: policy-for-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
     faultInjection:
@@ -102,8 +102,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     faultInjection:
@@ -119,8 +119,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-grpcroute
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-1
     faultInjection:

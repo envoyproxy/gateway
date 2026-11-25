@@ -22,8 +22,8 @@ clientTrafficPolicies:
           value: "duplicate-should-be-ignored"
         - name: "another-default-header"
           value: "another-value"
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
 gateways:

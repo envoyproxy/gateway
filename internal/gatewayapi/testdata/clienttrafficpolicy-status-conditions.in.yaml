@@ -5,8 +5,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -15,8 +15,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1-as-well
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -25,8 +25,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-2-all-sections
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -35,8 +35,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-2-http
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
       sectionName: http
@@ -46,8 +46,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-2-https
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
       sectionName: https
@@ -57,8 +57,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-2-https-as-well
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
       sectionName: https
@@ -68,8 +68,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-unknown-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: unknown-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -78,8 +78,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: not-same-namespace-with-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: not-same-namespace-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -88,8 +88,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: not-found-section-name
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-3
       sectionName: foo-bar

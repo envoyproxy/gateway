@@ -9,8 +9,10 @@ envoyProxiesForGateways:
     telemetry:
       tracing:
         provider:
-          host: otel-collector.monitoring.svc.cluster.local
-          port: 4317
+          backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 4317
           type: OpenTelemetry
         samplingRate: 100
   status:
@@ -26,12 +28,6 @@ envoyProxiesForGateways:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.telemetry.tracing.provider.host is deprecated and will be removed
-          in v1.11, use spec.telemetry.tracing.provider.backendRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
@@ -130,8 +126,10 @@ infraIR:
           telemetry:
             tracing:
               provider:
-                host: otel-collector.monitoring.svc.cluster.local
-                port: 4317
+                backendRefs:
+                - name: otel-collector
+                  namespace: monitoring
+                  port: 4317
                 type: OpenTelemetry
               samplingRate: 100
         status:
@@ -147,13 +145,6 @@ infraIR:
               reason: Accepted
               status: "True"
               type: Accepted
-            - lastTransitionTime: null
-              message: spec.telemetry.tracing.provider.host is deprecated and will
-                be removed in v1.11, use spec.telemetry.tracing.provider.backendRefs
-                instead
-              reason: DeprecatedField
-              status: "True"
-              type: Warning
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -248,7 +239,7 @@ xdsIR:
       path: /ready
       port: 19003
     tracing:
-      authority: otel-collector.monitoring.svc.cluster.local
+      authority: otel-collector.monitoring.svc
       destination:
         metadata:
           kind: EnvoyProxy
@@ -256,16 +247,22 @@ xdsIR:
           namespace: envoy-gateway
         name: tracing
         settings:
-        - addressType: FQDN
+        - addressType: IP
           endpoints:
-          - host: otel-collector.monitoring.svc.cluster.local
+          - host: 8.7.6.5
             port: 4317
+          metadata:
+            kind: Service
+            name: otel-collector
+            namespace: monitoring
+            sectionName: "4317"
           name: tracing/backend/-1
           protocol: GRPC
-          weight: 1
       provider:
-        host: otel-collector.monitoring.svc.cluster.local
-        port: 4317
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
         type: OpenTelemetry
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway

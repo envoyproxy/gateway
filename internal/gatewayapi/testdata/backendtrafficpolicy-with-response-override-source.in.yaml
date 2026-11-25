@@ -78,10 +78,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-local-source
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       responseOverride:
         - match:
             statusCodes:
@@ -99,10 +99,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-backend-source
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-backend
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-backend
       responseOverride:
         - match:
             statusCodes:
@@ -120,10 +120,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-all-source
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-all
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-all
       responseOverride:
         - match:
             statusCodes:

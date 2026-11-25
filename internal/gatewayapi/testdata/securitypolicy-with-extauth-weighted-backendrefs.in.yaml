@@ -236,10 +236,10 @@ securityPolicies:
       # default policy with no weight specified
       name: policy-for-http-route-1
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       extAuth:
         failOpen: true
         headersToExtAuth:
@@ -258,10 +258,10 @@ securityPolicies:
       # policy with weight specified
       name: policy-for-http-route-2
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-2
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-2
       extAuth:
         failOpen: true
         headersToExtAuth:
@@ -282,10 +282,10 @@ securityPolicies:
       # policy with weight specified
       name: policy-for-http-route-3
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-3
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-3
       extAuth:
         failOpen: false
         headersToExtAuth:
