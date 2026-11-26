@@ -385,6 +385,48 @@ func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, polic
 	require.NoErrorf(t, waitErr, "error waiting for ClientTrafficPolicy to be accepted")
 }
 
+// ClientTrafficPolicyMustNotExist waits for the specified ClientTrafficPolicy to be deleted.
+func ClientTrafficPolicyMustNotExist(t *testing.T, c client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.ClientTrafficPolicy{}
+		err := c.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching ClientTrafficPolicy: %w", err)
+		default:
+			tlog.Logf(t, "ClientTrafficPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for ClientTrafficPolicy to be deleted")
+}
+
+// BackendTrafficPolicyMustNotExist waits for the specified BackendTrafficPolicy to be deleted.
+func BackendTrafficPolicyMustNotExist(t *testing.T, c client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.BackendTrafficPolicy{}
+		err := c.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching BackendTrafficPolicy: %w", err)
+		default:
+			tlog.Logf(t, "BackendTrafficPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for BackendTrafficPolicy to be deleted")
+}
+
 func EnvoyProxyMustBeAccepted(t *testing.T, client client.Client, epName types.NamespacedName, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 
@@ -928,7 +970,7 @@ func WaitForRateLimitDomainsToBeLoaded(t *testing.T, suite *suite.ConformanceTes
 		// unmatched domain is treated as unlimited) - reintroducing the same "expected 429, got
 		// 200" race this helper exists to close. This matters most for profiles like
 		// gateway-namespace-mode that run more than one ratelimit replica - see
-		// rateLimitDeployment.replicas in test/config/envoy-gateaway-config/gateway-namespace-mode.yaml.
+		// rateLimitDeployment.replicas in test/config/envoy-gateway-config/gateway-namespace-mode.yaml.
 		for i := range pods.Items {
 			pod := &pods.Items[i]
 			cfg, err := dumpRateLimitConfigForPod(t, suite, pod.Name)
@@ -1118,7 +1160,12 @@ func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption
 	}
 
 	tlog.Logf(t, "creating e2e artifacts directory %s", bundlePath)
-	if _, err := tb.CollectResult(t.Context(), rest, opts...); err != nil {
+	// Collection runs from t.Cleanup (see e2e.Hook), and t.Context() is canceled just before
+	// cleanup functions run, so it must not be used here: the pod log collector would fail
+	// with "context canceled".
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	if _, err := tb.CollectResult(ctx, rest, opts...); err != nil {
 		tlog.Logf(t, "failed to collect all data: %v", err)
 	}
 }
@@ -1232,6 +1279,10 @@ func UseStandardChannel() bool {
 // TODO(zhaohuabing) remove this after the feature flag is removed.
 func XDSNameSchemeV2() bool {
 	return DeployProfile == "xds-name-scheme-v2"
+}
+
+func MergeBackendsEnabled() bool {
+	return DeployProfile == "merge-backends"
 }
 
 func GetGatewayResourceNamespace() string {

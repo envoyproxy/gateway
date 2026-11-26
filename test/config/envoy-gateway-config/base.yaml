@@ -1,0 +1,64 @@
+# Envoy Gateway config shared by every e2e profile. e2e-prepare renders the
+# envoy-gateway-config ConfigMap from this file, then the profile's helm values
+# (test/config/helm/<profile>.yaml), then <profile>.yaml in this directory if it
+# exists. Later files win; set a key to null to clear it.
+config:
+  envoyGateway:
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+      enableBackend: true
+      enableLua: true
+      enableExtensionBackends: true
+      enableSDSSecretRef: true
+    rateLimit:
+      backend:
+        type: Redis
+        redis:
+          url: redis.redis-system.svc.cluster.local:6379
+      # Bumped from the 20ms default (unset field) - that default is tuned for a colocated,
+      # low-latency ratelimit service, but this gRPC call also has to cover the ratelimit
+      # service's own Redis round trip, which can exceed 20ms under CI load. failClosed
+      # defaults to false, so a timed-out check fails open (request passed through unlimited)
+      # instead of erroring - which shows up as flaky "expected 429, got 200" e2e failures
+      # rather than a hard, easily-diagnosed error.
+      timeout: 1s
+    envoyProxy:
+      provider:
+        type: Kubernetes
+        kubernetes:
+          envoyDeployment:
+            container:
+              image: envoyproxy/envoy:invalid-tag
+    extensionManager:
+      maxMessageSize: 1000M
+      policyResources:
+      - group: extserver.example.io
+        version: v1alpha1
+        kind: VHostMetadataPolicy
+      backendResources:
+      - group: inference.networking.k8s.io
+        version: v1
+        kind: InferencePool
+      hooks:
+        xdsTranslator:
+          post:
+          - VirtualHost
+          - Cluster
+      service:
+        fqdn:
+          hostname: gateway-simple-extension-server.envoy-gateway-system.svc.cluster.local
+          port: 5005
+    telemetry:
+      traces:
+        sink:
+          type: OpenTelemetry
+          openTelemetry:
+            host: otel-collector.monitoring.svc.cluster.local
+            port: 4317
+            protocol: grpc
+        samplingRate:
+          numerator: 100

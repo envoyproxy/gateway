@@ -7,7 +7,7 @@ backends:
   spec:
     endpoints:
     - fqdn:
-        hostname: otel-collector.example.com
+        hostname: otel-collector.example.com.
         port: 443
     tls:
       wellKnownCACertificates: System
@@ -132,7 +132,7 @@ infraIR:
           settings:
           - addressType: FQDN
             endpoints:
-            - host: otel-collector.example.com
+            - host: otel-collector.example.com.
               port: 443
             metadata:
               kind: Backend
@@ -162,7 +162,7 @@ xdsIR:
           settings:
           - addressType: FQDN
             endpoints:
-            - host: otel-collector.example.com
+            - host: otel-collector.example.com.
               port: 443
             metadata:
               kind: Backend
@@ -220,6 +220,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
     metrics:
+      enableCircuitBreakerRemainingStats: false
       enablePerEndpointStats: false
       enableRequestResponseSizesStats: false
       enableVirtualHostStats: false
@@ -239,7 +240,7 @@ xdsIR:
         settings:
         - addressType: FQDN
           endpoints:
-          - host: otel-collector.example.com
+          - host: otel-collector.example.com.
             port: 443
           metadata:
             kind: Backend

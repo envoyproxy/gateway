@@ -1,0 +1,69 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: transcode
+          backendRefs:
+            - name: service-1
+              port: 8080
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      namespace: default
+      name: proto-descriptor
+    binaryData:
+      proto-descriptor: bm90IGEgZGVzY3JpcHRvcg==
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: transcode
+    spec:
+      grpcJSONTranscoder:
+        services:
+          - test.v1.Echo
+        protoDescriptor:
+          valueRef:
+            group: ""
+            kind: ConfigMap
+            name: proto-descriptor
+        convertGRPCStatus: true
+        ignoreUnknownQueryParameters: true
+        printOptions:
+          addWhitespace: true
+          alwaysPrintPrimitiveFields: true

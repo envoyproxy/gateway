@@ -119,8 +119,8 @@ securityPolicies:
         issuer: https://oauth.foo.com
         tokenEndpoint: https://oauth.foo.com/token
       redirectURL: https://www.example.com/oauth2/callback
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -136,11 +136,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
@@ -216,6 +211,7 @@ xdsIR:
           prefix: /
         security:
           jwt:
+            name: envoy-gateway/security-policy-1
             providers:
             - issuer: https://oauth.foo.com
               name: example1
@@ -237,6 +233,7 @@ xdsIR:
             refreshToken: true
             scopes:
             - openid
+            tokenCookieChunking: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

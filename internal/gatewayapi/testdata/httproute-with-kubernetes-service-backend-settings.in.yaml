@@ -1,0 +1,134 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-svc
+              port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: svc-1
+      namespace: default
+    spec:
+      clusterIP: 10.11.12.13
+      ports:
+        - port: 8080
+          name: http
+          protocol: TCP
+          targetPort: 3001
+          appProtocol: kubernetes.io/ws  # The Backend appProtocols take precedence over this.
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: svc-1-abcde
+      namespace: default
+      labels:
+        kubernetes.io/service-name: svc-1
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 3001
+    endpoints:
+      - addresses:
+          - "10.244.0.11"
+        conditions:
+          ready: true
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ca-cmap
+      namespace: default
+    data:
+      ca.crt: |
+        -----BEGIN CERTIFICATE-----
+        placeholder
+        -----END CERTIFICATE-----
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: client-auth
+      namespace: default
+    type: kubernetes.io/tls
+    data:
+      tls.crt: cGxhY2Vob2xkZXI=
+      tls.key: cGxhY2Vob2xkZXI=
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-svc
+      namespace: default
+    spec:
+      type: KubernetesService
+      kubernetesService:
+        name: svc-1
+        port: 8080
+      appProtocols:
+        - gateway.envoyproxy.io/h2c
+      fallback: true
+      tls:
+        clientCertificateRef:
+          name: client-auth
+          group: ""
+          kind: Secret
+        sni: example.com
+        minVersion: "1.2"
+        maxVersion: "1.3"
+        ciphers:
+          - ECDHE-RSA-AES128-GCM-SHA256
+        ecdhCurves:
+          - X25519
+        alpnProtocols:
+          - h2
+          - http/1.1
+backendTLSPolicies:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-section
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-svc
+          sectionName: "8080"
+      validation:
+        caCertificateRefs:
+          - name: ca-cmap
+            group: ""
+            kind: ConfigMap
+        hostname: example.com

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1175 580" width="1175" height="580" font-family="Inter, 'Helvetica Neue', Arial, sans-serif">
+<title>Envoy Gateway reference architecture</title>
+<defs>
+<marker id="open" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse">
+<path d="M2,1 L10,6 L2,11" fill="none" stroke="#B3B3B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+<marker id="open-start" viewBox="0 0 12 12" refX="2" refY="6" markerWidth="12" markerHeight="12" orient="auto" markerUnits="userSpaceOnUse">
+<path d="M10,1 L2,6 L10,11" fill="none" stroke="#B3B3B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+<rect width="1175" height="580" fill="#FFFFFF"/>
+<rect x="10" y="75" width="120" height="70" rx="6" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="2"/>
+<text x="70.0" y="103.0" font-size="17" font-weight="700" fill="#1E1E1E" text-anchor="middle">Platform and</text>
+<text x="70.0" y="125.0" font-size="17" font-weight="700" fill="#1E1E1E" text-anchor="middle">app teams</text>
+<rect x="10" y="360" width="120" height="80" rx="6" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="2"/>
+<text x="70.0" y="405.0" font-size="19" font-weight="700" fill="#1E1E1E" text-anchor="middle">Clients</text>
+<rect x="200" y="40" width="810" height="525" rx="6" fill="#F5F5F5" stroke="#CCCCCC" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="202" y="31" font-size="17" font-weight="500" fill="#1E1E1E" text-anchor="start">Kubernetes cluster</text>
+<rect x="225" y="75" width="195" height="70" rx="6" fill="#BDE3FF" stroke="#0D99FF" stroke-width="2"/>
+<text x="322.5" y="103.0" font-size="19" font-weight="700" fill="#1E1E1E" text-anchor="middle">Kubernetes</text>
+<text x="322.5" y="127.0" font-size="19" font-weight="700" fill="#1E1E1E" text-anchor="middle">API server</text>
+<rect x="205" y="215" width="460" height="335" rx="6" fill="#E7E7E7" stroke="#CCCCCC" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="663" y="206" font-size="17" font-weight="500" fill="#1E1E1E" text-anchor="end">envoy-gateway-system namespace</text>
+<rect x="225" y="235" width="195" height="80" rx="6" fill="#E4CCFF"/>
+<text x="322.5" y="258.0" font-size="19" font-weight="700" fill="#1E1E1E" text-anchor="middle">Envoy Gateway</text>
+<text x="322.5" y="282.0" font-size="19" font-weight="700" fill="#1E1E1E" text-anchor="middle">Controller</text>
+<text x="322.5" y="303.0" font-size="15" font-weight="400" fill="#1E1E1E" text-anchor="middle" font-style="italic">control plane</text>
+<rect x="470" y="245" width="180" height="60" rx="6" fill="#E4CCFF"/>
+<text x="560.0" y="280.0" font-size="19" font-weight="700" fill="#1E1E1E" text-anchor="middle">Rate limit service</text>
+<rect x="559.072" y="236" width="80.9281" height="18" rx="3" fill="#9747FF"/>
+<text x="599.5359374999999" y="249" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="1.2">OPTIONAL</text>
+<rect x="225" y="360" width="195" height="80" rx="6" fill="#757575"/>
+<text x="322.5" y="395.0" font-size="19" font-weight="700" fill="#FFFFFF" text-anchor="middle">Envoy Service</text>
+<text x="322.5" y="416.0" font-size="15" font-weight="400" fill="#FFFFFF" text-anchor="middle" font-style="italic">LoadBalancer by default</text>
+<rect x="470" y="360" width="180" height="130" rx="6" fill="#9747FF"/>
+<text x="560.0" y="420.0" font-size="19" font-weight="700" fill="#FFFFFF" text-anchor="middle">Envoy Proxy fleet</text>
+<text x="560.0" y="441.0" font-size="15" font-weight="400" fill="#FFFFFF" text-anchor="middle" font-style="italic">data plane</text>
+<rect x="778" y="330" width="222" height="220" rx="6" fill="#E7E7E7" stroke="#CCCCCC" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="780" y="321" font-size="17" font-weight="500" fill="#1E1E1E" text-anchor="start">Application namespaces</text>
+<rect x="795" y="355" width="185" height="90" rx="6" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="2"/>
+<text x="887.5" y="385.0" font-size="19" font-weight="700" fill="#1E1E1E" text-anchor="middle">Backends</text>
+<text x="887.5" y="406.0" font-size="15" font-weight="400" fill="#1E1E1E" text-anchor="middle" font-style="italic">Services, Pods,</text>
+<text x="887.5" y="426.0" font-size="15" font-weight="400" fill="#1E1E1E" text-anchor="middle" font-style="italic">Backend resources</text>
+<rect x="795" y="470" width="185" height="60" rx="6" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="2"/>
+<text x="887.5" y="504.5" font-size="18" font-weight="700" fill="#1E1E1E" text-anchor="middle">Ext auth / ext proc</text>
+<rect x="889.072" y="461" width="80.9281" height="18" rx="3" fill="#9747FF"/>
+<text x="929.5359374999999" y="474" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="1.2">OPTIONAL</text>
+<rect x="1025" y="240" width="140" height="70" rx="6" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="2"/>
+<text x="1095.0" y="270.0" font-size="19" font-weight="700" fill="#1E1E1E" text-anchor="middle">Redis</text>
+<text x="1095.0" y="291.0" font-size="15" font-weight="400" fill="#1E1E1E" text-anchor="middle" font-style="italic">user provided</text>
+<path d="M130,110 L219,110" fill="none" stroke="#B3B3B3" stroke-width="2" marker-end="url(#open)" stroke-linejoin="round"/>
+<path d="M322,151 L322,229" fill="none" stroke="#B3B3B3" stroke-width="2" marker-start="url(#open-start)" marker-end="url(#open)" stroke-linejoin="round"/>
+<path d="M420,275 L464,275" fill="none" stroke="#B3B3B3" stroke-width="2" marker-end="url(#open)" stroke-linejoin="round"/>
+<path d="M370,315 L370,325 Q370,335 382,335 L483,335 Q495,335 495,344.5 L495,354" fill="none" stroke="#B3B3B3" stroke-width="2" marker-end="url(#open)" stroke-linejoin="round"/>
+<path d="M130,400 L219,400" fill="none" stroke="#B3B3B3" stroke-width="2" marker-end="url(#open)" stroke-linejoin="round"/>
+<path d="M420,400 L464,400" fill="none" stroke="#B3B3B3" stroke-width="2" marker-end="url(#open)" stroke-linejoin="round"/>
+<path d="M650,400 L789,400" fill="none" stroke="#B3B3B3" stroke-width="2" marker-end="url(#open)" stroke-linejoin="round"/>
+<path d="M610,360 L610,311" fill="none" stroke="#B3B3B3" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#open)" stroke-linejoin="round"/>
+<path d="M650,480 L789,480" fill="none" stroke="#B3B3B3" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#open)" stroke-linejoin="round"/>
+<path d="M650,275 L1019,275" fill="none" stroke="#B3B3B3" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#open)" stroke-linejoin="round"/>
+<text x="174" y="100" font-size="17" font-weight="700" fill="#222222" text-anchor="middle">apply</text>
+<text x="405" y="180" font-size="17" font-weight="700" fill="#222222" text-anchor="middle">watch / status</text>
+<text x="442" y="262" font-size="17" font-weight="700" fill="#222222" text-anchor="middle">xDS</text>
+<rect x="410.3671875" y="326" width="43.265625" height="27" fill="#E7E7E7"/>
+<text x="432" y="341" font-size="17" font-weight="700" fill="#222222" text-anchor="middle">xDS</text>
+<rect x="518.8359375" y="315" width="82.328125" height="27" fill="#E7E7E7"/>
+<text x="560" y="330" font-size="17" font-weight="700" fill="#222222" text-anchor="middle">rate limit</text>
+<text x="720" y="470" font-size="17" font-weight="700" fill="#222222" text-anchor="middle">calls</text>
+</svg>

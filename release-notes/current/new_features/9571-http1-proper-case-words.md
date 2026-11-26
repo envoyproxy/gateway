@@ -1,1 +1,0 @@
-Added `ClientTrafficPolicy.spec.http1.headerKeyFormat` so HTTP/1 header names can be serialized with Envoy `proper_case_words`. `ProperCaseWords` and `preserveHeaderCase` cannot be set together. The default remains lowercase header names.

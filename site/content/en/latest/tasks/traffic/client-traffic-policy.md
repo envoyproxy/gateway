@@ -213,7 +213,7 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
-  enableProxyProtocol: true
+  proxyProtocol: {}
 EOF
 ```
 
@@ -233,7 +233,7 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
-  enableProxyProtocol: true
+  proxyProtocol: {}
 ```
 
 {{% /tab %}}
@@ -733,13 +733,13 @@ Only one `ClientTrafficPolicy` can set `maxRequestHeaderLimit` per Envoy listene
 
 ### Format HTTP/1 header names
 
-`http1.headerKeyFormat: ProperCaseWords` maps to Envoy [`header_key_format.proper_case_words`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#config-core-v3-http1protocoloptions-headerkeyformat). Envoy capitalizes the first letter and any letter after a special character when it writes the HTTP/1 header. A header stored as `location` is sent as `Location`. A header stored as `content-type` is sent as `Content-Type`. This includes headers that Envoy adds itself, such as a redirect `Location` header.
+`http1.headerKeyFormat.type: ProperCaseWords` maps to Envoy [`header_key_format.proper_case_words`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#config-core-v3-http1protocoloptions-headerkeyformat). Envoy capitalizes the first letter and any letter after a special character when it writes the HTTP/1 header. A header stored as `location` is sent as `Location`. A header stored as `content-type` is sent as `Content-Type`. This includes headers that Envoy adds itself, such as a redirect `Location` header.
 
 When `headerKeyFormat` is unset, Envoy lowercases header names. That is the default.
 
 `headerKeyFormat` and `preserveHeaderCase` cannot be set on the same `http1` block. `preserveHeaderCase` keeps the original case of headers that already have a case. It does not change headers that Envoy creates in lowercase.
 
-Envoy Gateway applies the format on the listener HTTP/1 codec. It also applies the format on upstream HTTP/1 connections for routes on that listener, the same way as `preserveHeaderCase`.
+Envoy Gateway applies the format on the listener HTTP/1 codec only, so it changes the header names sent to the client. It does not change the header names that Envoy sends to the backend.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -757,7 +757,8 @@ spec:
       kind: Gateway
       name: eg
   http1:
-    headerKeyFormat: ProperCaseWords
+    headerKeyFormat:
+      type: ProperCaseWords
 EOF
 ```
 
@@ -778,7 +779,8 @@ spec:
       kind: Gateway
       name: eg
   http1:
-    headerKeyFormat: ProperCaseWords
+    headerKeyFormat:
+      type: ProperCaseWords
 ```
 
 {{% /tab %}}

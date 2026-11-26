@@ -21,13 +21,6 @@
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
-  typedExtensionProtocolOptions:
-    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
-        httpProtocolOptions:
-          headerKeyFormat:
-            properCaseWords: {}
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -57,5 +50,3 @@
       explicitHttpConfig:
         httpProtocolOptions:
           enableTrailers: true
-          headerKeyFormat:
-            properCaseWords: {}

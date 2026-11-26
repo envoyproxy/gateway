@@ -57,7 +57,7 @@ type ClientTrafficPolicySpec struct {
 	// Note Proxy Protocol must be present when this field is set, else the connection
 	// is closed.
 	//
-	// Deprecated: Use ProxyProtocol instead.
+	// Deprecated: Use ProxyProtocol instead. This field will be removed in v1.11.
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
@@ -166,7 +166,7 @@ type HeaderSettings struct {
 	// (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
 	// Defaults to false and cannot be combined with RequestID.
 	//
-	// Deprecated: use RequestID=PreserveOrGenerate instead
+	// Deprecated: use RequestID=PreserveOrGenerate instead. This field will be removed in v1.11.
 	//
 	// +optional
 	PreserveXRequestID *bool `json:"preserveXRequestID,omitempty"`
@@ -414,44 +414,44 @@ type HTTP3Settings struct {
 	AdvertisedPort *gwapiv1.PortNumber `json:"advertisedPort,omitempty"`
 }
 
-// HTTP1HeaderKeyFormat defines how Envoy formats HTTP/1 header names when it
-// serializes them onto the wire.
-// +kubebuilder:validation:Enum=ProperCaseWords
-type HTTP1HeaderKeyFormat string
-
-const (
-	// HTTP1HeaderKeyFormatProperCaseWords capitalizes the first letter and any
-	// letter following a special character. For example, "location" is sent as
-	// "Location" and "content-type" is sent as "Content-Type".
-	// Envoy applies this when it writes the header, including headers that Envoy
-	// itself creates in lowercase.
-	HTTP1HeaderKeyFormatProperCaseWords HTTP1HeaderKeyFormat = "ProperCaseWords"
-)
-
 // HTTP1Settings provides HTTP/1 configuration on the listener.
 // +kubebuilder:validation:XValidation:rule="!(has(self.headerKeyFormat) && has(self.preserveHeaderCase) && self.preserveHeaderCase == true)",message="preserveHeaderCase and headerKeyFormat are mutually exclusive"
 type HTTP1Settings struct {
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
+	//
+	// Note: this field currently configures both the client connection and the backend HTTP/1
+	// protocol settings. In a future release it will be restricted to the client connection only.
+	// Use BackendTrafficPolicy.http1.enableTrailers for backend settings.
+	// Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+	// to opt in to the new behavior now.
+	//
 	// +optional
 	EnableTrailers *bool `json:"enableTrailers,omitempty"`
 	// PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
 	// By default, Envoy will lowercase all the headers.
-	// PreserveHeaderCase keeps the case of headers that already carry one. It does
-	// not change headers that Envoy creates in lowercase.
-	// PreserveHeaderCase and HeaderKeyFormat are mutually exclusive.
+	//
+	// Note: this field currently configures both the client connection and the backend HTTP/1
+	// protocol settings. In a future release it will be restricted to the client connection only.
+	// Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.
+	// Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
+	// to opt in to the new behavior now.
+	//
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
-	// HeaderKeyFormat defines how Envoy formats HTTP/1 header names on the wire.
-	// ProperCaseWords capitalizes the first letter and any letter after a special
-	// character. This includes headers that Envoy adds itself.
-	// When unset, Envoy lowercases header names.
-	// Envoy Gateway applies the format on the listener HTTP/1 codec and on HTTP/1
-	// requests sent to backends for routes on that listener.
+	// HeaderKeyFormat defines how Envoy formats the HTTP/1 header names it sends to
+	// the client. When unset, Envoy lowercases header names.
+	// This field configures the client connection only.
 	// HeaderKeyFormat and PreserveHeaderCase are mutually exclusive.
 	//
 	// +optional
 	HeaderKeyFormat *HTTP1HeaderKeyFormat `json:"headerKeyFormat,omitempty"`
 	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
+	//
+	// Note: this field currently forces explicit HTTP/1 for backend connections when other
+	// backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.
+	// In a future release it will no longer force explicit HTTP/1 on backend connections.
+	// Use BackendTrafficPolicy.http1: {} to force HTTP/1 on a backend cluster explicitly.
+	//
 	// +optional
 	HTTP10 *HTTP10Settings `json:"http10,omitempty"`
 	// DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.
@@ -519,6 +519,46 @@ type ProxyProtocolSettings struct {
 	//
 	// +optional
 	Optional *bool `json:"optional,omitempty"`
+	// ForwardProtoConfig infers the x-forwarded-proto header from the PROXY protocol
+	// destination port. Only takes effect when PROXY protocol is enabled.
+	//
+	// This is useful when a Layer 4 load balancer (such as AWS NLB) terminates TLS and
+	// forwards traffic to Envoy over PROXY protocol, so that Envoy can set the correct
+	// scheme for the forwarded request.
+	//
+	// +optional
+	ForwardProto *ForwardProtoConfig `json:"forwardProtoConfig,omitempty"`
+}
+
+// ForwardProtoConfig configures the ports used to infer the x-forwarded-proto
+// header from the PROXY protocol destination port. When the restored local address
+// (populated by the PROXY protocol listener filter) has a destination port matching
+// one of these lists, the x-forwarded-proto header is set to the corresponding scheme.
+// At least one of httpsDestinationPorts or httpDestinationPorts must be set.
+//
+// +kubebuilder:validation:XValidation:rule="(has(self.httpsDestinationPorts) ? self.httpsDestinationPorts.size() : 0) + (has(self.httpDestinationPorts) ? self.httpDestinationPorts.size() : 0) >= 1",message="at least one of httpsDestinationPorts or httpDestinationPorts must be set"
+// +kubebuilder:validation:XValidation:rule="!(has(self.httpsDestinationPorts) && has(self.httpDestinationPorts) && self.httpsDestinationPorts.exists(p, p in self.httpDestinationPorts))",message="httpsDestinationPorts and httpDestinationPorts must be disjoint"
+type ForwardProtoConfig struct {
+	// HTTPSDestinationPorts are the destination ports treated as HTTPS.
+	// When the PROXY protocol destination port matches one of these, the
+	// x-forwarded-proto header is set to "https".
+	// Common values: 443, 8443.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:items:XValidation:rule="self >= 1 && self <= 65535",message="port must be in the range [1, 65535]"
+	HTTPSDestinationPorts []int32 `json:"httpsDestinationPorts,omitempty"`
+	// HTTPDestinationPorts are the destination ports treated as HTTP.
+	// When the PROXY protocol destination port matches one of these, the
+	// x-forwarded-proto header is set to "http".
+	// Common values: 80, 8080.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:items:XValidation:rule="self >= 1 && self <= 65535",message="port must be in the range [1, 65535]"
+	HTTPDestinationPorts []int32 `json:"httpDestinationPorts,omitempty"`
 }
 
 //+kubebuilder:object:root=true

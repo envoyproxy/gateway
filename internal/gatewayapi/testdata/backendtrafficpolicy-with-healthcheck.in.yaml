@@ -195,8 +195,8 @@ backendTrafficPolicies:
     namespace: envoy-gateway
     name: policy-for-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     healthCheck:
@@ -205,6 +205,7 @@ backendTrafficPolicies:
         interval: "3s"
         unhealthyThreshold: 3
         healthyThreshold: 1
+        disableConnectionReuse: true
         type: HTTP
         http:
           path: "/healthz"
@@ -229,8 +230,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     healthCheck:
@@ -267,8 +268,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route-4
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-4
     healthCheck:
@@ -293,8 +294,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
     healthCheck:
@@ -325,8 +326,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route-3
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
     healthCheck:
@@ -357,8 +358,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route-5
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-5
     healthCheck:
@@ -376,8 +377,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-grpc-route
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-2
     healthCheck:
@@ -393,8 +394,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-grpc-route-3
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-3
     healthCheck:

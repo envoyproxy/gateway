@@ -106,8 +106,8 @@ securityPolicies:
     cors:
       allowHeaders:
       - x-gateway-1
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: not-found-section-name

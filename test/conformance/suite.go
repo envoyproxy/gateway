@@ -61,7 +61,7 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		return skipTests
 	}
 
-	skipTests = append(skipTests, tests.GatewayInfrastructure)
+	skipTests = append(skipTests, tests.GatewayInfrastructureMetadata)
 
 	return skipTests
 }
@@ -69,14 +69,14 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 // SkipFeatures is a list of features that are skipped in the conformance report.
 func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 	if gatewayNamespaceMode {
-		return sets.New[features.FeatureName](
+		return sets.New(
 			features.GatewayHTTPSListenerDetectMisdirectedRequestsFeature.Name,
 		)
 	}
 
 	return sets.New(
 		features.GatewayHTTPSListenerDetectMisdirectedRequestsFeature.Name,
-		features.GatewayInfrastructurePropagationFeature.Name,
+		features.GatewayInfrastructureFeature.Name,
 	)
 }
 
@@ -91,11 +91,9 @@ func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
 // EnvoyGatewaySuite is the conformance suite configuration for the Gateway API.
 func EnvoyGatewaySuite(gatewayNamespaceMode, standardChannel bool) suite.ConformanceOptions {
 	return suite.ConformanceOptions{
-		ConfigurableOptions: suite.ConfigurableOptions{
-			SupportedFeatures: allFeatures(gatewayNamespaceMode, standardChannel),
-			ExemptFeatures:    meshFeatures(),
-			SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
-		},
+		SupportedFeatures: allFeatures(gatewayNamespaceMode, standardChannel),
+		ExemptFeatures:    meshFeatures(),
+		SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
 	}
 }
 

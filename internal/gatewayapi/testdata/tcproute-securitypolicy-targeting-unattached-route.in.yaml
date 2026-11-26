@@ -1,0 +1,66 @@
+# Two TCPRoutes name the same listener, so only the oldest is attached to the IR.
+# A SecurityPolicy targeting the other one must not restrict the route that is
+# actually serving traffic.
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-tcp
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: tcp
+      protocol: TCP
+      port: 8088
+      allowedRoutes:
+        namespaces:
+          from: All
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcpr-attached
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-tcp
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcpr-unattached
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-tcp
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: sp-tcpr-unattached
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcpr-unattached
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-unattached-only
+        principal:
+          clientCIDRs:
+          - 10.99.0.0/16

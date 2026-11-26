@@ -50,6 +50,8 @@
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
           maxConnectionDuration: 300s
+          maxConnectionDurationJitter:
+            value: 20
           maxRequestsPerConnection: 100
           maxStreamDuration: 200s
         http1SafeMaxConnectionDuration: true

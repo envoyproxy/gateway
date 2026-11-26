@@ -67,8 +67,8 @@ envoyextensionpolicies:
     namespace: envoy-gateway
     name: policy-for-gateway  # This policy should attach httproute-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     wasm:
@@ -105,10 +105,15 @@ envoyextensionpolicies:
     namespace: default
     name: policy-for-http-route   # This policy should attach httproute-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+    backends:
+    - name: resolver
+      backendRef:
+        name: service-1
+        port: 8080
     wasm:
     - name: wasm-filter-4
       code:

@@ -43,8 +43,9 @@ metadata:
 rules:
 {{ include "eg.rbac.infra.basic" . }}
 {{ with .Values.config.envoyGateway.provider.kubernetes -}}
-  {{- if and .watch .deploy (eq .deploy.type "GatewayNamespace") .watch.namespaces (gt (len .watch.namespaces) 0) }}
+  {{- if and .watch .watch.namespaces (gt (len .watch.namespaces) 0) }}
 {{ include "eg.rbac.controllernamespace.secrets.read" $ }}
+{{ include "eg.rbac.controllernamespace.endpointslices.read" $ }}
   {{- end }}
 {{- end }}
 ---

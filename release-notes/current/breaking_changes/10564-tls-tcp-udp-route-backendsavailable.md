@@ -1,0 +1,1 @@
+TLSRoute, TCPRoute and UDPRoute now report `BackendsAvailable=False` instead of `ResolvedRefs=False` when the backend Service has no ready endpoints. If you watch `ResolvedRefs` for this, switch to `BackendsAvailable`.

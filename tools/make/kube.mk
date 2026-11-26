@@ -57,7 +57,8 @@ HOMEBREW_GOPROXY ?=
 
 KUBE_DEPLOY_PROFILE ?= default
 KUBE_DEPLOY_HELM_VALUES_FILE = $(ROOT_DIR)/test/config/helm/$(KUBE_DEPLOY_PROFILE).yaml
-KUBE_DEPLOY_EG_CONFIG_FILE = $(ROOT_DIR)/test/config/envoy-gateaway-config/$(KUBE_DEPLOY_PROFILE).yaml
+KUBE_DEPLOY_EG_CONFIG_DIR = $(ROOT_DIR)/test/config/envoy-gateway-config
+KUBE_DEPLOY_EG_CONFIG_FILE = $(KUBE_DEPLOY_EG_CONFIG_DIR)/$(KUBE_DEPLOY_PROFILE).yaml
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
@@ -270,10 +271,9 @@ benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-
 
 .PHONY: resilience
 resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server enable-multiple-extension-managers run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
-
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
-	install-ratelimit install-eg-addons kube-install-examples-image \
+	install-ratelimit install-eg-addons kube-install-examples-image enable-simple-extension-server \
 	e2e-prepare setup-mac-net-connect run-e2e delete-cluster
 
 .PHONY: e2e-mac conformance-mac
@@ -311,7 +311,17 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
+	kubectl apply -f test/e2e/testdata/extension-server-crds.yaml
+	kubectl apply -f test/e2e/testdata/inferencepool-crd.yaml
+	# Render the e2e config from the shared base plus the profile's overrides. This
+	# uses the chart values.yaml that kube-deploy generated, so images match the
+	# ones loaded into the cluster.
+	$(GO_TOOL) helm template eg charts/gateway-helm -n envoy-gateway-system \
+		-s templates/envoy-gateway-config.yaml \
+		-f $(KUBE_DEPLOY_EG_CONFIG_DIR)/base.yaml \
+		-f $(KUBE_DEPLOY_HELM_VALUES_FILE) \
+		$(if $(wildcard $(KUBE_DEPLOY_EG_CONFIG_FILE)),-f $(KUBE_DEPLOY_EG_CONFIG_FILE)) \
+		| kubectl apply -f -
 	kubectl apply -f test/config/gatewayclass.yaml
 
 .PHONY: setup-mac-net-connect

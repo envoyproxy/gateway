@@ -41,6 +41,7 @@ const (
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:message="openTelemetry can only be used with type OpenTelemetry",rule="has(self.openTelemetry) ? self.type == 'OpenTelemetry' : true"
+// +kubebuilder:validation:XValidation:message="http1 is not supported for OpenTelemetry tracing backends, which use gRPC.",rule="self.type != 'OpenTelemetry' || !has(self.backendSettings) || !has(self.backendSettings.http1)"
 type TracingProvider struct {
 	BackendCluster `json:",inline"`
 	// Type defines the tracing provider type.
@@ -49,13 +50,13 @@ type TracingProvider struct {
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the provider service is exposed on.
 	//
-	// Deprecated: Use BackendRefs instead.
+	// Deprecated: Use BackendRefs instead. This field will be removed in v1.11.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
@@ -142,7 +143,25 @@ type ZipkinTracingProvider struct {
 	// client and server spans sharing the same span context should be disabled.
 	// +optional
 	DisableSharedSpanContext *bool `json:"disableSharedSpanContext,omitempty"`
+	// TraceContextMode determines which trace context headers are used to extract
+	// the trace context from downstream requests and to inject it into upstream requests.
+	// Defaults to UseB3.
+	// +optional
+	TraceContextMode *ZipkinTraceContextMode `json:"traceContextMode,omitempty"`
 }
+
+// ZipkinTraceContextMode defines the trace context headers used by the Zipkin tracer.
+// +kubebuilder:validation:Enum=UseB3;UseB3WithW3CPropagation
+type ZipkinTraceContextMode string
+
+const (
+	// ZipkinTraceContextModeUseB3 uses B3 headers only, for both extraction and injection.
+	ZipkinTraceContextModeUseB3 ZipkinTraceContextMode = "UseB3"
+	// ZipkinTraceContextModeUseB3WithW3CPropagation uses both B3 and W3C trace context headers.
+	// Extraction: prefers B3 headers, falling back to the W3C traceparent header if B3 headers are absent.
+	// Injection: emits both B3 and W3C traceparent headers.
+	ZipkinTraceContextModeUseB3WithW3CPropagation ZipkinTraceContextMode = "UseB3WithW3CPropagation"
+)
 
 // OpenTelemetryTracingProvider defines the OpenTelemetry tracing provider configuration.
 type OpenTelemetryTracingProvider struct {

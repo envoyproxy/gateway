@@ -148,16 +148,22 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 304
 	case isFilterType(filter, egv1a1.EnvoyFilterGRPCWeb):
 		order = 305
-	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCJSONTranscoder):
 		order = 306
-	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
+	case isFilterType(filter, egv1a1.EnvoyFilterGRPCStats):
 		order = 307
-	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
+	case isFilterType(filter, egv1a1.EnvoyFilterCredentialInjector):
 		order = 308
-	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
+	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
 		order = 309
-	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
 		order = 310
+	// Sits next to the router so that on the response path it sees the alt-svc header
+	// straight from upstream, before any other filter can rewrite or strip it.
+	case isFilterType(filter, egv1a1.EnvoyFilterAlternateProtocolsCache):
+		order = 311
+	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+		order = 312
 	}
 
 	return &OrderedHTTPFilter{
@@ -292,6 +298,14 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 		if err := filter.patchHCM(mgr, irListener); err != nil {
 			return err
 		}
+	}
+
+	// Handled outside the filter loop because they need the backend cluster index.
+	if err := t.patchHCMWithAlternateProtocolsCache(mgr, irListener); err != nil {
+		return err
+	}
+	if err := t.patchHCMWithUpstreamHTTP3AltSvc(mgr, irListener); err != nil {
+		return err
 	}
 
 	// RateLimit filter is handled separately because it relies on the global

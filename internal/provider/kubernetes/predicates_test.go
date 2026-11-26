@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -1414,6 +1414,66 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 
 // TestValidateServiceForReconcile tests the validateServiceForReconcile
 // predicate function.
+func TestValidateServiceImportForReconcile(t *testing.T) {
+	backendRef := test.GetServiceImportBackendRef(types.NamespacedName{Name: "resolver"}, 8080)
+	policy := &egv1a1.EnvoyExtensionPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "extension", Namespace: "default"},
+		Spec: egv1a1.EnvoyExtensionPolicySpec{Backends: []egv1a1.ExtensionBackend{
+			{Name: "resolver", BackendRef: backendRef},
+		}},
+	}
+	remotePolicy := policy.DeepCopy()
+	remotePolicy.Spec.Backends[0].BackendRef.Namespace = new(gwapiv1.Namespace("other"))
+	route := test.GetHTTPRoute(types.NamespacedName{Name: "app", Namespace: "default"}, "gateway", backendRef, "")
+
+	testCases := []struct {
+		name         string
+		namespace    string
+		configs      []client.Object
+		eepCRDExists bool
+		expect       bool
+	}{
+		{
+			name: "extension backend in the policy namespace", namespace: "default",
+			configs: []client.Object{policy}, eepCRDExists: true, expect: true,
+		},
+		{
+			name: "extension backend in another namespace", namespace: "other",
+			configs: []client.Object{remotePolicy}, eepCRDExists: true, expect: true,
+		},
+		{
+			name: "same name in an unrelated namespace", namespace: "other",
+			configs: []client.Object{policy}, eepCRDExists: true,
+		},
+		{
+			name: "extension policy CRD absent", namespace: "default",
+			configs: []client.Object{policy},
+		},
+		{
+			name: "route backend without an extension policy", namespace: "default",
+			configs: []client.Object{route}, expect: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := gatewayAPIReconciler{
+				log:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				eepCRDExists: tc.eepCRDExists,
+				client: fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.configs...).
+					WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+					WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
+					Build(),
+			}
+			serviceImport := &mcsapiv1a1.ServiceImport{
+				ObjectMeta: metav1.ObjectMeta{Name: "resolver", Namespace: tc.namespace},
+			}
+			require.Equal(t, tc.expect, r.validateServiceImportForReconcile(serviceImport))
+		})
+	}
+}
+
 func TestValidateServiceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
@@ -1737,6 +1797,123 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				},
 			},
 			service: test.GetService(types.NamespacedName{Name: "ext-auth-grpc-service"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by SecurityPolicy OIDC provider",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "oidc",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						OIDC: &egv1a1.OIDC{
+							Provider: egv1a1.OIDCProvider{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "oidc-provider-service",
+												Namespace: new(gwapiv1.Namespace("idp")),
+											},
+										},
+									},
+								},
+								Issuer: "https://idp.example.com",
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "oidc-provider-service", Namespace: "idp"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by the second backendRef of a SecurityPolicy ExtAuth HTTP service",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-http-multi",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						ExtAuth: &egv1a1.ExtAuth{
+							HTTP: &egv1a1.HTTPExtAuthService{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-http-service-a",
+											},
+										},
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-http-service-b",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-http-service-b"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by the second backendRef of a SecurityPolicy ExtAuth GRPC service",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-grpc-multi",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						ExtAuth: &egv1a1.ExtAuth{
+							GRPC: &egv1a1.GRPCExtAuthService{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-grpc-service-a",
+											},
+										},
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-grpc-service-b",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-grpc-service-b"}, nil, nil),
 			expect:  true,
 		},
 		{
@@ -2234,6 +2411,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 	sampleService := test.GetService(types.NamespacedName{Name: "service"}, nil, nil)
 	sampleServiceBackendRef := test.GetServiceBackendRef(types.NamespacedName{Name: "service"}, 80)
 	sampleHTTPRouteFilter := test.GetHTTPRouteFilter(types.NamespacedName{Name: "httproutefilter"})
+	// A route that references the filter only from a backendRef, with no rule-level filters.
+	backendRefFilterRoute := test.GetHTTPRoute(types.NamespacedName{Name: "httproute-backendref-filter"}, "scheduled-status-test", sampleServiceBackendRef, "")
+	backendRefFilterRoute.Spec.Rules[0].BackendRefs[0].Filters = []gwapiv1.HTTPRouteFilter{
+		{
+			Type: gwapiv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: egv1a1.GroupName,
+				Kind:  egv1a1.KindHTTPRouteFilter,
+				Name:  "httproutefilter",
+			},
+		},
+	}
 
 	testCases := []struct {
 		name string
@@ -2263,6 +2452,18 @@ func TestValidateHTTPRouteFilerForReconcile(t *testing.T) {
 				sampleService,
 				sampleHTTPRouteFilter,
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", sampleServiceBackendRef, "httproutefilter"),
+			},
+			httpRouteFilter: sampleHTTPRouteFilter,
+			expect:          true,
+		},
+		{
+			name: "httproutefilter referenced only by a backendRef of route",
+			configs: []client.Object{
+				sampleGWC,
+				sampleGateway,
+				sampleService,
+				sampleHTTPRouteFilter,
+				backendRefFilterRoute,
 			},
 			httpRouteFilter: sampleHTTPRouteFilter,
 			expect:          true,
@@ -2374,7 +2575,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		// include BackendTLSPolicy, e.g. OpenShift's Ingress-Operator-managed set.
 		btlsCRDAbsent bool
 		configs       []client.Object
-		ctb           *certificatesv1b1.ClusterTrustBundle
+		ctb           *certificatesv1.ClusterTrustBundle
 		expect        bool
 	}{
 		{

@@ -280,7 +280,7 @@ func confirmEchoBackendRes(httpRes *http.ExpectedResponse, expectedResBody *Resp
 		},
 	}
 	req := http.MakeRequest(t, httpRes, gwAddr, "HTTP", "http")
-	res, err := casePreservingRoundTrip(&req, transport, suite)
+	res, err := customTransportRoundTrip(&req, transport, suite)
 	if err != nil {
 		return err
 	}

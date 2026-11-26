@@ -286,3 +286,60 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPRouteFilterIndexFuncs(t *testing.T) {
+	egFilter := &gwapiv1.LocalObjectReference{
+		Group: gwapiv1.Group(egv1a1.GroupName),
+		Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
+		Name:  "eg-filter",
+	}
+	// An extension resource with the same kind in another group must not be indexed.
+	extFilter := &gwapiv1.LocalObjectReference{
+		Group: "custom.example.io",
+		Kind:  gwapiv1.Kind(egv1a1.KindHTTPRouteFilter),
+		Name:  "ext-filter",
+	}
+
+	httpRoute := &gwapiv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-1",
+			Namespace: "default",
+		},
+		Spec: gwapiv1.HTTPRouteSpec{
+			Rules: []gwapiv1.HTTPRouteRule{
+				{
+					Filters: []gwapiv1.HTTPRouteFilter{
+						{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: egFilter},
+						{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: extFilter},
+					},
+					BackendRefs: []gwapiv1.HTTPBackendRef{
+						{
+							Filters: []gwapiv1.HTTPRouteFilter{
+								{Type: gwapiv1.HTTPRouteFilterExtensionRef, ExtensionRef: extFilter},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.ElementsMatch(t, []string{"default/eg-filter"}, httpRouteFilterHTTPRouteIndexFunc(httpRoute))
+
+	grpcRoute := &gwapiv1.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "grpcroute-1",
+			Namespace: "default",
+		},
+		Spec: gwapiv1.GRPCRouteSpec{
+			Rules: []gwapiv1.GRPCRouteRule{
+				{
+					Filters: []gwapiv1.GRPCRouteFilter{
+						{Type: gwapiv1.GRPCRouteFilterExtensionRef, ExtensionRef: egFilter},
+						{Type: gwapiv1.GRPCRouteFilterExtensionRef, ExtensionRef: extFilter},
+					},
+				},
+			},
+		},
+	}
+	require.ElementsMatch(t, []string{"default/eg-filter"}, httpRouteFilterGRPCRouteIndexFunc(grpcRoute))
+}

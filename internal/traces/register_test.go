@@ -9,8 +9,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/cmd/version"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
@@ -61,4 +64,19 @@ func TestTracesRunner_Close(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewResource(t *testing.T) {
+	res, err := newResource(t.Context())
+	require.NoError(t, err)
+
+	attrs := map[attribute.Key]string{}
+	for _, kv := range res.Attributes() {
+		attrs[kv.Key] = kv.Value.Emit()
+	}
+	v := version.Get()
+	require.Equal(t, "envoy-gateway", attrs[semconv.ServiceNameKey])
+	require.Equal(t, v.EnvoyGatewayVersion, attrs[semconv.ServiceVersionKey])
+	require.Contains(t, attrs, gitCommitIDKey)
+	require.Equal(t, v.GitCommitID, attrs[gitCommitIDKey])
 }

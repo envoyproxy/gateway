@@ -1,0 +1,1 @@
+Added `ClientTrafficPolicy.spec.http1.headerKeyFormat`. With `type: ProperCaseWords`, Envoy sends HTTP/1 header names to the client with Envoy `proper_case_words`, also for headers Envoy creates itself. It applies to the client connection only. `headerKeyFormat` and `preserveHeaderCase: true` cannot be set together. The default remains lowercase header names.

@@ -190,8 +190,11 @@ securityPolicies:
       forwardIDToken:
         header: X-Id-Token
       logoutPath: /foo/logout
+      postLogoutRedirect:
+        uri: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/foo/loggedout'
       provider:
         authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+        endSessionEndpoint: https://oauth.foo.com/logout
         issuer: https://oauth.foo.com
         tokenEndpoint: https://oauth.foo.com/token
       redirectURL: https://www.example.com/foo/oauth2/callback
@@ -202,8 +205,8 @@ securityPolicies:
       - openid
       - email
       - profile
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -220,11 +223,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -241,13 +239,16 @@ securityPolicies:
       defaultTokenTTL: 30m
       forwardAccessToken: true
       logoutPath: /bar/logout
+      postLogoutRedirect:
+        disabled: true
       provider:
         authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth?foo=bar
+        endSessionEndpoint: https://accounts.google.com/o/oauth2/v2/logout
         issuer: https://accounts.google.com
       redirectURL: https://www.example.com/bar/oauth2/callback
       refreshToken: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
   status:
@@ -264,11 +265,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -291,8 +287,8 @@ securityPolicies:
         issuer: https://accounts.google.com
       redirectURL: https://www.example.com/bar/oauth2/callback
       refreshToken: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -314,11 +310,6 @@ securityPolicies:
         reason: Overridden
         status: "True"
         type: Overridden
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
@@ -406,8 +397,11 @@ xdsIR:
             hmacSecret: '[redacted]'
             logoutPath: /foo/logout
             name: securitypolicy/default/policy-for-http-route
+            postLogoutRedirect:
+              uri: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/foo/loggedout'
             provider:
               authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              endSessionEndpoint: https://oauth.foo.com/logout
               tokenEndpoint: https://oauth.foo.com/token
             redirectPath: /foo/oauth2/callback
             redirectURL: https://www.example.com/foo/oauth2/callback
@@ -418,6 +412,7 @@ xdsIR:
             - openid
             - email
             - profile
+            tokenCookieChunking: true
       - destination:
           metadata:
             kind: HTTPRoute
@@ -469,6 +464,7 @@ xdsIR:
             refreshToken: true
             scopes:
             - openid
+            tokenCookieChunking: true
       - destination:
           metadata:
             kind: HTTPRoute
@@ -511,14 +507,18 @@ xdsIR:
             hmacSecret: '[redacted]'
             logoutPath: /bar/logout
             name: securitypolicy/default/policy-for-http-route-3
+            postLogoutRedirect:
+              disabled: true
             provider:
               authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth?foo=bar
+              endSessionEndpoint: https://accounts.google.com/o/oauth2/v2/logout
               tokenEndpoint: https://oauth2.googleapis.com/token
             redirectPath: /bar/oauth2/callback
             redirectURL: https://www.example.com/bar/oauth2/callback
             refreshToken: true
             scopes:
             - openid
+            tokenCookieChunking: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

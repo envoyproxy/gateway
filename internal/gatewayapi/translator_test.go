@@ -25,9 +25,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	k8sresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -48,6 +50,8 @@ func mustUnmarshal(t *testing.T, val []byte, out any) {
 }
 
 func TestTranslate(t *testing.T) {
+	useLocalOIDCDiscovery(t)
+
 	testCasesConfig := []struct {
 		name                            string
 		EnvoyPatchPolicyEnabled         bool
@@ -57,7 +61,10 @@ func TestTranslate(t *testing.T) {
 		LuaEnvoyExtensionPolicyDisabled bool
 		SDSEnabled                      bool
 		PerResourceSystemCASecret       bool
+		RateLimitClusterSettings        *egv1a1.ClusterSettings
 		EnvoyProxyPatchDisabled         bool
+		CTPHTTP1ClientScopeOnly         bool
+		OIDCTokenCookieChunkingDisabled bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -136,8 +143,65 @@ func TestTranslate(t *testing.T) {
 			SDSEnabled:     true,
 		},
 		{
+			// Settings that fail translation fall back to the defaults rather than dropping the
+			// rate limit cluster and the Envoy client certificate.
+			name:                    "ratelimit-cluster-settings-invalid",
+			EnvoyPatchPolicyEnabled: true,
+			BackendEnabled:          true,
+			RateLimitClusterSettings: &egv1a1.ClusterSettings{
+				// Passes the schema, but is out of range for Envoy.
+				Connection: &egv1a1.BackendConnection{
+					BufferLimit: new(k8sresource.MustParse("8Gi")),
+				},
+			},
+		},
+		{
+			name:                    "ratelimit-cluster-settings",
+			EnvoyPatchPolicyEnabled: true,
+			BackendEnabled:          true,
+			RateLimitClusterSettings: &egv1a1.ClusterSettings{
+				CircuitBreaker: &egv1a1.CircuitBreaker{
+					MaxRequestsPerConnection: new(int64(10)),
+					PerEndpoint:              &egv1a1.PerEndpointCircuitBreakers{},
+				},
+				// Omitted fields are defaulted from the CRD schema, since EnvoyGateway isn't admitted as a CRD.
+				HealthCheck: &egv1a1.HealthCheck{
+					Passive: &egv1a1.PassiveHealthCheck{},
+				},
+				Timeout: &egv1a1.Timeout{
+					HTTP: &egv1a1.HTTPTimeout{
+						MaxConnectionDuration: new(gwapiv1.Duration("30s")),
+					},
+				},
+			},
+		},
+		{
 			name:                    "envoyproxy-patch-disabled",
 			EnvoyProxyPatchDisabled: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-listenerset-http1-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-listener-http1-divergence-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-listener-ctp-divergence-no-sectionname-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-http-merge-ctp-flat-http1-btp-override-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                    "mergebackends-btp-backend-target-http1-ctp-client-scope",
+			CTPHTTP1ClientScopeOnly: true,
+		},
+		{
+			name:                            "securitypolicy-with-oidc-token-cookie-chunking-disabled",
+			OIDCTokenCookieChunkingDisabled: true,
 		},
 	}
 
@@ -165,7 +229,10 @@ func TestTranslate(t *testing.T) {
 			luaEnvoyExtensionPolicyDisabled := false
 			sdsEnabled := false
 			perResourceSystemCASecret := false
+			var rateLimitClusterSettings *egv1a1.ClusterSettings
 			envoyProxyPatchDisabled := false
+			ctpHTTP1ClientScopeOnly := false
+			oidcTokenCookieChunkingDisabled := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -176,16 +243,27 @@ func TestTranslate(t *testing.T) {
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 					sdsEnabled = config.SDSEnabled
 					perResourceSystemCASecret = config.PerResourceSystemCASecret
+					rateLimitClusterSettings = config.RateLimitClusterSettings
 					envoyProxyPatchDisabled = config.EnvoyProxyPatchDisabled
+					ctpHTTP1ClientScopeOnly = config.CTPHTTP1ClientScopeOnly
+					oidcTokenCookieChunkingDisabled = config.OIDCTokenCookieChunkingDisabled
 				}
+			}
+			// The config loader applies the schema defaults before settings reach the translator.
+			if rateLimitClusterSettings != nil {
+				var err error
+				rateLimitClusterSettings, err = config.DefaultClusterSettings(rateLimitClusterSettings)
+				require.NoError(t, err)
 			}
 
 			translator := &Translator{
 				GatewayControllerName:           egv1a1.GatewayControllerName,
 				GatewayClassName:                "envoy-gateway-class",
 				GlobalRateLimitEnabled:          true,
+				RateLimitClusterSettings:        rateLimitClusterSettings,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
+				ExtensionBackendsEnabled:        true,
 				SDSSecretRefEnabled:             sdsEnabled,
 				PerResourceSystemCASecret:       perResourceSystemCASecret,
 				ControllerNamespace:             "envoy-gateway-system",
@@ -196,6 +274,8 @@ func TestTranslate(t *testing.T) {
 				RunningOnHost:                   runningOnHost,
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
 				EnvoyProxyPatchDisabled:         envoyProxyPatchDisabled,
+				CTPHTTP1ClientScopeOnly:         ctpHTTP1ClientScopeOnly,
+				OIDCTokenCookieChunkingDisabled: oidcTokenCookieChunkingDisabled,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
@@ -583,6 +663,11 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				ExtensionGroupKinds: []schema.GroupKind{
 					{Group: "foo.example.io", Kind: "Foo"},
 					{Group: "bar.example.io", Kind: "Bar"},
+					{Group: "storage.example.io", Kind: "S3Backend"},
+					{Group: "compute.example.io", Kind: "LambdaBackend"},
+					{Group: "custom.example.io", Kind: "HTTPRouteFilter"},
+				},
+				ExtensionBackendGroupKinds: []schema.GroupKind{
 					{Group: "storage.example.io", Kind: "S3Backend"},
 					{Group: "compute.example.io", Kind: "LambdaBackend"},
 				},
@@ -1220,6 +1305,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		Tracing                 *ir.Tracing
 		Metrics                 *ir.Metrics
 		HealthCheckLog          *ir.ProxyHealthCheckLog
+		DrainStrategy           egv1a1.DrainStrategy
 		HTTP                    []*ir.HTTPListener
 		TCP                     []*ir.TCPListener
 		UDP                     []*ir.UDPListener
@@ -1229,6 +1315,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies []*ir.UnstructuredRef
 		ExtensionResources      []*ir.UnstructuredRef
 		BackendClusters         []*ir.BackendCluster
+		ExtensionBackends       []*ir.ExtensionBackend
 		CACertificates          []*ir.CACertificateEntry
 	}{
 		ReadyListener:           a.ReadyListener,
@@ -1236,6 +1323,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		Tracing:                 a.Tracing,
 		Metrics:                 a.Metrics,
 		HealthCheckLog:          a.HealthCheckLog,
+		DrainStrategy:           a.DrainStrategy,
 		HTTP:                    a.HTTP,
 		TCP:                     a.TCP,
 		UDP:                     a.UDP,
@@ -1245,6 +1333,7 @@ func xdsWithoutEqual(a *ir.Xds) any {
 		ExtensionServerPolicies: a.ExtensionServerPolicies,
 		ExtensionResources:      a.ExtensionResources,
 		BackendClusters:         a.BackendClusters,
+		ExtensionBackends:       a.ExtensionBackends,
 		CACertificates:          a.CACertificates,
 	}
 
@@ -1260,4 +1349,84 @@ func xdsWithoutEqual(a *ir.Xds) any {
 	}
 
 	return ret
+}
+
+func TestGetRelevantGatewaysClearsStaleEnvoyProxyWarning(t *testing.T) {
+	staleWarning := metav1.Condition{
+		Type:    string(egv1a1.EnvoyProxyConditionWarning),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(egv1a1.EnvoyProxyReasonInvalidField),
+		Message: "The following invalid fields were ignored: filterOrder: cycle",
+	}
+	// newProxy returns an EnvoyProxy that is invalid as a whole, carrying the warning from a
+	// previous translation in which it was accepted with an ignored invalid field.
+	newProxy := func(namespace string, ancestor gwapiv1.ParentReference) *egv1a1.EnvoyProxy {
+		return &egv1a1.EnvoyProxy{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "proxy"},
+			Spec: egv1a1.EnvoyProxySpec{
+				Provider: &egv1a1.EnvoyProxyProvider{
+					Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+					Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+						EnvoyService: &egv1a1.KubernetesServiceSpec{Type: new(egv1a1.ServiceType("foo"))},
+					},
+				},
+			},
+			Status: egv1a1.EnvoyProxyStatus{Ancestors: []egv1a1.EnvoyProxyAncestorStatus{{
+				AncestorRef: ancestor,
+				Conditions:  []metav1.Condition{staleWarning},
+			}}},
+		}
+	}
+	conditionTypes := func(ep *egv1a1.EnvoyProxy) []string {
+		require.Len(t, ep.Status.Ancestors, 1)
+		types := make([]string, 0, len(ep.Status.Ancestors[0].Conditions))
+		for _, c := range ep.Status.Ancestors[0].Conditions {
+			types = append(types, c.Type)
+		}
+		return types
+	}
+
+	translator := &Translator{
+		GatewayClassName: "eg",
+		Logger:           logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+	}
+
+	t.Run("GatewayClass", func(t *testing.T) {
+		ep := newProxy("envoy-gateway-system", gwapiv1.ParentReference{
+			Group: GroupPtr(gwapiv1.GroupName),
+			Kind:  KindPtr(resource.KindGatewayClass),
+			Name:  "eg",
+		})
+		translator.GetRelevantGateways(&resource.Resources{
+			GatewayClass:              &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "eg"}},
+			EnvoyProxyForGatewayClass: ep,
+		})
+		require.Equal(t, []string{string(egv1a1.EnvoyProxyConditionAccepted)}, conditionTypes(ep))
+	})
+
+	t.Run("Gateway", func(t *testing.T) {
+		ep := newProxy("default", gwapiv1.ParentReference{
+			Group:     GroupPtr(gwapiv1.GroupName),
+			Kind:      KindPtr(resource.KindGateway),
+			Name:      "gateway",
+			Namespace: NamespacePtr("default"),
+		})
+		translator.GetRelevantGateways(&resource.Resources{
+			EnvoyProxiesForGateways: []*egv1a1.EnvoyProxy{ep},
+			Gateways: []*gwapiv1.Gateway{{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gateway"},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "eg",
+					Infrastructure: &gwapiv1.GatewayInfrastructure{
+						ParametersRef: &gwapiv1.LocalParametersReference{
+							Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+							Kind:  egv1a1.KindEnvoyProxy,
+							Name:  "proxy",
+						},
+					},
+				},
+			}},
+		})
+		require.Equal(t, []string{string(egv1a1.EnvoyProxyConditionAccepted)}, conditionTypes(ep))
+	})
 }

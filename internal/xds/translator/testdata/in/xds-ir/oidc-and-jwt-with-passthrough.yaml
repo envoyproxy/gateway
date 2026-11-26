@@ -23,6 +23,7 @@ http:
               name: httproute/default/httproute-1/rule/0/backend/0
         security:
           jwt:
+            name: default/policy
             providers:
               - issuer: https://oauth.foo.com
                 name: example1

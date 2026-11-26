@@ -57,12 +57,20 @@ envoyProxyForGatewayClass:
         name: envoy-gateway-class
       conditions:
       - lastTransitionTime: null
-        message: '[unable to configure access log when using File sink type but "file"
-          field being empty, unable to configure access log when using OpenTelemetry
-          sink type but "openTelemetry" field being empty]'
-        reason: InvalidParameters
-        status: "False"
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'The following invalid fields were ignored: telemetry.accessLog.settings[0].sinks[0]:
+          unable to configure access log when using File sink type but "file" field
+          being empty; telemetry.accessLog.settings[0].sinks[1]: unable to configure
+          access log when using ALS sink type but "als" field being empty; telemetry.accessLog.settings[0].sinks[2]:
+          unable to configure access log when using OpenTelemetry sink type but "openTelemetry"
+          field being empty'
+        reason: InvalidField
+        status: "True"
+        type: Warning
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
@@ -78,11 +86,9 @@ gatewayClass:
   status:
     conditions:
     - lastTransitionTime: null
-      message: 'Invalid parametersRef: [unable to configure access log when using
-        File sink type but "file" field being empty, unable to configure access log
-        when using OpenTelemetry sink type but "openTelemetry" field being empty]'
-      reason: InvalidParameters
-      status: "False"
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
       type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -144,17 +150,73 @@ gateways:
       port: 80
       protocol: HTTP
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Invalid parametersRef:: [unable to configure access log when using
-        File sink type but "file" field being empty, unable to configure access log
-        when using OpenTelemetry sink type but "openTelemetry" field being empty]'
-      reason: InvalidParameters
-      status: "False"
-      type: Accepted
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 infraIR:
   envoy-gateway/ep-from-gc:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: invalid
+          namespace: envoy-gateway
+        spec:
+          logging: {}
+          telemetry:
+            accessLog: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
+            - lastTransitionTime: null
+              message: 'The following invalid fields were ignored: telemetry.accessLog.settings[0].sinks[0]:
+                unable to configure access log when using File sink type but "file"
+                field being empty; telemetry.accessLog.settings[0].sinks[1]: unable
+                to configure access log when using ALS sink type but "als" field being
+                empty; telemetry.accessLog.settings[0].sinks[2]: unable to configure
+                access log when using OpenTelemetry sink type but "openTelemetry"
+                field being empty'
+              reason: InvalidField
+              status: "True"
+              type: Warning
+      listeners:
+      - name: envoy-gateway/ep-from-gc/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: ep-from-gc
@@ -215,7 +277,51 @@ infraIR:
       name: envoy-gateway/ep-from-gtw
       namespace: envoy-gateway-system
 xdsIR:
-  envoy-gateway/ep-from-gc: {}
+  envoy-gateway/ep-from-gc:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-ep-from-gc-f44842f2
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/ep-from-gc
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-ep-from-gc-f44842f2
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/ep-from-gc
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: ep-from-gc
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/ep-from-gc/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
   envoy-gateway/ep-from-gtw:
     accessLog:
       text:

@@ -61,11 +61,13 @@ func (v *securityValidator) install(state *lua.LState) {
 func (v *securityValidator) luaValidatePath(state *lua.LState) int {
 	fnName := state.CheckString(1)
 	pathValue := state.Get(2)
-	if pathValue.Type() != lua.LTString {
+	// The wrapped io/os functions take their path via CheckString, which also coerces numbers,
+	// so validate the same string form they will open. Other types are rejected by the callee.
+	if !lua.LVCanConvToString(pathValue) {
 		return 0
 	}
 
-	if err := v.validatePath(fnName, pathValue.String()); err != nil {
+	if err := v.validatePath(fnName, lua.LVAsString(pathValue)); err != nil {
 		state.RaiseError("%s", err)
 	}
 	return 0

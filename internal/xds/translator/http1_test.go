@@ -22,7 +22,7 @@ func TestHTTP1ProtocolOptionsHeaderKeyFormat(t *testing.T) {
 
 	t.Run("proper case words", func(t *testing.T) {
 		got := http1ProtocolOptions(&ir.HTTP1Settings{
-			HeaderKeyFormat: egv1a1.HTTP1HeaderKeyFormatProperCaseWords,
+			HeaderKeyFormat: egv1a1.HTTP1HeaderKeyFormatTypeProperCaseWords,
 		})
 		require.NotNil(t, got)
 		require.NotNil(t, got.GetHeaderKeyFormat().GetProperCaseWords())
@@ -43,11 +43,11 @@ func TestBuildHTTP1SettingsHeaderKeyFormat(t *testing.T) {
 		require.Nil(t, got.GetHeaderKeyFormat())
 	})
 
-	t.Run("proper case words", func(t *testing.T) {
+	t.Run("proper case words is not set on the cluster", func(t *testing.T) {
 		got := buildHTTP1Settings(&ir.HTTP1Settings{
-			HeaderKeyFormat: egv1a1.HTTP1HeaderKeyFormatProperCaseWords,
+			HeaderKeyFormat: egv1a1.HTTP1HeaderKeyFormatTypeProperCaseWords,
 		})
-		require.NotNil(t, got.GetHeaderKeyFormat().GetProperCaseWords())
+		require.Nil(t, got.GetHeaderKeyFormat())
 	})
 
 	t.Run("preserve header case", func(t *testing.T) {

@@ -36,13 +36,13 @@ SecurityPolicy can be attached to Gateway API resources using two targeting mech
 1. **Direct Reference (`targetRefs`)**: Explicitly reference specific resources by name and kind.
 2. **Label Selection (`targetSelectors`)**: Match resources based on their labels (see [targetSelectors API reference](../../api/extension_types#targetselector))
 
-The policy applies to all resources that match either targeting method. You can target various Gateway API resource types including `Gateway`, `ListenerSet`, `HTTPRoute`, `GRPCRoute`, and `TCPRoute`.
+The policy applies to all resources that match either targeting method. You can target various Gateway API resource types including `Gateway`, `ListenerSet`, `HTTPRoute`, `GRPCRoute`, `TCPRoute`, and `UDPRoute`.
 
 When a SecurityPolicy targets a `ListenerSet`, it applies only to listeners in that ListenerSet. It does not apply to listeners owned directly by the parent Gateway. A `ListenerSet` target can also use `sectionName` to apply the policy to a single listener in the ListenerSet.
 
 Route-level policies apply to the targeted route regardless of whether that route is attached directly to a `Gateway` or through a `ListenerSet`.
 
-Note: TCPRoute support is limited to authorization using client IP allow/deny lists (IP-based authorization). Other SecurityPolicy features such as JWT, API Key, Basic Auth, or OIDC are not applicable to TCPRoute targets.
+Note: TCPRoute and UDPRoute support is limited to authorization using client IP allow/deny lists (IP-based authorization). Other SecurityPolicy features such as JWT, API Key, Basic Auth, or OIDC are not applicable to L4 targets, since there is no HTTP request to inspect. For a UDPRoute the client IP is the source address of the datagram, and a denied source is dropped without a reply.
 
 **Important**: A SecurityPolicy can only target resources in the same namespace as the policy itself.
 
@@ -52,8 +52,8 @@ When multiple SecurityPolicies apply to the same resource, Envoy Gateway resolve
 
 Route-specific policies take precedence first:
 
-1. **Route rule-level policies** (HTTPRoute, GRPCRoute, or TCPRoute with `sectionName` targeting specific rules)
-2. **Route-level policies** (HTTPRoute, GRPCRoute, or TCPRoute without `sectionName`)
+1. **Route rule-level policies** (HTTPRoute, GRPCRoute, TCPRoute, or UDPRoute with `sectionName` targeting specific rules)
+2. **Route-level policies** (HTTPRoute, GRPCRoute, TCPRoute, or UDPRoute without `sectionName`)
 
 After route-specific policies, parent policy precedence depends on how the route is attached.
 
@@ -133,10 +133,10 @@ kind: SecurityPolicy
 metadata:
   name: rule-policy
 spec:
-  targetRef:
-    kind: HTTPRoute
-    name: my-route
-    sectionName: rule-1  # Targets specific named rule
+  targetRefs:
+    - kind: HTTPRoute
+      name: my-route
+      sectionName: rule-1  # Targets specific named rule
   cors:
     allowOrigins:
     - exact: https://rule.example.com
@@ -148,9 +148,9 @@ kind: SecurityPolicy
 metadata:
   name: route-policy
 spec:
-  targetRef:
-    kind: HTTPRoute
-    name: my-route  # No sectionName = entire route
+  targetRefs:
+    - kind: HTTPRoute
+      name: my-route  # No sectionName = entire route
   cors:
     allowOrigins:
     - exact: https://route.example.com
@@ -162,10 +162,10 @@ kind: SecurityPolicy
 metadata:
   name: listener-policy
 spec:
-  targetRef:
-    kind: Gateway
-    name: my-gateway
-    sectionName: https-listener  # Targets specific listener
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway
+      sectionName: https-listener  # Targets specific listener
   cors:
     allowOrigins:
     - exact: https://listener.example.com
@@ -177,9 +177,9 @@ kind: SecurityPolicy
 metadata:
   name: gateway-policy
 spec:
-  targetRef:
-    kind: Gateway
-    name: my-gateway  # No sectionName = entire gateway
+  targetRefs:
+    - kind: Gateway
+      name: my-gateway  # No sectionName = entire gateway
   cors:
     allowOrigins:
     - exact: https://gateway.example.com

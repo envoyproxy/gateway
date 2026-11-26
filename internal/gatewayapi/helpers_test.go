@@ -1136,6 +1136,60 @@ func TestGetServiceIPFamily(t *testing.T) {
 	}
 }
 
+func TestGetEnvoyIPFamily(t *testing.T) {
+	testCases := []struct {
+		name       string
+		envoyProxy *egv1a1.EnvoyProxy
+		expected   *egv1a1.IPFamily
+	}{
+		{
+			name:       "nil envoy proxy",
+			envoyProxy: nil,
+			expected:   nil,
+		},
+		{
+			name:       "no ip family specified",
+			envoyProxy: &egv1a1.EnvoyProxy{},
+			expected:   nil,
+		},
+		{
+			name: "ipv4",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.IPv4)},
+			},
+			expected: new(egv1a1.IPv4),
+		},
+		{
+			name: "ipv6",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.IPv6)},
+			},
+			expected: new(egv1a1.IPv6),
+		},
+		{
+			name: "dual stack",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.DualStack)},
+			},
+			expected: new(egv1a1.DualStack),
+		},
+		{
+			name: "prefer dual stack",
+			envoyProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{IPFamily: new(egv1a1.PreferDualStack)},
+			},
+			expected: new(egv1a1.DualStack),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := getEnvoyIPFamily(tc.envoyProxy)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestGetCaCertFromConfigMap(t *testing.T) {
 	cases := []struct {
 		name          string
@@ -1843,4 +1897,175 @@ func structWithFieldSet[T any](fieldName string) *T {
 		panic(fmt.Sprintf("structWithFieldSet: unsupported field kind %s for field %q", field.Kind(), fieldName))
 	}
 	return specPtr
+}
+
+// A route hostname that is more specifically matched by a sibling listener's nested
+// wildcard still attaches to the broader apex listener.
+//
+// The filter loop at the end of computeHosts does
+//
+//	hostnamesSet.Delete(string(*listener.Hostname))
+//
+// (helpers.go:380), which removes the sibling's hostname as a literal string. The set
+// holds whatever the match phase resolved the route hostname to, so the delete only
+// lands when those two strings happen to be equal. A concrete route hostname under a
+// wildcard sibling never matches, and the apex listener keeps a host it does not own.
+//
+// The first two cases below share identical listeners and differ only in the route
+// hostname, which is what makes the route hostname - not the listener topology - the
+// discriminator for whether isolation happens at all.
+func TestComputeHostsNestedWildcardIsolation(t *testing.T) {
+	newListener := func(gateway *GatewayContext, name, listenerHostname string) *ListenerContext {
+		hostname := gwapiv1.Hostname(listenerHostname)
+		return &ListenerContext{
+			Listener: &gwapiv1.Listener{
+				Name:     gwapiv1.SectionName(name),
+				Port:     80,
+				Protocol: gwapiv1.HTTPProtocolType,
+				Hostname: &hostname,
+			},
+			gateway: gateway,
+		}
+	}
+
+	tests := []struct {
+		name string
+		// hostname of the listener we are computing hosts FOR
+		subject string
+		// hostname of the other listener on the same port
+		sibling string
+		// siblingProtocolConflicted marks the sibling as having lost a protocol conflict
+		siblingProtocolConflicted bool
+		// siblingSpecInvalid marks the sibling as having failed per-listener spec validation
+		siblingSpecInvalid bool
+		// siblingNoWinnerConflict marks the sibling as one of several listeners that
+		// declared the same hostname, where validateConflictedHostnameListeners picks
+		// no winner: the spec itself stayed valid, so only the conditions say it is
+		// conflicted.
+		siblingNoWinnerConflict bool
+		// the HTTPRoute's hostname
+		route string
+		want  []string
+	}{
+		{
+			// test.dev.example.com is more specifically matched by the sibling
+			// *.dev.example.com, so the apex listener should not claim it. The match
+			// phase resolves the set to the concrete "test.dev.example.com" while the
+			// filter deletes the literal "*.dev.example.com", so nothing is removed.
+			name:    "concrete route under a nested wildcard sibling is not isolated",
+			subject: "*.example.com",
+			sibling: "*.dev.example.com",
+			route:   "test.dev.example.com",
+			want:    []string{},
+		},
+		{
+			// Same two listeners as above. Here the match phase resolves the set to
+			// "*.dev.example.com", which is exactly the string the filter deletes, so
+			// isolation works. This case passes today.
+			name:    "wildcard route matching the sibling exactly is isolated",
+			subject: "*.example.com",
+			sibling: "*.dev.example.com",
+			route:   "*.dev.example.com",
+			want:    []string{},
+		},
+		{
+			// The mirror of the first case: the nested listener legitimately owns it.
+			name:    "nested wildcard listener claims its own concrete host",
+			subject: "*.dev.example.com",
+			sibling: "*.example.com",
+			route:   "test.dev.example.com",
+			want:    []string{"test.dev.example.com"},
+		},
+		{
+			// Control: a non-overlapping exact sibling must not cost the apex listener
+			// its route. Guards against a fix that over-deletes.
+			name:    "apex wildcard keeps its host when the sibling does not overlap",
+			subject: "*.example.com",
+			sibling: "other.example.com",
+			route:   "test.dev.example.com",
+			want:    []string{"test.dev.example.com"},
+		},
+		{
+			// A sibling that lost a protocol conflict is never programmed, so it cannot own
+			// a hostname. Deleting the route from the valid listener would leave it attached
+			// to nothing at all.
+			name:                      "protocol-conflicted sibling does not own a hostname",
+			subject:                   "*.example.com",
+			sibling:                   "*.dev.example.com",
+			siblingProtocolConflicted: true,
+			route:                     "test.dev.example.com",
+			want:                      []string{"test.dev.example.com"},
+		},
+		{
+			// A sibling that failed per-listener spec validation - an HTTPS listener with no
+			// usable certificate, say - is never programmed, so it cannot own a hostname.
+			// ProcessListeners omits it from the IR but leaves it in gateway.listeners, so
+			// the guard has to be here.
+			name:               "spec-invalid sibling does not own a hostname",
+			subject:            "*.example.com",
+			sibling:            "*.dev.example.com",
+			siblingSpecInvalid: true,
+			route:              "test.dev.example.com",
+			want:               []string{"test.dev.example.com"},
+		},
+		{
+			// Two same-port listeners declaring the same hostname leave no winner, so
+			// neither is programmed and neither is flagged hostnameConflictLoser. The
+			// spec stayed valid, so a guard that short-circuits on specValid misses this
+			// and the broad listener loses a host nothing else can serve.
+			name:                    "no-winner conflicted sibling does not own a hostname",
+			subject:                 "*.example.com",
+			sibling:                 "*.dev.example.com",
+			siblingNoWinnerConflict: true,
+			route:                   "test.dev.example.com",
+			want:                    []string{"test.dev.example.com"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := &GatewayContext{Gateway: &gwapiv1.Gateway{}}
+			subject := newListener(gateway, "subject", tc.subject)
+			sibling := newListener(gateway, "sibling", tc.sibling)
+			sibling.protocolConflicted = tc.siblingProtocolConflicted
+			gateway.listeners = []*ListenerContext{subject, sibling}
+			gateway.Status.Listeners = []gwapiv1.ListenerStatus{
+				{Name: subject.Name},
+				{Name: sibling.Name},
+			}
+			subject.listenerStatusIdx = 0
+			sibling.listenerStatusIdx = 1
+			if tc.siblingNoWinnerConflict {
+				// Phase 1 passed, so specValid stays true; Phase 2 records the conflict and
+				// validateListenerConditions then adds Programmed=False.
+				sibling.specValid = true
+				sibling.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionTrue,
+					gwapiv1.ListenerReasonHostnameConflict, "duplicate hostname, no winner")
+				sibling.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalid, "Listener is invalid, see other Conditions for details.")
+			}
+			if tc.siblingSpecInvalid {
+				sibling.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse,
+					gwapiv1.ListenerReasonInvalid, "listener failed spec validation")
+			}
+
+			require.ElementsMatch(t, tc.want, computeHosts([]string{tc.route}, subject))
+		})
+	}
+}
+
+func TestFormatNameList(t *testing.T) {
+	names := func(n int) []string {
+		out := make([]string, 0, n)
+		for i := range n {
+			out = append(out, fmt.Sprintf("ns/route-%02d", i))
+		}
+		return out
+	}
+	require.Equal(t, "[ns/route-00 ns/route-01]", formatNameList(names(2)))
+	require.NotContains(t, formatNameList(names(maxNamesListed)), "more")
+	over := formatNameList(names(maxNamesListed + 5))
+	require.Contains(t, over, fmt.Sprintf("ns/route-%02d]", maxNamesListed-1))
+	require.NotContains(t, over, fmt.Sprintf("ns/route-%02d", maxNamesListed))
+	require.Contains(t, over, "] and 5 more")
 }

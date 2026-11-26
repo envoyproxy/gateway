@@ -145,6 +145,15 @@ deployment:
     # - name: foo
     #   configMap:
     #     name: myconfigmap
+    # -- Additional init containers on the deployment definition. Also used for native sidecars (an init container with restartPolicy: Always).
+    initContainers: []
+    # - name: sidecar
+    #   image: my-sidecar:latest
+    #   restartPolicy: Always
+    # -- Additional sidecar containers on the deployment definition.
+    extraContainers: []
+    # - name: sidecar
+    #   image: my-sidecar:latest
     securityContext:
       runAsNonRoot: true
       runAsGroup: 65532
@@ -180,6 +189,15 @@ config:
       level:
         default: info
     extensionApis: {}
+
+# -- Extension managers keyed by name, rendered into `config.envoyGateway.extensionManagers`.
+# Each entry takes the ExtensionManager fields
+# (https://gateway.envoyproxy.io/docs/api/extension_types/#extensionmanager) except `name`, which
+# comes from the key, plus `order` (non-negative integer sort key, default 0; ties sort by name)
+# and `enabled` (default true; a bool, or a template string such as
+# "{{ .Values.global.myExtension.enabled }}" that renders to true or false). Can't be combined with
+# `config.envoyGateway.extensionManagers` or `config.envoyGateway.extensionManager`.
+extensionManagersMap: {}
 
 createNamespace: false
 

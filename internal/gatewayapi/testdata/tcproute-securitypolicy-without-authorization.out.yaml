@@ -62,8 +62,8 @@ securityPolicies:
     name: sp-tcpr-no-auth
     namespace: default
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: TCPRoute
       name: tcpr-app
   status:
@@ -80,11 +80,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1

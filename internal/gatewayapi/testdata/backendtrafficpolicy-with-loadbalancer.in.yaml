@@ -145,10 +145,10 @@ backendTrafficPolicies:
       namespace: envoy-gateway
       name: policy-for-gateway
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       loadBalancer:
         type: Random
   - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -157,10 +157,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       loadBalancer:
         type: ConsistentHash
         consistentHash:
@@ -172,10 +172,10 @@ backendTrafficPolicies:
       namespace: envoy-gateway
       name: policy-for-gateway2
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-2
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-2
       loadBalancer:
         type: RoundRobin
         slowStart:
@@ -192,10 +192,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route2
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-2
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-2
       loadBalancer:
         type: LeastRequest
         slowStart:
@@ -206,10 +206,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route3
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-3
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-3
       loadBalancer:
         type: ConsistentHash
         consistentHash:
@@ -222,10 +222,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route4
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-4
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-4
       loadBalancer:
         type: ConsistentHash
         consistentHash:
@@ -238,10 +238,10 @@ backendTrafficPolicies:
       namespace: default
       name: policy-for-route5
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-5
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-5
       loadBalancer:
         type: BackendUtilization
         slowStart:

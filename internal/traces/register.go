@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -19,6 +20,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/cmd/version"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/fraction"
@@ -49,12 +51,7 @@ func (r *Runner) Start(ctx context.Context) error {
 
 	endpoint := net.JoinHostPort(sinkConfig.OpenTelemetry.Host, fmt.Sprint(sinkConfig.OpenTelemetry.Port))
 
-	// Create resource
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String("envoy-gateway"),
-		),
-	)
+	res, err := newResource(ctx)
 	if err != nil {
 		return err
 	}
@@ -132,6 +129,22 @@ func (r *Runner) Start(ctx context.Context) error {
 	default:
 		return fmt.Errorf("unsupported protocol %s for OpenTelemetry sink", configObj.Protocol)
 	}
+}
+
+// gitCommitIDKey is the resource attribute holding the git commit Envoy Gateway was built from.
+const gitCommitIDKey = attribute.Key("envoy_gateway.git_commit_id")
+
+// newResource returns the resource attached to every span Envoy Gateway exports. It carries the
+// Envoy Gateway version and git commit, so traces can be compared across versions.
+func newResource(ctx context.Context) (*resource.Resource, error) {
+	v := version.Get()
+	return resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String("envoy-gateway"),
+			semconv.ServiceVersionKey.String(v.EnvoyGatewayVersion),
+			gitCommitIDKey.String(v.GitCommitID),
+		),
+	)
 }
 
 // getSampler returns the configured sampler or a default sampler

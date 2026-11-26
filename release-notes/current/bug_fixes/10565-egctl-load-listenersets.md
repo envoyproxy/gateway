@@ -1,0 +1,1 @@
+Fixed `egctl x translate` and the file provider (standalone mode) silently ignoring ListenerSets in YAML input, which also dropped every route attached to them. ListenerSets loaded from files are now translated and programmed as in Kubernetes.

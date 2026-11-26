@@ -203,8 +203,8 @@ securityPolicies:
         name: example3
         remoteJWKS:
           uri: https://three.example.com/jwt/public-key/jwks.json
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -221,11 +221,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
@@ -253,8 +248,8 @@ securityPolicies:
         name: example2
         remoteJWKS:
           uri: http://two.example.com/jwt/public-key/jwks.json
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
   status:
@@ -270,11 +265,6 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   envoy-gateway/gateway-1:
@@ -349,6 +339,7 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         security:
           jwt:
+            name: envoy-gateway/policy-for-gateway
             providers:
             - audiences:
               - one.foo.com
@@ -446,6 +437,7 @@ xdsIR:
           prefix: /
         security:
           jwt:
+            name: default/policy-for-route
             providers:
             - audiences:
               - three.foo.com

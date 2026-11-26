@@ -7,8 +7,8 @@ clientTrafficPolicies:
   spec:
     http1:
       enableTrailers: true
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
 gateways:

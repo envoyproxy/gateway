@@ -314,6 +314,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
 		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
+		xdsIR[irKey].DrainStrategy = getDrainStrategy(gateway.envoyProxy)
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
 
 		for _, listener := range gateway.listeners {
@@ -340,7 +341,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
-				tlsConfig := irTLSConfigs(&listener.tls)
+				tlsConfig := t.irTLSConfigs(&listener.tls, xdsIR[irKey], gateway)
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -371,7 +372,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
 				listener.httpIR = irListener
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
-				tlsConfig := irTLSConfigsForTCPListener(&listener.tls)
+				tlsConfig := t.irTLSConfigsForTCPListener(&listener.tls, xdsIR[irKey], gateway)
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
 						Name:         irListenerName(listener),
@@ -557,7 +558,7 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 		validListenerCountByPort[listener.Port]++
 
 		for _, secret := range listener.tls.secrets {
-			if secret.Type == egv1a1.SDSSecretType {
+			if secret.extensionSecret != nil || secret.kubernetesSecret.Type == egv1a1.SDSSecretType {
 				sdsListenersByPort[listener.Port] = append(sdsListenersByPort[listener.Port], listener)
 				break
 			}
@@ -749,8 +750,8 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 		address  = netutils.IPv4ListenerAddress
 	)
 
-	if envoyProxy != nil && envoyProxy.Spec.IPFamily != nil {
-		ipFamily = *envoyProxy.Spec.IPFamily
+	if envoyIPFamily := getEnvoyIPFamily(envoyProxy); envoyIPFamily != nil {
+		ipFamily = *envoyIPFamily
 	}
 	if ipFamily == egv1a1.IPv6 || ipFamily == egv1a1.DualStack {
 		address = netutils.IPv6ListenerAddress
@@ -762,6 +763,13 @@ func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1
 		Path:     bootstrap.EnvoyReadinessPath,
 		IPFamily: ipFamily,
 	}
+}
+
+func getDrainStrategy(envoyProxy *egv1a1.EnvoyProxy) egv1a1.DrainStrategy {
+	if envoyProxy == nil || envoyProxy.Spec.Shutdown == nil || envoyProxy.Spec.Shutdown.DrainStrategy == nil {
+		return ""
+	}
+	return *envoyProxy.Spec.Shutdown.DrainStrategy
 }
 
 func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {
@@ -1036,7 +1044,7 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
 					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
-					al.Authority = host
+					al.Authority = strings.TrimSuffix(host, ".")
 				}
 
 				// For OpenTelemetry, text (body) and attributes can be used together.
@@ -1090,7 +1098,7 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
 		}
 		ds = destinationSettingFromHostAndPort(settingName, host, port)
-		authority = host
+		authority = strings.TrimSuffix(host, ".")
 	}
 
 	gw := gwCtx.Gateway
@@ -1168,7 +1176,7 @@ func getAuthorityFromDestination(ds []*ir.DestinationSetting) string {
 		host := dest.Endpoints[0].Host
 		if _, err := netip.ParseAddr(host); err != nil {
 			// Not an IP - use as authority
-			return host
+			return strings.TrimSuffix(host, ".")
 		}
 
 		// Priority 3: Derive from metadata when endpoint is an IP
@@ -1284,7 +1292,7 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		// Fallback to deprecated host/port
 		if len(ds) == 0 && sink.OpenTelemetry.Host != nil {
 			ds = destinationSettingFromHostAndPort(settingName, *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port))
-			authority = *sink.OpenTelemetry.Host
+			authority = strings.TrimSuffix(*sink.OpenTelemetry.Host, ".")
 		}
 
 		if len(ds) > 0 && len(ds[0].Endpoints) > 0 {
@@ -1313,9 +1321,10 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	return &ir.Metrics{
-		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
-		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
-		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
+		EnableVirtualHostStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
+		EnablePerEndpointStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
+		EnableRequestResponseSizesStats:    ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
+		EnableCircuitBreakerRemainingStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableCircuitBreakerRemainingStats, false),
 	}, resolvedSinks, nil
 }
 
@@ -1339,7 +1348,7 @@ func (t *Translator) processProxyGRPCSettings(
 func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, gwCtx *GatewayContext,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
-	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
+	traffic, err := translateExtServiceBackendSettings(backendCluster.BackendSettings)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1368,10 +1377,13 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 				return nil, nil, err
 			}
 		case resource.KindBackend:
-			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
+			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP, true); err != nil {
 				return nil, nil, err
 			}
-			ds = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
+			ds, err = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy, nil)
+			if err != nil {
+				return nil, nil, err
+			}
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")
@@ -1381,7 +1393,7 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 		}
 
 		// Apply TLS from Backend resource, BackendTLSPolicy, and EnvoyProxy.
-		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, resources, gwCtx, nil)
+		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, gwCtx, nil)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1391,7 +1403,8 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 		if ds.TLS != nil && ds.TLS.SNI == nil && kind == resource.KindBackend {
 			backend := t.GetBackend(ns, string(ref.Name))
 			if len(backend.Spec.Endpoints) == 1 && backend.Spec.Endpoints[0].FQDN != nil {
-				ds.TLS.SNI = &backend.Spec.Endpoints[0].FQDN.Hostname
+				sni := strings.TrimSuffix(backend.Spec.Endpoints[0].FQDN.Hostname, ".")
+				ds.TLS.SNI = &sni
 			}
 		}
 
