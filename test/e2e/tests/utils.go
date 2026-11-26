@@ -1323,3 +1323,53 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 func EnabledClusterTrustBundle() bool {
 	return enabledClusterTrustBundle == "true"
 }
+
+// isDialError reports whether err happened while opening the TCP connection
+// (for example "no route to host" or "connection refused"), as opposed to
+// after the connection was open, such as during the TLS handshake.
+func isDialError(err error) bool {
+	var opErr *net.OpError
+	return errors.As(err, &opErr) && opErr.Op == "dial"
+}
+
+// dialUntilConnected calls dial until it no longer fails with a dial error, and
+// returns the result of the last call. Use it for checks against a Gateway that
+// was just created: its LoadBalancer IP can be unreachable for a few seconds, and
+// a dial error then says nothing about whether a policy allows or rejects the
+// connection. It fails the test if the Gateway is still unreachable after a minute.
+func dialUntilConnected[C net.Conn](t *testing.T, dial func() (C, error)) (C, error) {
+	t.Helper()
+
+	var (
+		conn C
+		err  error
+	)
+	pollErr := wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(context.Context) (bool, error) {
+		conn, err = dial()
+		if err != nil && isDialError(err) {
+			tlog.Logf(t, "gateway not reachable yet, retrying: %v", err)
+			return false, nil
+		}
+		return true, nil
+	})
+	if pollErr != nil {
+		t.Fatalf("gateway never became reachable: %v (last error: %v)", pollErr, err)
+	}
+	return conn, err
+}
+
+// TLS alert descriptions, as crypto/tls prints them. crypto/tls does not export
+// its alert type, so isTLSAlert matches an alert by this text.
+const (
+	tlsAlertProtocolVersion  = "protocol version not supported"
+	tlsAlertHandshakeFailure = "handshake failure"
+)
+
+// isTLSAlert reports whether err is the given TLS alert sent by the server. Use it
+// for checks that expect the server to reject a handshake: other errors, such as a
+// handshake timeout or a reset connection, do not show that a policy was enforced.
+func isTLSAlert(err error, alert string) bool {
+	var opErr *net.OpError
+	return errors.As(err, &opErr) && opErr.Op == "remote error" &&
+		strings.Contains(opErr.Err.Error(), alert)
+}

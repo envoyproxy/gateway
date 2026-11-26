@@ -84,7 +84,11 @@ func testTLSRouteConnectionBlocked(t *testing.T, gwAddr, hostname string) {
 		InsecureSkipVerify: true, //nolint:gosec
 	}
 
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}, "tcp", gwAddr, tlsConfig)
+	// A dial error means the Gateway is not reachable yet, not that it blocked us,
+	// so only an error after the TCP connection is open counts as blocked.
+	conn, err := dialUntilConnected(t, func() (*tls.Conn, error) {
+		return tls.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}, "tcp", gwAddr, tlsConfig)
+	})
 	if err != nil {
 		t.Logf("Connection blocked as expected: %v", err)
 		return
@@ -134,7 +138,9 @@ func testTLSRouteConnectionAllowed(t *testing.T, gwAddr, hostname string) {
 		InsecureSkipVerify: true, //nolint:gosec
 	}
 
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}, "tcp", gwAddr, tlsConfig)
+	conn, err := dialUntilConnected(t, func() (*tls.Conn, error) {
+		return tls.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}, "tcp", gwAddr, tlsConfig)
+	})
 	if err != nil {
 		t.Fatalf("Failed to establish TLS connection (should be allowed): %v", err)
 	}

@@ -12,9 +12,11 @@ package tests
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"net"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -85,23 +87,53 @@ var ListenerSetClientTrafficPolicyTest = suite.ConformanceTest{
 			RootCAs:    certPool,
 		}
 
-		// There can be a brief gap between route parents being set and Envoy finishing
-		// listener programming. Poll until the listener is accepting TLS connections.
+		// The ListenerSet tests delete and recreate listener-gateway, which keeps the same
+		// LoadBalancer IP. Right after a test starts, connections can fail with "no route to
+		// host", or can reach the previous test's Envoy, which has no ClientTrafficPolicy.
+		// Poll until the new Envoy enforces the policy: TLS 1.3 handshakes succeed and
+		// TLS 1.2 handshakes are rejected with a protocol_version alert. Any other
+		// failure, such as a dial error or a handshake timeout, says nothing about the
+		// policy and is retried.
 		require.Eventually(t, func() bool {
-			conn, err := tls.Dial("tcp", listenerAddr, baseTLSConfig)
-			if err != nil {
+			if _, err := dialListenerSetTLS(listenerAddr, baseTLSConfig, tls.VersionTLS13); err != nil {
 				return false
 			}
-			_ = conn.Close()
-			return true
+			_, err := dialListenerSetTLS(listenerAddr, baseTLSConfig, tls.VersionTLS12)
+			return isTLSAlert(err, tlsAlertProtocolVersion)
 		}, suite.TimeoutConfig.DefaultTestTimeout, time.Second)
 
 		t.Run("tls 1.3 succeeds", func(t *testing.T) {
-			dialWithTLSVersion(t, listenerAddr, baseTLSConfig, tls.VersionTLS13, false)
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				version, err := dialListenerSetTLS(listenerAddr, baseTLSConfig, tls.VersionTLS13)
+				if !assert.NoError(c, err) {
+					return
+				}
+				assert.Equal(c, uint16(tls.VersionTLS13), version)
+			}, suite.TimeoutConfig.DefaultTestTimeout, time.Second)
 		})
 
 		t.Run("tls 1.2 rejected by min version policy", func(t *testing.T) {
-			dialWithTLSVersion(t, listenerAddr, baseTLSConfig, tls.VersionTLS12, true)
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				_, err := dialListenerSetTLS(listenerAddr, baseTLSConfig, tls.VersionTLS12)
+				assert.True(c, isTLSAlert(err, tlsAlertProtocolVersion),
+					"expected the server to reject the TLS 1.2 handshake with a protocol_version alert, got: %v", err)
+			}, suite.TimeoutConfig.DefaultTestTimeout, time.Second)
 		})
 	},
+}
+
+// dialListenerSetTLS performs a TLS handshake pinned to a single TLS version and
+// returns the negotiated version.
+func dialListenerSetTLS(addr string, baseTLSConfig *tls.Config, version uint16) (uint16, error) {
+	tlsConfig := baseTLSConfig.Clone()
+	tlsConfig.MinVersion = version
+	tlsConfig.MaxVersion = version
+
+	dialer := &net.Dialer{Timeout: 5 * time.Second}
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close()
+	return conn.ConnectionState().Version, nil
 }
