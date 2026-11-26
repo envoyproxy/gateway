@@ -204,6 +204,76 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "tls compliance policy",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					TLS: &egv1a1.ClientTLSSettings{
+						TLSSettings: egv1a1.TLSSettings{
+							CompliancePolicies: []egv1a1.TLSCompliancePolicy{egv1a1.TLSCompliancePolicyFIPS202205},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "tls unsupported compliance policy",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					TLS: &egv1a1.ClientTLSSettings{
+						TLSSettings: egv1a1.TLSSettings{
+							CompliancePolicies: []egv1a1.TLSCompliancePolicy{"FIPS"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.tls.compliancePolicies[0]: Unsupported value: "FIPS"`,
+			},
+		},
+		{
+			desc: "tls more than one compliance policy",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					TLS: &egv1a1.ClientTLSSettings{
+						TLSSettings: egv1a1.TLSSettings{
+							CompliancePolicies: []egv1a1.TLSCompliancePolicy{egv1a1.TLSCompliancePolicyFIPS202205, egv1a1.TLSCompliancePolicyCNSA1202603},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.tls.compliancePolicies: Too many: 2: must have at most 1 item",
+			},
+		},
+		{
 			desc: "tls maximal version lesser than default tls minimal version",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{

@@ -2157,6 +2157,37 @@ spec:
                       rule: '!((has(self.mode) ? self.mode == ''VerifyIfGiven'' :
                         (has(self.optional) && self.optional)) && (has(self.subjectAltNames)
                         || has(self.certificateHashes) || has(self.spkiHashes)))'
+                  compliancePolicies:
+                    description: |-
+                      CompliancePolicies specifies the TLS compliance policies to apply.
+                      A compliance policy restricts the TLS protocol versions, cipher suites, key
+                      agreement groups and signature algorithms together, following the BoringSSL
+                      compliance policy of the same name. Unlike Ciphers, it also restricts the
+                      TLS 1.3 cipher suites.
+
+                      The policy is applied after MinVersion, MaxVersion, Ciphers, ECDHCurves and
+                      SignatureAlgorithms, and may override them. Values of those fields that are
+                      outside the policy have no effect, and a combination that leaves no value
+                      allowed by the policy causes the TLS handshake to fail.
+
+                      Envoy supports at most one compliance policy.
+                      For more details, see the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#envoy-v3-api-enum-extensions-transport-sockets-tls-v3-tlsparameters-compliancepolicy
+
+                      Supported values are:
+                      - FIPS_202205
+                      - CNSA1_202603
+                      - CNSA2_202603
+                    items:
+                      description: TLSCompliancePolicy specifies a TLS compliance
+                        policy.
+                      enum:
+                      - FIPS_202205
+                      - CNSA1_202603
+                      - CNSA2_202603
+                      type: string
+                    maxItems: 1
+                    type: array
                   ecdhCurves:
                     description: |-
                       ECDHCurves specifies the set of supported ECDH curves.

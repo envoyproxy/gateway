@@ -1,0 +1,1 @@
+Added `compliancePolicies` to the TLS settings of ClientTrafficPolicy, EnvoyProxy `backendTLS` and Backend `tls`, which sets Envoy's TLS `compliance_policies` (`FIPS_202205`, `CNSA1_202603` or `CNSA2_202603`) to restrict the TLS versions, cipher suites (including TLS 1.3 suites), key agreement groups and signature algorithms together.

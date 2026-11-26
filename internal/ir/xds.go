@@ -538,6 +538,17 @@ const (
 	TLSFingerprintTypeJA4 = TLSFingerprintType(egv1a1.TLSFingerprintTypeJA4)
 )
 
+type TLSCompliancePolicy egv1a1.TLSCompliancePolicy
+
+const (
+	// TLSCompliancePolicyFIPS202205 specifies the FIPS_202205 compliance policy.
+	TLSCompliancePolicyFIPS202205 = TLSCompliancePolicy(egv1a1.TLSCompliancePolicyFIPS202205)
+	// TLSCompliancePolicyCNSA1202603 specifies the CNSA1_202603 compliance policy.
+	TLSCompliancePolicyCNSA1202603 = TLSCompliancePolicy(egv1a1.TLSCompliancePolicyCNSA1202603)
+	// TLSCompliancePolicyCNSA2202603 specifies the CNSA2_202603 compliance policy.
+	TLSCompliancePolicyCNSA2202603 = TLSCompliancePolicy(egv1a1.TLSCompliancePolicyCNSA2202603)
+)
+
 // TLSConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
 type TLSConfig struct {
@@ -585,6 +596,9 @@ type TLSConfig struct {
 	StatefulSessionResumption bool `json:"statefulSessionResumption,omitempty" yaml:"statefulSessionResumption,omitempty"`
 	// EnableFingerprint enables TLS client fingerprinting.
 	Fingerprints []TLSFingerprintType `json:"fingerprints,omitempty" yaml:"fingerprints,omitempty"`
+	// CompliancePolicies restrict the TLS versions, ciphers, curves and signature algorithms
+	// according to the named policies.
+	CompliancePolicies []TLSCompliancePolicy `json:"compliancePolicies,omitempty" yaml:"compliancePolicies,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details

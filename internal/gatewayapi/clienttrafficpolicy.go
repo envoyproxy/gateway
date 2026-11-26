@@ -1309,6 +1309,9 @@ func (t *Translator) buildListenerTLSParameters(
 	if len(tlsParams.SignatureAlgorithms) > 0 {
 		irTLSConfig.SignatureAlgorithms = tlsParams.SignatureAlgorithms
 	}
+	if len(tlsParams.CompliancePolicies) > 0 {
+		irTLSConfig.CompliancePolicies = toIRTLSCompliancePolicies(tlsParams.CompliancePolicies)
+	}
 
 	if tlsParams.Fingerprints != nil {
 		irTLSConfig.Fingerprints = make([]ir.TLSFingerprintType, len(tlsParams.Fingerprints))

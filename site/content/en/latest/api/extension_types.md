@@ -597,6 +597,7 @@ _Appears in:_
 | `signatureAlgorithms` | _string array_ |  false  |  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Defaults to [h2, http/1.1] if not specified.<br />Typical Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
 | `fingerprints` | _[TLSFingerprintType](#tlsfingerprinttype) array_ |  false  |  | Fingerprints specifies TLS client fingerprinting.<br />When specified, a JAX fingerprint derived from the client’s TLS handshake<br />is generated. The fingerprint can be logged in access logs or<br />forwarded to upstream services using request headers.<br />Fingerprinting is disabled if not specified.<br />Supported values are:<br />- JA3<br />- JA4 |
+| `compliancePolicies` | _[TLSCompliancePolicy](#tlscompliancepolicy) array_ |  false  |  | CompliancePolicies specifies the TLS compliance policies to apply.<br />A compliance policy restricts the TLS protocol versions, cipher suites, key<br />agreement groups and signature algorithms together, following the BoringSSL<br />compliance policy of the same name. Unlike Ciphers, it also restricts the<br />TLS 1.3 cipher suites.<br />The policy is applied after MinVersion, MaxVersion, Ciphers, ECDHCurves and<br />SignatureAlgorithms, and may override them. Values of those fields that are<br />outside the policy have no effect, and a combination that leaves no value<br />allowed by the policy causes the TLS handshake to fail.<br />Envoy supports at most one compliance policy.<br />For more details, see the Envoy documentation:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#envoy-v3-api-enum-extensions-transport-sockets-tls-v3-tlsparameters-compliancepolicy<br />Supported values are:<br />- FIPS_202205<br />- CNSA1_202603<br />- CNSA2_202603 |
 
 
 #### BackendTLSSettings
@@ -1108,6 +1109,7 @@ _Appears in:_
 | `signatureAlgorithms` | _string array_ |  false  |  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Defaults to [h2, http/1.1] if not specified.<br />Typical Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
 | `fingerprints` | _[TLSFingerprintType](#tlsfingerprinttype) array_ |  false  |  | Fingerprints specifies TLS client fingerprinting.<br />When specified, a JAX fingerprint derived from the client’s TLS handshake<br />is generated. The fingerprint can be logged in access logs or<br />forwarded to upstream services using request headers.<br />Fingerprinting is disabled if not specified.<br />Supported values are:<br />- JA3<br />- JA4 |
+| `compliancePolicies` | _[TLSCompliancePolicy](#tlscompliancepolicy) array_ |  false  |  | CompliancePolicies specifies the TLS compliance policies to apply.<br />A compliance policy restricts the TLS protocol versions, cipher suites, key<br />agreement groups and signature algorithms together, following the BoringSSL<br />compliance policy of the same name. Unlike Ciphers, it also restricts the<br />TLS 1.3 cipher suites.<br />The policy is applied after MinVersion, MaxVersion, Ciphers, ECDHCurves and<br />SignatureAlgorithms, and may override them. Values of those fields that are<br />outside the policy have no effect, and a combination that leaves no value<br />allowed by the policy causes the TLS handshake to fail.<br />Envoy supports at most one compliance policy.<br />For more details, see the Envoy documentation:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#envoy-v3-api-enum-extensions-transport-sockets-tls-v3-tlsparameters-compliancepolicy<br />Supported values are:<br />- FIPS_202205<br />- CNSA1_202603<br />- CNSA2_202603 |
 | `session` | _[Session](#session)_ |  false  |  | Session defines settings related to TLS session management. |
 
 
@@ -7045,6 +7047,24 @@ _Appears in:_
 | `connectTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | The timeout for network connection establishment, including TCP and TLS handshakes.<br />Default: 10 seconds. |
 
 
+#### TLSCompliancePolicy
+
+_Underlying type:_ _string_
+
+TLSCompliancePolicy specifies a TLS compliance policy.
+
+_Appears in:_
+- [BackendTLSConfig](#backendtlsconfig)
+- [ClientTLSSettings](#clienttlssettings)
+- [TLSSettings](#tlssettings)
+
+| Value | Description |
+| ----- | ----------- |
+| `FIPS_202205` | TLSCompliancePolicyFIPS202205 allows TLS 1.2 or 1.3. For TLS 1.2, only<br />ECDHE with AES-GCM cipher suites are allowed, and for TLS 1.3, only AES-GCM.<br />Only P-256 or P-384 are allowed for key agreement.<br /> | 
+| `CNSA1_202603` | TLSCompliancePolicyCNSA1202603 allows TLS 1.2 or 1.3. For TLS 1.2, only<br />ECDHE with AES-256-GCM cipher suites are allowed, and for TLS 1.3, only<br />AES-256-GCM. Only ML-KEM-1024 or P-384 are allowed for key agreement.<br /> | 
+| `CNSA2_202603` | TLSCompliancePolicyCNSA2202603 allows only TLS 1.3 with AES-256-GCM.<br />Only ML-KEM-1024 is allowed for key agreement.<br /> | 
+
+
 #### TLSFingerprintType
 
 _Underlying type:_ _string_
@@ -7081,6 +7101,7 @@ _Appears in:_
 | `signatureAlgorithms` | _string array_ |  false  |  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Defaults to [h2, http/1.1] if not specified.<br />Typical Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
 | `fingerprints` | _[TLSFingerprintType](#tlsfingerprinttype) array_ |  false  |  | Fingerprints specifies TLS client fingerprinting.<br />When specified, a JAX fingerprint derived from the client’s TLS handshake<br />is generated. The fingerprint can be logged in access logs or<br />forwarded to upstream services using request headers.<br />Fingerprinting is disabled if not specified.<br />Supported values are:<br />- JA3<br />- JA4 |
+| `compliancePolicies` | _[TLSCompliancePolicy](#tlscompliancepolicy) array_ |  false  |  | CompliancePolicies specifies the TLS compliance policies to apply.<br />A compliance policy restricts the TLS protocol versions, cipher suites, key<br />agreement groups and signature algorithms together, following the BoringSSL<br />compliance policy of the same name. Unlike Ciphers, it also restricts the<br />TLS 1.3 cipher suites.<br />The policy is applied after MinVersion, MaxVersion, Ciphers, ECDHCurves and<br />SignatureAlgorithms, and may override them. Values of those fields that are<br />outside the policy have no effect, and a combination that leaves no value<br />allowed by the policy causes the TLS handshake to fail.<br />Envoy supports at most one compliance policy.<br />For more details, see the Envoy documentation:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#envoy-v3-api-enum-extensions-transport-sockets-tls-v3-tlsparameters-compliancepolicy<br />Supported values are:<br />- FIPS_202205<br />- CNSA1_202603<br />- CNSA2_202603 |
 
 
 #### TLSVersion

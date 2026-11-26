@@ -135,6 +135,30 @@ type TLSSettings struct {
 	//
 	// +optional
 	Fingerprints []TLSFingerprintType `json:"fingerprints,omitempty"`
+
+	// CompliancePolicies specifies the TLS compliance policies to apply.
+	// A compliance policy restricts the TLS protocol versions, cipher suites, key
+	// agreement groups and signature algorithms together, following the BoringSSL
+	// compliance policy of the same name. Unlike Ciphers, it also restricts the
+	// TLS 1.3 cipher suites.
+	//
+	// The policy is applied after MinVersion, MaxVersion, Ciphers, ECDHCurves and
+	// SignatureAlgorithms, and may override them. Values of those fields that are
+	// outside the policy have no effect, and a combination that leaves no value
+	// allowed by the policy causes the TLS handshake to fail.
+	//
+	// Envoy supports at most one compliance policy.
+	// For more details, see the Envoy documentation:
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#envoy-v3-api-enum-extensions-transport-sockets-tls-v3-tlsparameters-compliancepolicy
+	//
+	// Supported values are:
+	// - FIPS_202205
+	// - CNSA1_202603
+	// - CNSA2_202603
+	//
+	// +kubebuilder:validation:MaxItems=1
+	// +optional
+	CompliancePolicies []TLSCompliancePolicy `json:"compliancePolicies,omitempty"`
 }
 
 // ALPNProtocol specifies the protocol to be negotiated using ALPN
@@ -180,6 +204,24 @@ const (
 	// Enable JA4 TLS fingerprinting only.
 	// The fingerprint will be available as %TLS_JA4_FINGERPRINT%.
 	TLSFingerprintTypeJA4 TLSFingerprintType = "JA4"
+)
+
+// TLSCompliancePolicy specifies a TLS compliance policy.
+// +kubebuilder:validation:Enum=FIPS_202205;CNSA1_202603;CNSA2_202603
+type TLSCompliancePolicy string
+
+const (
+	// TLSCompliancePolicyFIPS202205 allows TLS 1.2 or 1.3. For TLS 1.2, only
+	// ECDHE with AES-GCM cipher suites are allowed, and for TLS 1.3, only AES-GCM.
+	// Only P-256 or P-384 are allowed for key agreement.
+	TLSCompliancePolicyFIPS202205 TLSCompliancePolicy = "FIPS_202205"
+	// TLSCompliancePolicyCNSA1202603 allows TLS 1.2 or 1.3. For TLS 1.2, only
+	// ECDHE with AES-256-GCM cipher suites are allowed, and for TLS 1.3, only
+	// AES-256-GCM. Only ML-KEM-1024 or P-384 are allowed for key agreement.
+	TLSCompliancePolicyCNSA1202603 TLSCompliancePolicy = "CNSA1_202603"
+	// TLSCompliancePolicyCNSA2202603 allows only TLS 1.3 with AES-256-GCM.
+	// Only ML-KEM-1024 is allowed for key agreement.
+	TLSCompliancePolicyCNSA2202603 TLSCompliancePolicy = "CNSA2_202603"
 )
 
 // ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection

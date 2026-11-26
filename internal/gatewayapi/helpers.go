@@ -1810,3 +1810,11 @@ func (t *Translator) isExtensionSecretRef(group, kind string) bool {
 	}
 	return false
 }
+
+func toIRTLSCompliancePolicies(policies []egv1a1.TLSCompliancePolicy) []ir.TLSCompliancePolicy {
+	out := make([]ir.TLSCompliancePolicy, len(policies))
+	for i, policy := range policies {
+		out[i] = ir.TLSCompliancePolicy(policy)
+	}
+	return out
+}
