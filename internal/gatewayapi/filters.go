@@ -1094,32 +1094,9 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 				}
 
 				if hrf.Spec.CredentialInjection != nil {
-					secret, err := t.validateSecretRef(
-						true,
-						crossNamespaceFrom{
-							group:     egv1a1.GroupName,
-							kind:      resource.KindHTTPRouteFilter,
-							namespace: filterNs,
-						},
-						hrf.Spec.CredentialInjection.Credential.ValueRef, resources)
+					injection, err := t.buildCredentialInjection(hrf, filterNs, resources)
 					if err != nil {
 						return t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
-					}
-
-					secretBytes, ok := secret.Data[egv1a1.InjectedCredentialKey]
-					if !ok || len(secretBytes) == 0 {
-						err := fmt.Errorf(
-							"credential key %s not found in secret %s/%s",
-							egv1a1.InjectedCredentialKey, secret.Namespace,
-							secret.Name)
-						return t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
-					}
-
-					injection := &ir.CredentialInjection{
-						Name:       irConfigName(hrf),
-						Header:     hrf.Spec.CredentialInjection.Header,
-						Overwrite:  hrf.Spec.CredentialInjection.Overwrite,
-						Credential: secretBytes,
 					}
 					filterContext.CredentialInjection = injection
 				}
@@ -1378,4 +1355,58 @@ func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *
 		fmt.Errorf("invalid filter %s: %w", filterType, err),
 		gwapiv1.RouteReasonUnsupportedValue,
 	).WithType(gwapiv1.RouteConditionAccepted)
+}
+
+// buildCredentialInjection translates the CredentialInjection of a HTTPRouteFilter into IR.
+// The credential is read from the secret referenced by valueRef, or, for OAuth2, the client
+// secret is read from the secret referenced by oauth2.clientSecret.
+func (t *Translator) buildCredentialInjection(
+	hrf *egv1a1.HTTPRouteFilter, filterNs string, resources *resource.Resources,
+) (*ir.CredentialInjection, error) {
+	credential := hrf.Spec.CredentialInjection.Credential
+	from := crossNamespaceFrom{
+		group:     egv1a1.GroupName,
+		kind:      resource.KindHTTPRouteFilter,
+		namespace: filterNs,
+	}
+
+	secretRef, secretKey := credential.ValueRef, egv1a1.InjectedCredentialKey
+	if credential.OAuth2 != nil {
+		secretRef, secretKey = &credential.OAuth2.ClientSecret, egv1a1.OIDCClientSecretKey
+	}
+	if secretRef == nil {
+		return nil, errors.New("one of credential.valueRef or credential.oauth2 must be set")
+	}
+
+	secret, err := t.validateSecretRef(true, from, *secretRef, resources)
+	if err != nil {
+		return nil, err
+	}
+	secretBytes, ok := secret.Data[secretKey]
+	if !ok || len(secretBytes) == 0 {
+		return nil, fmt.Errorf(
+			"credential key %s not found in secret %s/%s",
+			secretKey, secret.Namespace, secret.Name)
+	}
+
+	injection := &ir.CredentialInjection{
+		Name:      irConfigName(hrf),
+		Header:    hrf.Spec.CredentialInjection.Header,
+		Overwrite: hrf.Spec.CredentialInjection.Overwrite,
+	}
+	if credential.OAuth2 == nil {
+		injection.Credential = secretBytes
+		return injection, nil
+	}
+
+	if err := validateTokenEndpoint(credential.OAuth2.TokenEndpoint); err != nil {
+		return nil, err
+	}
+	injection.OAuth2 = &ir.CredentialInjectionOAuth2{
+		TokenEndpoint: credential.OAuth2.TokenEndpoint,
+		ClientID:      credential.OAuth2.ClientID,
+		ClientSecret:  secretBytes,
+		Scopes:        credential.OAuth2.Scopes,
+	}
+	return injection, nil
 }

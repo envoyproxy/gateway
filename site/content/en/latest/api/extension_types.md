@@ -3425,7 +3425,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `header` | _string_ |  false  |  | Header is the name of the header where the credentials are injected.<br />If not specified, the credentials are injected into the Authorization header. |
+| `header` | _string_ |  false  |  | Header is the name of the header where the credentials are injected.<br />If not specified, the credentials are injected into the Authorization header.<br />It cannot be set when credential.oauth2 is set. |
 | `overwrite` | _boolean_ |  false  |  | Whether to overwrite the value or not if the injected headers already exist.<br />If not specified, the default value is false. |
 | `credential` | _[InjectedCredential](#injectedcredential)_ |  true  |  | Credential is the credential to be injected. |
 
@@ -4006,13 +4006,33 @@ _Appears in:_
 
 
 InjectedCredential defines the credential to be injected.
+Exactly one of valueRef or oauth2 must be set.
 
 _Appears in:_
 - [HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `valueRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  true  |  | ValueRef is a reference to the secret containing the credentials to be injected.<br />This is an Opaque secret. The credential should be stored in the key<br />"credential", and the value should be the credential to be injected.<br />For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".<br />for bearer token, the value should be "Bearer <token>". |
+| `valueRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  false  |  | ValueRef is a reference to the secret containing the credentials to be injected.<br />This is an Opaque secret. The credential should be stored in the key<br />"credential", and the value should be the credential to be injected.<br />For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".<br />for bearer token, the value should be "Bearer <token>". |
+| `oauth2` | _[InjectedOAuth2Credential](#injectedoauth2credential)_ |  false  |  | OAuth2 configures Envoy to retrieve an OAuth2 access token from an authorization server<br />with the Client Credentials Grant flow, and to inject it into the Authorization header as<br />a bearer token. Envoy refreshes the token before it expires.<br />The upstream Envoy API for this credential is marked as work in progress, so its<br />behavior may change in future Envoy releases. |
+
+
+#### InjectedOAuth2Credential
+
+
+
+InjectedOAuth2Credential defines an OAuth2 access token retrieved with the
+[Client Credentials Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4) flow.
+
+_Appears in:_
+- [InjectedCredential](#injectedcredential)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `tokenEndpoint` | _string_ |  true  |  | TokenEndpoint is the URL of the authorization server's token endpoint. |
+| `clientID` | _string_ |  true  |  | ClientID is the client identifier issued to the client by the authorization server. |
+| `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  true  |  | ClientSecret is a reference to the secret containing the OAuth2 client secret.<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
+| `scopes` | _string array_ |  false  |  | Scopes is a list of OAuth2 scopes to request from the authorization server. |
 
 
 #### InvalidMessageAction

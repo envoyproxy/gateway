@@ -674,6 +674,7 @@ func TestValidateBackendTrafficPolicyForReconcileWithRedirectResponseOverride(t 
 // TestValidateSecretForReconcile tests the validateSecretForReconcile
 // predicate function.
 func TestValidateSecretForReconcile(t *testing.T) {
+	authServerURL := "https://oauth.example.com/oauth2/token"
 	mtlsEnabledEnvoyProxyConfig := &egv1a1.EnvoyProxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
@@ -993,7 +994,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					Spec: egv1a1.HTTPRouteFilterSpec{
 						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
 							Credential: egv1a1.InjectedCredential{
-								ValueRef: gwapiv1.SecretObjectReference{
+								ValueRef: &gwapiv1.SecretObjectReference{
 									Name: "secret",
 								},
 							},
@@ -1002,6 +1003,33 @@ func TestValidateSecretForReconcile(t *testing.T) {
 				},
 			},
 			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "secret"}),
+			expect: true,
+		},
+		{
+			name: "references HTTPRouteFilter credential injection oauth2 client secret",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.HTTPRouteFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "credential-injection",
+					},
+					Spec: egv1a1.HTTPRouteFilterSpec{
+						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+							Credential: egv1a1.InjectedCredential{
+								OAuth2: &egv1a1.InjectedOAuth2Credential{
+									TokenEndpoint: authServerURL,
+									ClientID:      "client-1",
+									ClientSecret: gwapiv1.SecretObjectReference{
+										Name: "client-secret",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "default", Name: "client-secret"}),
 			expect: true,
 		},
 		{
@@ -1016,7 +1044,7 @@ func TestValidateSecretForReconcile(t *testing.T) {
 					Spec: egv1a1.HTTPRouteFilterSpec{
 						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
 							Credential: egv1a1.InjectedCredential{
-								ValueRef: gwapiv1.SecretObjectReference{
+								ValueRef: &gwapiv1.SecretObjectReference{
 									Name: "secret",
 								},
 							},

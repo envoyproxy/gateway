@@ -82,6 +82,82 @@ spec:
                   credential:
                     description: Credential is the credential to be injected.
                     properties:
+                      oauth2:
+                        description: |-
+                          OAuth2 configures Envoy to retrieve an OAuth2 access token from an authorization server
+                          with the Client Credentials Grant flow, and to inject it into the Authorization header as
+                          a bearer token. Envoy refreshes the token before it expires.
+
+                          The upstream Envoy API for this credential is marked as work in progress, so its
+                          behavior may change in future Envoy releases.
+                        properties:
+                          clientID:
+                            description: ClientID is the client identifier issued
+                              to the client by the authorization server.
+                            minLength: 1
+                            type: string
+                          clientSecret:
+                            description: |-
+                              ClientSecret is a reference to the secret containing the OAuth2 client secret.
+                              This is an Opaque secret. The client secret should be stored in the key
+                              "client-secret".
+                            properties:
+                              group:
+                                default: ""
+                                description: |-
+                                  Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                  When unspecified or empty string, core API group is inferred.
+                                maxLength: 253
+                                pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                type: string
+                              kind:
+                                default: Secret
+                                description: Kind is kind of the referent. For example
+                                  "Secret".
+                                maxLength: 63
+                                minLength: 1
+                                pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                type: string
+                              name:
+                                description: Name is the name of the referent.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace is the namespace of the referenced object. When unspecified, the local
+                                  namespace is inferred.
+
+                                  Note that when a namespace different than the local namespace is specified,
+                                  a ReferenceGrant object is required in the referent namespace to allow that
+                                  namespace's owner to accept the reference. See the ReferenceGrant
+                                  documentation for details.
+
+                                  Support: Core
+                                maxLength: 63
+                                minLength: 1
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          scopes:
+                            description: Scopes is a list of OAuth2 scopes to request
+                              from the authorization server.
+                            items:
+                              type: string
+                            type: array
+                          tokenEndpoint:
+                            description: TokenEndpoint is the URL of the authorization
+                              server's token endpoint.
+                            minLength: 1
+                            pattern: ^https?://[^/?#]+
+                            type: string
+                        required:
+                        - clientID
+                        - clientSecret
+                        - tokenEndpoint
+                        type: object
                       valueRef:
                         description: |-
                           ValueRef is a reference to the secret containing the credentials to be injected.
@@ -129,13 +205,15 @@ spec:
                         required:
                         - name
                         type: object
-                    required:
-                    - valueRef
                     type: object
+                    x-kubernetes-validations:
+                    - message: exactly one of valueRef or oauth2 must be set
+                      rule: has(self.valueRef) != has(self.oauth2)
                   header:
                     description: |-
                       Header is the name of the header where the credentials are injected.
                       If not specified, the credentials are injected into the Authorization header.
+                      It cannot be set when credential.oauth2 is set.
                     type: string
                   overwrite:
                     description: |-
@@ -145,6 +223,11 @@ spec:
                 required:
                 - credential
                 type: object
+                x-kubernetes-validations:
+                - message: header cannot be set when credential.oauth2 is set, the
+                    OAuth2 access token is always injected into the Authorization
+                    header
+                  rule: '!(has(self.credential.oauth2) && has(self.header))'
               directResponse:
                 description: |-
                   DirectResponse returns a fixed response for matching requests.

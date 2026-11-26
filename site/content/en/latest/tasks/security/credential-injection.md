@@ -226,6 +226,73 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+### Injecting an OAuth2 Access Token
+
+Instead of a static credential, Envoy can retrieve an OAuth2 access token from an authorization server with the
+[Client Credentials Grant][Client Credentials Grant] flow, and inject it into the `Authorization` header as a bearer
+token. Envoy refreshes the token before it expires. The `header` field cannot be set with `oauth2`.
+
+Create a secret with the OAuth2 client secret in a field named `client-secret`:
+
+```shell
+kubectl create secret generic oauth2-client-secret --from-literal=client-secret="${CLIENT_SECRET}"
+```
+
+Then reference it from the `oauth2` credential of the `HTTPRouteFilter`, together with the token endpoint and the client
+ID issued by the authorization server:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: credential-injection
+spec:
+  credentialInjection:
+    overwrite: true
+    credential:
+      oauth2:
+        tokenEndpoint: https://auth.example.com/oauth2/token
+        clientID: my-client
+        clientSecret:
+          name: oauth2-client-secret
+        scopes:
+        - api.read
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: credential-injection
+spec:
+  credentialInjection:
+    overwrite: true
+    credential:
+      oauth2:
+        tokenEndpoint: https://auth.example.com/oauth2/token
+        clientID: my-client
+        clientSecret:
+          name: oauth2-client-secret
+        scopes:
+        - api.read
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+The upstream Envoy API for the OAuth2 credential is marked as work in progress, so its behavior may change in future
+Envoy releases.
+
 ## Testing
 
 Send a request to the backend service without `Authentication` header:
@@ -264,3 +331,4 @@ Check out the [Developer Guide](/community/develop) to get involved in the proje
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/
 [BackendRef]: {{<gateway-api-spec>}}#httpbackendref
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
+[Client Credentials Grant]: https://datatracker.ietf.org/doc/html/rfc6749#section-4.4

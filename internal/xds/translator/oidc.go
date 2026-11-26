@@ -521,6 +521,13 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	oidc *ir.OIDC,
 ) error {
+	return addTokenEndpointCluster(tCtx, oidc.Provider.TokenEndpoint, oidc.Provider.Traffic)
+}
+
+// addTokenEndpointCluster creates a cluster for an OAuth2 token endpoint URL.
+func addTokenEndpointCluster(tCtx *types.ResourceVersionTable,
+	tokenEndpoint string, traffic *ir.TrafficFeatures,
+) error {
 	var (
 		cluster *urlCluster
 		ds      *ir.DestinationSetting
@@ -528,7 +535,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 		err     error
 	)
 
-	if cluster, err = url2Cluster(oidc.Provider.TokenEndpoint); err != nil {
+	if cluster, err = url2Cluster(tokenEndpoint); err != nil {
 		return err
 	}
 
@@ -538,7 +545,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	if cluster.endpointType == EndpointTypeStatic {
 		return fmt.Errorf(
 			"static IP cluster is not allowed: %s",
-			oidc.Provider.TokenEndpoint)
+			tokenEndpoint)
 	}
 
 	ds = &ir.DestinationSetting{
@@ -566,7 +573,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	}
 
 	// Apply traffic features if they exist.
-	applyTraffic(clusterArgs, oidc.Provider.Traffic.ClusterFeatures())
+	applyTraffic(clusterArgs, traffic.ClusterFeatures())
 
 	return addXdsCluster(tCtx, clusterArgs)
 }
