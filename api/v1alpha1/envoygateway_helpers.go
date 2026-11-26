@@ -163,6 +163,19 @@ func (e *ExtensionAPISettings) LuaDisabled() bool {
 	return true
 }
 
+// EnvoyProxyPatchEnabled reports whether the Kubernetes resource `patch` fields of EnvoyProxy are
+// applied. They are, unless extensionApis.envoyProxyPatch.enabled is false or the deprecated
+// EnvoyProxyPatch runtime flag is disabled.
+func (e *EnvoyGateway) EnvoyProxyPatchEnabled() bool {
+	if e == nil {
+		return true
+	}
+	if a := e.ExtensionAPIs; a != nil && a.EnvoyProxyPatch != nil && !ptr.Deref(a.EnvoyProxyPatch.Enabled, true) {
+		return false
+	}
+	return e.RuntimeFlags.IsEnabled(EnvoyProxyPatch)
+}
+
 // GetEnvoyProxyDefaultSpec returns the default EnvoyProxySpec if specified,
 // otherwise returns nil.
 func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {

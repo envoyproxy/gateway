@@ -5,4 +5,3 @@ config:
     runtimeFlags:
       enabled:
       - XDSNameSchemeV2
-      - EnvoyProxyPatch

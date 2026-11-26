@@ -389,6 +389,21 @@ func TestDecode(t *testing.T) {
 			expect: true,
 		},
 		{
+			in: inPath + "gateway-envoy-proxy-patch-gate.yaml",
+			out: &egv1a1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+						EnvoyProxyPatch: &egv1a1.EnvoyProxyPatchSettings{Enabled: new(false)},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
 			in: inPath + "standalone-extension-server.yaml",
 			out: &egv1a1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{

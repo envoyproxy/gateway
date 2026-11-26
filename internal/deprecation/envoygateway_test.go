@@ -45,6 +45,26 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			expected: []string{"disableLua is deprecated, use enableLua instead"},
 		},
 		{
+			name: "EnvoyProxyPatch runtime flag is set",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					RuntimeFlags: &egv1a1.RuntimeFlags{Disabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}},
+				},
+			},
+			expected: []string{"the EnvoyProxyPatch runtime flag is deprecated, use extensionApis.envoyProxyPatch.enabled instead"},
+		},
+		{
+			name: "envoyProxyPatch gate is set",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+						EnvoyProxyPatch: &egv1a1.EnvoyProxyPatchSettings{Enabled: new(false)},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
 			name: "enableLua is set",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{

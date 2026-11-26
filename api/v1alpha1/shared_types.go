@@ -586,7 +586,7 @@ const (
 // privileged containers, or an arbitrary image/command — on a resource that Envoy Gateway's own,
 // more privileged, ServiceAccount applies. Because EnvoyProxy is commonly namespace-scoped and
 // tenant-authored, treat this field as untrusted input in multi-tenant clusters: restrict who may
-// set it via RBAC, or disable EnvoyGateway's `EnvoyProxyPatch` runtime flag.
+// set it via RBAC, or set EnvoyGateway's `extensionApis.envoyProxyPatch.enabled` to false.
 type KubernetesPatchSpec struct {
 	// Type is the type of merge operation to perform
 	//

@@ -194,10 +194,10 @@ const (
 
 	// EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on
 	// EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve
-	// pre-existing behavior. Because EnvoyProxy is commonly namespace-scoped and
-	// tenant-authored, a patch may grant arbitrary access to resources applied by Envoy
-	// Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters
-	// where tenants can author their own EnvoyProxy resources.
+	// pre-existing behavior. Disabling it still blocks the patches.
+	//
+	// Deprecated: Use extensionApis.envoyProxyPatch.enabled instead. This flag will be removed
+	// in a future release.
 	EnvoyProxyPatch RuntimeFlag = "EnvoyProxyPatch"
 
 	// ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly restricts the ClientTrafficPolicy http1 fields
@@ -456,6 +456,25 @@ type ExtensionAPISettings struct {
 	EnableLua bool `json:"enableLua,omitempty"`
 	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds).
 	EnableSDSSecretRef bool `json:"enableSDSSecretRef"`
+	// EnvoyProxyPatch configures the Kubernetes resource `patch` fields of EnvoyProxy's
+	// Kubernetes provider settings.
+	//
+	// +optional
+	EnvoyProxyPatch *EnvoyProxyPatchSettings `json:"envoyProxyPatch,omitempty"`
+}
+
+// EnvoyProxyPatchSettings configures the Kubernetes resource `patch` fields of EnvoyProxy's
+// Kubernetes provider settings, such as envoyDeployment.patch and envoyService.patch.
+type EnvoyProxyPatchSettings struct {
+	// Enabled enables applying the patches. Defaults to true to preserve pre-existing behavior.
+	//
+	// Because EnvoyProxy is commonly namespace-scoped and tenant-authored, a patch may grant
+	// arbitrary access to resources applied by Envoy Gateway's more privileged ServiceAccount.
+	// Set it to false in multi-tenant clusters where tenants can author their own EnvoyProxy
+	// resources. Patches are then dropped and reported on the EnvoyProxy status.
+	//
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.

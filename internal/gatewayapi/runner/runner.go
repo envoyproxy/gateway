@@ -327,7 +327,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
 					RateLimitClusterSettings:        r.EnvoyGateway.RateLimit.GetServiceSettings(),
 					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
-					EnvoyProxyPatchDisabled:         !r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.EnvoyProxyPatch),
+					EnvoyProxyPatchDisabled:         !r.EnvoyGateway.EnvoyProxyPatchEnabled(),
 					CTPHTTP1ClientScopeOnly:         r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly),
 					OIDCTokenCookieChunkingDisabled: !r.EnvoyGateway.RuntimeFlags.IsEnabled(egv1a1.OIDCTokenCookieChunking),
 					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,

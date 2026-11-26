@@ -2228,7 +2228,9 @@ func TestEnvoyProxyPatchDisabled(t *testing.T) {
 		cfg, err := config.New(os.Stdout, os.Stderr)
 		require.NoError(t, err)
 		if disablePatch {
-			cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Disabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
+			cfg.EnvoyGateway.ExtensionAPIs = &egv1a1.ExtensionAPISettings{
+				EnvoyProxyPatch: &egv1a1.EnvoyProxyPatchSettings{Enabled: new(false)},
+			}
 		}
 
 		infra := newTestInfra()
@@ -2386,6 +2388,29 @@ func TestEnvoyProxyPatchDisabled(t *testing.T) {
 		assert.NotContains(t, disabled.Annotations, "tenant-injected")
 		assert.Equal(t, unpatched, disabled)
 	})
+}
+
+// TestEnvoyProxyPatchDeprecatedRuntimeFlag verifies that disabling the deprecated EnvoyProxyPatch
+// runtime flag still drops the patches.
+func TestEnvoyProxyPatchDeprecatedRuntimeFlag(t *testing.T) {
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	cfg.EnvoyGateway.RuntimeFlags = &egv1a1.RuntimeFlags{Disabled: []egv1a1.RuntimeFlag{egv1a1.EnvoyProxyPatch}}
+
+	infra := newTestInfra()
+	provider := infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
+	provider.Kubernetes = egv1a1.DefaultEnvoyProxyKubeProvider()
+	provider.Kubernetes.EnvoyDeployment.Patch = &egv1a1.KubernetesPatchSpec{
+		Type:  new(egv1a1.StrategicMerge),
+		Value: apiextensionsv1.JSON{Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true}}}}`)},
+	}
+
+	r, err := NewResourceRender(context.Background(), newFakeKubernetesInfraProvider(cfg), infra)
+	require.NoError(t, err)
+	require.True(t, r.EnvoyProxyPatchDisabled)
+	dp, err := r.Deployment()
+	require.NoError(t, err)
+	assert.False(t, dp.Spec.Template.Spec.HostNetwork)
 }
 
 func writeTestDataToFile(filename string, resources []any) error {
