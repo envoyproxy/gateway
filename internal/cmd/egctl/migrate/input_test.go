@@ -236,6 +236,27 @@ func TestListInputRejected(t *testing.T) {
 		_, err := newFileInput("-", []byte(input))
 		require.ErrorContains(t, err, "-: document 1: list resource")
 	}
+	// A resource whose Kind ends in "List" but has no items isn't a list.
+	_, err := newFileInput("-", []byte("kind: IPAllowList\nspec: {}\n"))
+	require.NoError(t, err)
+}
+
+func TestReplaceAnchoredKey(t *testing.T) {
+	src := "kind: Example\nspec:\n  &key compression: true\nmetadata:\n  name: *key\n"
+	in, err := newFileInput("example.yaml", []byte(src))
+	require.NoError(t, err)
+	d := in.docs[0]
+	require.True(t, Replace(GetMapping(d.obj.Root, "spec"), "compression", "compressor", Bool(true)))
+	d.changed = true
+	var out bytes.Buffer
+	require.NoError(t, in.write(&out, true))
+	var got struct {
+		Metadata map[string]any
+		Spec     map[string]any
+	}
+	require.NoError(t, yaml.Unmarshal(out.Bytes(), &got))
+	require.Equal(t, "compression", got.Metadata["name"])
+	require.Equal(t, map[string]any{"compressor": true}, got.Spec)
 }
 
 func TestManagedBy(t *testing.T) {

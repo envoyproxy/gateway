@@ -82,8 +82,9 @@ func Replace(m *yaml.Node, key, newKey string, value *yaml.Node) bool {
 	if i < 0 {
 		return false
 	}
-	if k := m.Content[i]; k.Kind == yaml.AliasNode {
-		// Renaming the alias would point it to another anchor; replace it with a plain key.
+	if k := m.Content[i]; k.Kind == yaml.AliasNode || k.Anchor != "" {
+		// Renaming an alias would point it to another anchor, and renaming an anchored key would
+		// change every alias of it; replace it with a plain key.
 		m.Content[i] = &yaml.Node{
 			Kind: yaml.ScalarNode, Tag: "!!str", Value: newKey,
 			HeadComment: k.HeadComment, LineComment: k.LineComment, FootComment: k.FootComment,

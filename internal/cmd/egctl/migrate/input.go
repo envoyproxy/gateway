@@ -253,7 +253,8 @@ func parseDocuments(source string, data []byte) ([]*document, error) {
 		}
 		d.node = &node
 		d.obj = newObject(node.Content[0], source)
-		if strings.HasSuffix(d.obj.Kind, "List") {
+		// A custom resource Kind can end in "List" too, like IPAllowList; only a list envelope has items.
+		if strings.HasSuffix(d.obj.Kind, "List") && Get(d.obj.Root, "items") != nil {
 			return nil, fmt.Errorf("%s: document %d: list resource %q is not supported; split its items into individual YAML documents separated by ---", source, i+1, d.obj.Kind)
 		}
 		if d.compactSeq, ok = seqStyle(d.raw); !ok {
