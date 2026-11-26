@@ -128,6 +128,34 @@ func credentialInjectionSecretRef(filter *egv1a1.HTTPRouteFilter) *gwapiv1.Secre
 	return credential.ValueRef
 }
 
+// routeFilterBackendRefs returns the backends referenced by a HTTPRouteFilter: the token endpoint
+// backends of an OAuth2 credential injection.
+func routeFilterBackendRefs(filter *egv1a1.HTTPRouteFilter) []gwapiv1.BackendObjectReference {
+	if filter.Spec.CredentialInjection == nil || filter.Spec.CredentialInjection.Credential.OAuth2 == nil {
+		return nil
+	}
+	return getBackendRefs(filter.Spec.CredentialInjection.Credential.OAuth2.BackendCluster)
+}
+
+// processRouteFilterBackendRefs adds the backends referenced by a HTTPRouteFilter to the resourceMap
+// for later processBackendRefs.
+func (r *gatewayAPIReconciler) processRouteFilterBackendRefs(
+	ctx context.Context, filter *egv1a1.HTTPRouteFilter,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	for _, backendRef := range routeFilterBackendRefs(filter) {
+		// we don't return an error here, because we want to continue
+		// reconciling the rest of the HTTPRouteFilter despite that this
+		// reference is invalid.
+		if err := r.processBackendRef(ctx, resourceMap, resourceTree,
+			resource.KindHTTPRouteFilter, filter.Namespace, filter.Name, backendRef); err != nil {
+			r.log.Error(err,
+				"failed to process CredentialInjection BackendRef for HTTPRouteFilter",
+				"filter", filter, "backendRef", backendRef)
+		}
+	}
+}
+
 // processRouteFilterSecretRef adds the referenced Secret in a HTTPRouteFilter
 // to the resourceTree
 func (r *gatewayAPIReconciler) processRouteFilterSecretRef(

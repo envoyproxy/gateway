@@ -1038,6 +1038,12 @@ type CredentialInjection struct {
 // CredentialInjectionOAuth2 defines an OAuth2 access token retrieved with the Client Credentials Grant flow.
 // +k8s:deepcopy-gen=true
 type CredentialInjectionOAuth2 struct {
+	// Destination defines the destination for the token endpoint.
+	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
+
+	// Traffic contains configuration for traffic features for the token endpoint.
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+
 	// TokenEndpoint is the URL of the authorization server's token endpoint.
 	TokenEndpoint string `json:"tokenEndpoint" yaml:"tokenEndpoint"`
 

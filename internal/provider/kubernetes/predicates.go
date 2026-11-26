@@ -584,6 +584,12 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		}
 	}
 
+	if r.hrfCRDExists {
+		if r.isHTTPRouteFilterReferencingBackend(&nsName) {
+			return true
+		}
+	}
+
 	if r.epCRDExists {
 		if r.isEnvoyProxyReferencingBackend(&nsName) {
 			return true
@@ -620,6 +626,12 @@ func (r *gatewayAPIReconciler) validateBackendForReconcile(obj client.Object) bo
 		}
 	}
 
+	if r.hrfCRDExists {
+		if r.isHTTPRouteFilterReferencingBackend(&nsName) {
+			return true
+		}
+	}
+
 	if r.epCRDExists {
 		if r.isEnvoyProxyReferencingBackend(&nsName) {
 			return true
@@ -645,6 +657,18 @@ func (r *gatewayAPIReconciler) isSecurityPolicyReferencingBackend(nsName *types.
 	}
 
 	return len(spList.Items) > 0
+}
+
+func (r *gatewayAPIReconciler) isHTTPRouteFilterReferencingBackend(nsName *types.NamespacedName) bool {
+	routeFilterList := &egv1a1.HTTPRouteFilterList{}
+	if err := r.client.List(context.Background(), routeFilterList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendHTTPRouteFilterIndex, nsName.String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated HTTPRouteFilters")
+		return false
+	}
+
+	return len(routeFilterList.Items) > 0
 }
 
 // isServiceReferencedByBackend returns true if a KubernetesService Backend that points at
@@ -819,6 +843,12 @@ func (r *gatewayAPIReconciler) isEndpointSliceBackendReferenced(nsName *types.Na
 
 	if r.spCRDExists {
 		if r.isSecurityPolicyReferencingBackend(nsName) {
+			return true
+		}
+	}
+
+	if r.hrfCRDExists {
+		if r.isHTTPRouteFilterReferencingBackend(nsName) {
 			return true
 		}
 	}

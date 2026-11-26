@@ -1503,6 +1503,7 @@ func TestValidateServiceImportForReconcile(t *testing.T) {
 }
 
 func TestValidateServiceForReconcile(t *testing.T) {
+	authServerURL := "https://idp.example.com/oauth2/token"
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
 	telemetryEnabledGatewaysConfig := &egv1a1.EnvoyProxy{
@@ -1865,6 +1866,42 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  true,
 		},
 		{
+			name: "service referenced by HTTPRouteFilter credential injection oauth2 token endpoint",
+			configs: []client.Object{
+				&egv1a1.HTTPRouteFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "credential-injection",
+					},
+					Spec: egv1a1.HTTPRouteFilterSpec{
+						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+							Credential: egv1a1.InjectedCredential{
+								OAuth2: &egv1a1.InjectedOAuth2Credential{
+									BackendCluster: egv1a1.BackendCluster{
+										BackendRefs: []egv1a1.BackendRef{
+											{
+												BackendObjectReference: gwapiv1.BackendObjectReference{
+													Name:      "token-endpoint-service",
+													Namespace: new(gwapiv1.Namespace("idp")),
+												},
+											},
+										},
+									},
+									TokenEndpoint: authServerURL,
+									ClientID:      "client-1",
+									ClientSecret: gwapiv1.SecretObjectReference{
+										Name: "client-secret",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "token-endpoint-service", Namespace: "idp"}, nil, nil),
+			expect:  true,
+		},
+		{
 			name: "service referenced by the second backendRef of a SecurityPolicy ExtAuth HTTP service",
 			configs: []client.Object{
 				&egv1a1.SecurityPolicy{
@@ -2084,6 +2121,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		spCRDExists:       true,
 		eepCRDExists:      true,
 		epCRDExists:       true,
+		hrfCRDExists:      true,
 	}
 
 	for _, tc := range testCases {
@@ -2102,6 +2140,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithIndex(&egv1a1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
 			WithIndex(&egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
+			WithIndex(&egv1a1.HTTPRouteFilter{}, backendHTTPRouteFilterIndex, backendRouteFilterIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)

@@ -338,7 +338,21 @@ type InjectedCredential struct {
 
 // InjectedOAuth2Credential defines an OAuth2 access token retrieved with the
 // [Client Credentials Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4) flow.
+//
+// BackendRefs is used to specify the address of the token endpoint.
+// If the BackendRefs is not specified, the TokenEndpoint field is used to determine the address of the token endpoint.
+//
+// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+//
+// Other settings for the connection to the token endpoint can be specified in the BackendSettings resource.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
 type InjectedOAuth2Credential struct {
+	// +optional
+	BackendCluster `json:",inline"`
+
 	// TokenEndpoint is the URL of the authorization server's token endpoint.
 	//
 	// +kubebuilder:validation:MinLength=1

@@ -501,6 +501,58 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid credentialInjection with oauth2 backendRefs",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+						Credential: egv1a1.InjectedCredential{
+							OAuth2: &egv1a1.InjectedOAuth2Credential{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "idp",
+												Port: new(gwapiv1.PortNumber(443)),
+											},
+										},
+									},
+								},
+								TokenEndpoint: authServerURL,
+								ClientID:      "client-1",
+								ClientSecret:  gwapiv1.SecretObjectReference{Name: "client-secret"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid credentialInjection with oauth2 backendRef",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+						Credential: egv1a1.InjectedCredential{
+							OAuth2: &egv1a1.InjectedOAuth2Credential{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRef: &gwapiv1.BackendObjectReference{
+										Name: "idp",
+										Port: new(gwapiv1.PortNumber(443)),
+									},
+								},
+								TokenEndpoint: authServerURL,
+								ClientID:      "client-1",
+								ClientSecret:  gwapiv1.SecretObjectReference{Name: "client-secret"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"BackendRefs must be used, backendRef is not supported.",
+			},
+		},
+		{
 			desc: "invalid credentialInjection with both valueRef and oauth2",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{

@@ -1604,6 +1604,11 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 			return err
 		}
 	}
+
+	// Add the token endpoint cluster used by an OAuth2 Credential Injector filter.
+	if len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil {
+		return addOAuth2TokenEndpointCluster(tCtx, args.settings[0].Filters.CredentialInjection)
+	}
 	return nil
 }
 

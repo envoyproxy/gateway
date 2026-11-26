@@ -290,6 +290,12 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+By default, Envoy connects to the host of `tokenEndpoint` and validates its certificate with the system trust bundle. To
+reach the token endpoint through a Service or a [Backend][Backend], for example an authorization server inside the
+cluster or one with a private CA, set `backendRefs` in the `oauth2` credential, and target it with a
+[BackendTLSPolicy][BackendTLSPolicy] for a custom trust bundle. Other connection settings can be set in
+`backendSettings`.
+
 The upstream Envoy API for the OAuth2 credential is marked as work in progress, so its behavior may change in future
 Envoy releases.
 
@@ -332,3 +338,5 @@ Check out the [Developer Guide](/community/develop) to get involved in the proje
 [BackendRef]: {{<gateway-api-spec>}}#httpbackendref
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
 [Client Credentials Grant]: https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
+[Backend]: ../../../api/extension_types#backend
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/reference/api-types/policy/backendtlspolicy/

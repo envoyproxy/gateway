@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -1094,7 +1095,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 				}
 
 				if hrf.Spec.CredentialInjection != nil {
-					injection, err := t.buildCredentialInjection(hrf, filterNs, resources)
+					injection, err := t.buildCredentialInjection(hrf, filterNs, resources, filterContext.ParentRef.GetGateway())
 					if err != nil {
 						return t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 					}
@@ -1361,7 +1362,7 @@ func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *
 // The credential is read from the secret referenced by valueRef, or, for OAuth2, the client
 // secret is read from the secret referenced by oauth2.clientSecret.
 func (t *Translator) buildCredentialInjection(
-	hrf *egv1a1.HTTPRouteFilter, filterNs string, resources *resource.Resources,
+	hrf *egv1a1.HTTPRouteFilter, filterNs string, resources *resource.Resources, gtwCtx *GatewayContext,
 ) (*ir.CredentialInjection, error) {
 	credential := hrf.Spec.CredentialInjection.Credential
 	from := crossNamespaceFrom{
@@ -1399,14 +1400,63 @@ func (t *Translator) buildCredentialInjection(
 		return injection, nil
 	}
 
-	if err := validateTokenEndpoint(credential.OAuth2.TokenEndpoint); err != nil {
+	oauth2, err := t.buildCredentialInjectionOAuth2(hrf, credential.OAuth2, resources, gtwCtx)
+	if err != nil {
 		return nil, err
 	}
-	injection.OAuth2 = &ir.CredentialInjectionOAuth2{
-		TokenEndpoint: credential.OAuth2.TokenEndpoint,
-		ClientID:      credential.OAuth2.ClientID,
-		ClientSecret:  secretBytes,
-		Scopes:        credential.OAuth2.Scopes,
-	}
+	oauth2.ClientSecret = secretBytes
+	injection.OAuth2 = oauth2
 	return injection, nil
+}
+
+// buildCredentialInjectionOAuth2 translates the OAuth2 credential of a HTTPRouteFilter into IR,
+// resolving the token endpoint the same way as the OIDC provider does.
+func (t *Translator) buildCredentialInjectionOAuth2(
+	hrf *egv1a1.HTTPRouteFilter,
+	oauth2 *egv1a1.InjectedOAuth2Credential,
+	resources *resource.Resources,
+	gtwCtx *GatewayContext,
+) (*ir.CredentialInjectionOAuth2, error) {
+	var (
+		protocol ir.AppProtocol
+		rd       *ir.RouteDestination
+		traffic  *ir.TrafficFeatures
+		err      error
+	)
+
+	u, err := url.Parse(oauth2.TokenEndpoint)
+	if err != nil {
+		return nil, err
+	}
+	if u.Scheme == "https" {
+		protocol = ir.HTTPS
+	} else {
+		protocol = ir.HTTP
+	}
+
+	if len(oauth2.BackendRefs) > 0 {
+		if gtwCtx == nil {
+			return nil, errors.New("credential.oauth2.backendRefs requires the route to be attached to a Gateway")
+		}
+		if rd, err = t.translateExtServiceBackendRefs(
+			hrf, oauth2.BackendRefs, protocol, resources, gtwCtx, "credentialinjection", 0); err != nil {
+			return nil, err
+		}
+	}
+
+	if err = validateTokenEndpoint(oauth2.TokenEndpoint); err != nil {
+		return nil, err
+	}
+
+	if traffic, err = translateExtServiceBackendSettings(oauth2.BackendSettings); err != nil {
+		return nil, err
+	}
+
+	return &ir.CredentialInjectionOAuth2{
+		Destination:   rd,
+		Traffic:       traffic,
+		TokenEndpoint: oauth2.TokenEndpoint,
+		ClientID:      oauth2.ClientID,
+		Scopes:        oauth2.Scopes,
+	}, nil
 }

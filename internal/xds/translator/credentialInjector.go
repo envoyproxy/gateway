@@ -125,21 +125,36 @@ func buildInjectedCredential(credentialInjection *ir.CredentialInjection) (*core
 
 func buildOAuth2InjectedCredential(credentialInjection *ir.CredentialInjection) (*corev3.TypedExtensionConfig, error) {
 	oauth2 := credentialInjection.OAuth2
-	cluster, err := url2Cluster(oauth2.TokenEndpoint)
-	if err != nil {
-		return nil, err
+
+	var tokenEndpointCluster string
+	if oauth2.Destination != nil && len(oauth2.Destination.Settings) > 0 {
+		tokenEndpointCluster = oauth2.Destination.Name
+	} else {
+		cluster, err := url2Cluster(oauth2.TokenEndpoint)
+		if err != nil {
+			return nil, err
+		}
+		if cluster.endpointType == EndpointTypeStatic {
+			return nil, fmt.Errorf("static IP cluster is not allowed: %s", oauth2.TokenEndpoint)
+		}
+		tokenEndpointCluster = cluster.name
 	}
-	if cluster.endpointType == EndpointTypeStatic {
-		return nil, fmt.Errorf("static IP cluster is not allowed: %s", oauth2.TokenEndpoint)
+
+	tokenEndpointTimeout := durationpb.New(defaultExtServiceRequestTimeout)
+	if oauth2.Traffic != nil &&
+		oauth2.Traffic.Timeout != nil &&
+		oauth2.Traffic.Timeout.HTTP != nil &&
+		oauth2.Traffic.Timeout.HTTP.RequestTimeout != nil {
+		tokenEndpointTimeout = durationpb.New(oauth2.Traffic.Timeout.HTTP.RequestTimeout.Duration)
 	}
 
 	oauth2Credential := &oauth2credv3.OAuth2{
 		TokenEndpoint: &corev3.HttpUri{
 			Uri: oauth2.TokenEndpoint,
 			HttpUpstreamType: &corev3.HttpUri_Cluster{
-				Cluster: cluster.name,
+				Cluster: tokenEndpointCluster,
 			},
-			Timeout: durationpb.New(defaultExtServiceRequestTimeout),
+			Timeout: tokenEndpointTimeout,
 		},
 		Scopes: oauth2.Scopes,
 		FlowType: &oauth2credv3.OAuth2_ClientCredentials_{
@@ -179,19 +194,11 @@ func (*credentialInjector) patchResources(resource *types.ResourceVersionTable, 
 			continue
 		}
 
-		if oauth2 := route.CredentialInjection.OAuth2; oauth2 != nil {
-			secret := buildGenericSecret(credentialOAuth2ClientSecretName(route.CredentialInjection), oauth2.ClientSecret)
-			if err := addXdsSecret(resource, secret); err != nil {
-				errs = errors.Join(errs, err)
-			}
-			if err := addTokenEndpointCluster(resource, oauth2.TokenEndpoint, nil); err != nil {
-				errs = errors.Join(errs, err)
-			}
-			continue
-		}
-
-		secret := buildCredentialSecret(route.CredentialInjection)
+		secret := buildCredentialInjectionSecret(route.CredentialInjection)
 		if err := addXdsSecret(resource, secret); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if err := addOAuth2TokenEndpointCluster(resource, route.CredentialInjection); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -199,8 +206,30 @@ func (*credentialInjector) patchResources(resource *types.ResourceVersionTable, 
 	return errs
 }
 
-func buildCredentialSecret(credentialInjection *ir.CredentialInjection) *tlsv3.Secret {
+// buildCredentialInjectionSecret returns the SDS secret read by the credential injector filter:
+// the OAuth2 client secret, or the credential to be injected.
+func buildCredentialInjectionSecret(credentialInjection *ir.CredentialInjection) *tlsv3.Secret {
+	if credentialInjection.OAuth2 != nil {
+		return buildGenericSecret(credentialOAuth2ClientSecretName(credentialInjection), credentialInjection.OAuth2.ClientSecret)
+	}
 	return buildGenericSecret(credentialSecretName(credentialInjection), credentialInjection.Credential)
+}
+
+// addOAuth2TokenEndpointCluster adds the cluster for the OAuth2 token endpoint of the credential
+// injector filter, if the filter injects an OAuth2 access token.
+func addOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable, credentialInjection *ir.CredentialInjection) error {
+	oauth2 := credentialInjection.OAuth2
+	if oauth2 == nil {
+		return nil
+	}
+
+	if oauth2.Destination != nil && len(oauth2.Destination.Settings) > 0 {
+		if err := createExtServiceXDSCluster(oauth2.Destination, oauth2.Traffic, tCtx); err != nil {
+			return err
+		}
+		return processClientCertificates(tCtx, oauth2.Destination.Settings)
+	}
+	return addTokenEndpointCluster(tCtx, oauth2.TokenEndpoint, oauth2.Traffic)
 }
 
 func buildGenericSecret(name string, value []byte) *tlsv3.Secret {

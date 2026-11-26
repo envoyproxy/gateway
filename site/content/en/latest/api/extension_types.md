@@ -360,6 +360,7 @@ _Appears in:_
 - [ExtProc](#extproc)
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
+- [InjectedOAuth2Credential](#injectedoauth2credential)
 - [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
@@ -490,6 +491,7 @@ _Appears in:_
 - [ExtProc](#extproc)
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
+- [InjectedOAuth2Credential](#injectedoauth2credential)
 - [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
@@ -522,6 +524,7 @@ _Appears in:_
 - [ExtProc](#extproc)
 - [GRPCExtAuthService](#grpcextauthservice)
 - [HTTPExtAuthService](#httpextauthservice)
+- [InjectedOAuth2Credential](#injectedoauth2credential)
 - [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
@@ -4024,11 +4027,21 @@ _Appears in:_
 InjectedOAuth2Credential defines an OAuth2 access token retrieved with the
 [Client Credentials Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4) flow.
 
+BackendRefs is used to specify the address of the token endpoint.
+If the BackendRefs is not specified, the TokenEndpoint field is used to determine the address of the token endpoint.
+
+TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+
+Other settings for the connection to the token endpoint can be specified in the BackendSettings resource.
+
 _Appears in:_
 - [InjectedCredential](#injectedcredential)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. This field will be removed in v1.11. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
+| `backendSettings` | _[BackendSettings](#backendsettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `tokenEndpoint` | _string_ |  true  |  | TokenEndpoint is the URL of the authorization server's token endpoint. |
 | `clientID` | _string_ |  true  |  | ClientID is the client identifier issued to the client by the authorization server. |
 | `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  true  |  | ClientSecret is a reference to the secret containing the OAuth2 client secret.<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
