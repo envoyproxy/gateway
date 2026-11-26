@@ -19,6 +19,7 @@ import (
 	"go.yaml.in/yaml/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -275,6 +276,31 @@ func TestMigrateDeprecatedFromCluster(t *testing.T) {
 		require.NotContains(t, stdout, "envoy-gateway-config")
 		require.NotContains(t, stderr, "default/")
 	})
+}
+
+func TestMigrateDeprecatedFromClusterExternalNameService(t *testing.T) {
+	proxy := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gateway.envoyproxy.io/v1alpha1",
+		"kind":       "EnvoyProxy",
+		"metadata":   map[string]any{"name": "proxy", "namespace": "default"},
+		"spec": map[string]any{"telemetry": map[string]any{"tracing": map[string]any{"provider": map[string]any{
+			"type": "OpenTelemetry", "host": "otel.monitoring.svc.cluster.local", "port": int64(4317),
+		}}}},
+	}}
+	external := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "otel", Namespace: "monitoring"},
+		Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeExternalName, ExternalName: "otel.example.com"},
+	}
+	cli := fake.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(proxy, external).Build()
+	orig := newK8sClientFunc
+	newK8sClientFunc = func() (client.Client, error) { return cli, nil }
+	t.Cleanup(func() { newK8sClientFunc = orig })
+
+	stdout, stderr, err := runMigrate(t, "--from-cluster", "-A")
+	require.Equal(t, migrate.ExitCodeError, exitCode(err), "%v", err)
+	require.Contains(t, stdout, "host: otel.monitoring.svc.cluster.local")
+	require.NotContains(t, stdout, "backendRefs")
+	require.Regexp(t, `spec.telemetry.tracing.provider.host\s+error\s+host \S+ names ExternalName Service monitoring/otel`, stderr)
 }
 
 func TestMigrateDeprecatedEmptyCompressor(t *testing.T) {

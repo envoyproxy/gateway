@@ -6,11 +6,14 @@
 package deprecated
 
 import (
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/cmd/egctl/migrate"
@@ -223,7 +226,9 @@ var serviceHost = regexp.MustCompile(`^([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.([a-z0-9
 // host is the DNS name of a Service. Other hosts need a Backend resource or a Service, which is up
 // to the user, so they're reported as errors. A host under .svc with a domain other than
 // clusterDomain may be an external name, so it's reported too rather than redirected to a Service.
-func migrateTelemetryHost(sink *yaml.Node, base, clusterDomain string) migrate.Finding {
+// With getService, which is only set for objects read from the cluster, the Service must exist and
+// not be an ExternalName Service, which backendRefs don't support.
+func migrateTelemetryHost(sink *yaml.Node, base, clusterDomain string, getService serviceGetter) migrate.Finding {
 	field := base + ".host"
 	host := migrate.Get(sink, "host")
 	port := telemetryPort(sink)
@@ -251,13 +256,37 @@ func migrateTelemetryHost(sink *yaml.Node, base, clusterDomain string) migrate.F
 			"or to a Backend with an %s endpoint (requires extensionApis.enableBackend)", migrate.Scalar(host), port, kind)
 	}
 
-	ref := migrate.Mapping("name", migrate.String(m[1]), "namespace", migrate.String(m[3]), "port", migrate.Int(int64(port)))
+	name, namespace := m[1], m[3]
+	caveat := "check that the Service isn't of type ExternalName, which backendRefs don't support"
+	if getService != nil {
+		svc, err := getService(namespace, name)
+		switch {
+		case kerrors.IsNotFound(err):
+			return errorf(field, "host %s:%d names Service %s/%s, which doesn't exist, not migrated: "+
+				"set backendRefs to a Service, or to a Backend with an fqdn endpoint (requires extensionApis.enableBackend)",
+				migrate.Scalar(host), port, namespace, name)
+		case err != nil:
+			return errorf(field, "host %s:%d names Service %s/%s, which can't be read, not migrated: %v",
+				migrate.Scalar(host), port, namespace, name, err)
+		case svc.Spec.Type == corev1.ServiceTypeExternalName:
+			return errorf(field, "host %s:%d names ExternalName Service %s/%s, which backendRefs don't support, not migrated: "+
+				"set backendRefs to a Backend with an fqdn endpoint for %s (requires extensionApis.enableBackend)",
+				migrate.Scalar(host), port, namespace, name, svc.Spec.ExternalName)
+		}
+		caveat = ""
+	}
+
+	ref := migrate.Mapping("name", migrate.String(name), "namespace", migrate.String(namespace), "port", migrate.Int(int64(port)))
 	migrate.Delete(sink, "backendRefs")
 	migrate.Replace(sink, "host", "backendRefs", migrate.Sequence(ref))
 	migrate.Delete(sink, "port")
-	return migrated(field, "replaced host and port with a backendRef to Service %s/%s port %d; "+
+	note := fmt.Sprintf("replaced host and port with a backendRef to Service %s/%s port %d; "+
 		"Envoy now uses the Service endpoints instead of DNS, and a cross-namespace reference needs a ReferenceGrant",
-		m[3], m[1], port)
+		namespace, name, port)
+	if caveat != "" {
+		note += "; " + caveat
+	}
+	return migrated(field, "%s", note)
 }
 
 // migrateTelemetryPort removes an explicit telemetry port that is set without host.

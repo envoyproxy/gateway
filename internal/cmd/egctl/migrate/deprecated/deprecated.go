@@ -44,13 +44,24 @@ type Path struct {
 	// ClusterDomain is the DNS domain of the cluster. A telemetry host is converted to a Service
 	// reference only if it's <name>.<namespace>.svc, optionally followed by this domain.
 	ClusterDomain string
+
+	// getService reads a Service from the cluster. It's set by Fetch, so it's nil for files.
+	getService serviceGetter
 }
+
+// serviceGetter returns the Service namespace/name.
+type serviceGetter func(namespace, name string) (*corev1.Service, error)
 
 var _ migrate.Path = (*Path)(nil)
 
 // Fetch lists the policies and EnvoyProxy resources in namespace (all namespaces if empty), and
 // the envoy-gateway-config ConfigMap.
 func (p *Path) Fetch(ctx context.Context, cli client.Client, namespace string) ([]client.Object, error) {
+	// A telemetry host is only converted to a Service reference after checking the Service.
+	p.getService = func(ns, name string) (*corev1.Service, error) {
+		svc := &corev1.Service{}
+		return svc, cli.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, svc)
+	}
 	var objs []client.Object
 	// The objects are read as unstructured, so that the deprecated fields are kept even when this
 	// egctl is built from an API that no longer has them.
@@ -303,7 +314,7 @@ func (p *Path) apply(root *yaml.Node, g *group) migrate.Finding {
 	case ruleConsistentHash:
 		return migrateConsistentHash(n, g.base)
 	case ruleTelemetryHost:
-		return migrateTelemetryHost(n, g.base, p.ClusterDomain)
+		return migrateTelemetryHost(n, g.base, p.ClusterDomain, p.getService)
 	case ruleTelemetryPort:
 		return migrateTelemetryPort(n, g.base)
 	}

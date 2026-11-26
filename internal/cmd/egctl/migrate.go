@@ -88,8 +88,8 @@ ClientTrafficPolicy, BackendTrafficPolicy, SecurityPolicy, EnvoyExtensionPolicy 
 resources are rewritten. Comments and field order are kept.
 
 These are reported as errors and never rewritten:
-  - Telemetry host/port that isn't the DNS name of a Service in --cluster-domain: set backendRefs to a
-    Service or a Backend.
+  - Telemetry host/port that isn't the DNS name of a Service in --cluster-domain, or, with
+    --from-cluster, names a missing or ExternalName Service: set backendRefs to a Service or a Backend.
   - The EnvoyGateway configuration, in a ConfigMap, an EnvoyGateway file or the Helm values:
     update config.envoyGateway in the Helm values.
   - With --from-cluster, resources managed by Helm, Argo CD or Flux: fix the source instead.`,

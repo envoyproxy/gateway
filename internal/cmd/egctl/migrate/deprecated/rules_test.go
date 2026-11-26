@@ -6,11 +6,14 @@
 package deprecated
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/envoyproxy/gateway/internal/cmd/egctl/migrate"
 )
@@ -19,7 +22,7 @@ func TestTelemetryHostEmptyBackendRefs(t *testing.T) {
 	for _, refs := range []string{"[]", "null"} {
 		t.Run(refs, func(t *testing.T) {
 			sink := parse(t, "host: collector.monitoring.svc\nport: 4317\nbackendRefs: "+refs)
-			migrateTelemetryHost(sink, "sink", "cluster.local")
+			migrateTelemetryHost(sink, "sink", "cluster.local", nil)
 			data, err := yaml.Marshal(sink)
 			require.NoError(t, err)
 			var got map[string]any
@@ -51,7 +54,7 @@ func TestTelemetryHostClusterDomain(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.host+"/"+tt.domain, func(t *testing.T) {
 			sink := parse(t, "host: "+tt.host+"\nport: 4317\n")
-			f := migrateTelemetryHost(sink, "sink", tt.domain)
+			f := migrateTelemetryHost(sink, "sink", tt.domain, nil)
 			if tt.migrated {
 				require.Equal(t, migrate.ResultMigrated, f.Result, f.Note)
 				require.True(t, migrate.Has(sink, "backendRefs"))
@@ -62,6 +65,52 @@ func TestTelemetryHostClusterDomain(t *testing.T) {
 			require.False(t, migrate.Has(sink, "backendRefs"))
 		})
 	}
+}
+
+func TestTelemetryHostServiceType(t *testing.T) {
+	services := map[string]*corev1.Service{
+		"monitoring/collector": {Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}},
+		"monitoring/external":  {Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeExternalName, ExternalName: "otel.example.com"}},
+	}
+	get := func(ns, name string) (*corev1.Service, error) {
+		if name == "broken" {
+			return nil, errors.New("forbidden")
+		}
+		if svc, ok := services[ns+"/"+name]; ok {
+			return svc, nil
+		}
+		return nil, kerrors.NewNotFound(corev1.Resource("services"), name)
+	}
+	tests := []struct {
+		host, note string
+		getter     serviceGetter
+		migrated   bool
+	}{
+		{host: "collector.monitoring.svc", getter: get, migrated: true},
+		{host: "external.monitoring.svc.cluster.local", getter: get, note: "ExternalName Service monitoring/external"},
+		{host: "missing.monitoring.svc", getter: get, note: "doesn't exist"},
+		{host: "broken.monitoring.svc", getter: get, note: "can't be read"},
+		// Without a cluster, the Service type is unknown, so the note asks the user to check it.
+		{host: "external.monitoring.svc", migrated: true, note: "isn't of type ExternalName"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.host, func(t *testing.T) {
+			sink := parse(t, "host: "+tt.host+"\nport: 4317\n")
+			f := migrateTelemetryHost(sink, "sink", "cluster.local", tt.getter)
+			require.Contains(t, f.Note, tt.note)
+			if tt.migrated {
+				require.Equal(t, migrate.ResultMigrated, f.Result, f.Note)
+				require.True(t, migrate.Has(sink, "backendRefs"))
+				return
+			}
+			require.Equal(t, migrate.ResultError, f.Result, f.Note)
+			require.Equal(t, tt.host, migrate.Scalar(migrate.Get(sink, "host")))
+			require.False(t, migrate.Has(sink, "backendRefs"))
+		})
+	}
+	// A Service read from the cluster has no caveat.
+	sink := parse(t, "host: collector.monitoring.svc\n")
+	require.NotContains(t, migrateTelemetryHost(sink, "sink", "cluster.local", get).Note, "ExternalName")
 }
 
 func TestDeprecatedBooleanAliases(t *testing.T) {

@@ -142,6 +142,10 @@ If `host` is the DNS name of a Service (`<service>.<namespace>.svc` or
 The cluster domain is `cluster.local` by default; pass `--cluster-domain` if your cluster uses another one.
 A host under `.svc` with any other domain, such as `collector.logging.svc.example.com`, may be an
 external name, so it is reported as `error` instead of being redirected to a Service.
+
+`backendRefs` don't support ExternalName Services. With `--from-cluster`, a host that names an
+ExternalName Service, or a Service that doesn't exist, is reported as `error`. When migrating files
+the Service type is unknown, so the report asks you to check it.
 Envoy then sends to the Service endpoints instead of resolving its DNS name. A reference to a
 Service in another namespace needs a [ReferenceGrant][] that allows the EnvoyProxy to reference it.
 
