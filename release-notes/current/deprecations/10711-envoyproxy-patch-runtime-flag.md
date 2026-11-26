@@ -1,0 +1,1 @@
+Deprecated the `EnvoyProxyPatch` runtime flag in favor of `extensionApis.envoyProxyPatch.enabled`. Disabling the flag still blocks EnvoyProxy patches, and Envoy Gateway logs a deprecation warning when it is set. The flag will be removed in a future release.

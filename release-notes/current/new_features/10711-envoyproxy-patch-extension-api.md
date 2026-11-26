@@ -1,0 +1,1 @@
+Added `extensionApis.envoyProxyPatch.enabled` to `EnvoyGateway`, which controls whether the Kubernetes resource `patch` fields of EnvoyProxy are applied. It defaults to `true`; set it to `false` in multi-tenant clusters where tenants can author their own EnvoyProxy resources.
