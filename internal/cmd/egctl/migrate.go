@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/cmd/egctl/migrate"
@@ -87,7 +88,8 @@ ClientTrafficPolicy, BackendTrafficPolicy, SecurityPolicy, EnvoyExtensionPolicy 
 resources are rewritten. Comments and field order are kept.
 
 These are reported as errors and never rewritten:
-  - Telemetry host/port that isn't the DNS name of a Service: set backendRefs to a Service or a Backend.
+  - Telemetry host/port that isn't the DNS name of a Service in --cluster-domain: set backendRefs to a
+    Service or a Backend.
   - The EnvoyGateway configuration, in a ConfigMap, an EnvoyGateway file or the Helm values:
     update config.envoyGateway in the Helm values.
   - With --from-cluster, resources managed by Helm, Argo CD or Flux: fix the source instead.`,
@@ -108,6 +110,10 @@ These are reported as errors and never rewritten:
 			if err := opts.Validate(); err != nil {
 				return err
 			}
+			path.ClusterDomain = strings.TrimSuffix(strings.ToLower(path.ClusterDomain), ".")
+			if errs := validation.IsDNS1123Subdomain(path.ClusterDomain); len(errs) > 0 {
+				return fmt.Errorf("invalid --cluster-domain %q: %s", path.ClusterDomain, strings.Join(errs, "; "))
+			}
 			var cli client.Client
 			if opts.FromCluster {
 				var err error
@@ -124,5 +130,8 @@ These are reported as errors and never rewritten:
 	}
 	cmd.Flags().StringVar(&path.EnvoyGatewayNamespace, "eg-namespace", "envoy-gateway-system",
 		"Namespace of the envoy-gateway-config ConfigMap, used with --from-cluster.")
+	cmd.Flags().StringVar(&path.ClusterDomain, "cluster-domain", "cluster.local",
+		"DNS domain of the cluster. A telemetry host is converted to a Service reference only if it's "+
+			"<name>.<namespace>.svc, optionally followed by this domain.")
 	return cmd
 }

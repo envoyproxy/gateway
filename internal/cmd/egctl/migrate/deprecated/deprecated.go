@@ -41,6 +41,9 @@ type Path struct {
 	// EnvoyGatewayNamespace is the namespace of the envoy-gateway-config ConfigMap, used with
 	// --from-cluster.
 	EnvoyGatewayNamespace string
+	// ClusterDomain is the DNS domain of the cluster. A telemetry host is converted to a Service
+	// reference only if it's <name>.<namespace>.svc, optionally followed by this domain.
+	ClusterDomain string
 }
 
 var _ migrate.Path = (*Path)(nil)
@@ -88,7 +91,7 @@ var migratedKinds = []string{
 func (p *Path) Migrate(obj *migrate.Object) ([]migrate.Finding, error) {
 	switch {
 	case obj.APIVersion == egAPIVersion:
-		return migrateEnvoyGatewayResource(obj)
+		return p.migrateEnvoyGatewayResource(obj)
 	case obj.APIVersion == "v1" && obj.Kind == "ConfigMap":
 		return reportConfigMap(obj)
 	case obj.APIVersion == "" && obj.Kind == "":
@@ -100,7 +103,7 @@ func (p *Path) Migrate(obj *migrate.Object) ([]migrate.Finding, error) {
 	return nil, nil
 }
 
-func migrateEnvoyGatewayResource(obj *migrate.Object) ([]migrate.Finding, error) {
+func (p *Path) migrateEnvoyGatewayResource(obj *migrate.Object) ([]migrate.Finding, error) {
 	if obj.Kind == egv1a1.KindEnvoyGateway {
 		return reportEnvoyGateway("", obj.Root, helmValuesHint), nil
 	}
@@ -128,7 +131,7 @@ func migrateEnvoyGatewayResource(obj *migrate.Object) ([]migrate.Finding, error)
 		}
 	}
 	fields := detect(obj.Kind, obj.Root)
-	rewritten, unmigrated := rewrite(obj.Root, slices.Collect(maps.Keys(fields)))
+	rewritten, unmigrated := p.rewrite(obj.Root, slices.Collect(maps.Keys(fields)))
 
 	findings = append(findings, rewritten...)
 	slices.SortStableFunc(findings, func(a, b migrate.Finding) int { return cmp.Compare(a.Field, b.Field) })
@@ -245,15 +248,15 @@ func classify(path string) (rule, string) {
 
 // rewrite applies the rules for the deprecated field paths to root. It returns the findings, and
 // the paths that were left unchanged because they couldn't be migrated.
-func rewrite(root *yaml.Node, paths []string) ([]migrate.Finding, map[string]bool) {
+func (p *Path) rewrite(root *yaml.Node, paths []string) ([]migrate.Finding, map[string]bool) {
 	groups := map[string]*group{}
-	for _, p := range paths {
-		r, base := classify(p)
+	for _, path := range paths {
+		r, base := classify(path)
 		k := fmt.Sprintf("%d|%s", r, base)
 		if groups[k] == nil {
 			groups[k] = &group{rule: r, base: base}
 		}
-		groups[k].keys = append(groups[k].keys, p)
+		groups[k].keys = append(groups[k].keys, path)
 	}
 	ordered := slices.SortedFunc(maps.Values(groups), func(a, b *group) int {
 		return cmp.Or(cmp.Compare(a.rule, b.rule), cmp.Compare(a.base, b.base))
@@ -262,7 +265,7 @@ func rewrite(root *yaml.Node, paths []string) ([]migrate.Finding, map[string]boo
 	findings := make([]migrate.Finding, 0, len(ordered))
 	unmigrated := map[string]bool{}
 	for _, g := range ordered {
-		f := apply(root, g)
+		f := p.apply(root, g)
 		if f.Result == migrate.ResultError {
 			for _, k := range g.keys {
 				unmigrated[k] = true
@@ -274,7 +277,7 @@ func rewrite(root *yaml.Node, paths []string) ([]migrate.Finding, map[string]boo
 	return findings, unmigrated
 }
 
-func apply(root *yaml.Node, g *group) migrate.Finding {
+func (p *Path) apply(root *yaml.Node, g *group) migrate.Finding {
 	n := migrate.Lookup(root, g.base)
 	if g.rule == ruleUnknown {
 		return errorf(g.base, "deprecated, but there is no automatic migration for it")
@@ -300,7 +303,7 @@ func apply(root *yaml.Node, g *group) migrate.Finding {
 	case ruleConsistentHash:
 		return migrateConsistentHash(n, g.base)
 	case ruleTelemetryHost:
-		return migrateTelemetryHost(n, g.base)
+		return migrateTelemetryHost(n, g.base, p.ClusterDomain)
 	case ruleTelemetryPort:
 		return migrateTelemetryPort(n, g.base)
 	}

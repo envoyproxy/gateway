@@ -8,6 +8,7 @@ package deprecated
 import (
 	"net"
 	"regexp"
+	"strings"
 
 	"go.yaml.in/yaml/v3"
 
@@ -214,13 +215,15 @@ func migrateConsistentHash(ch *yaml.Node, base string) migrate.Finding {
 	return migrated(base+".header", "replaced type Header and header with type Headers and headers")
 }
 
-// serviceHost matches the in-cluster DNS name of a Service.
-var serviceHost = regexp.MustCompile(`^([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.svc(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\.?$`)
+// serviceHost matches <name>.<namespace>.svc, optionally followed by a domain, without a trailing
+// dot. The domain is checked separately against the cluster domain.
+var serviceHost = regexp.MustCompile(`^([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.([a-z0-9]([-a-z0-9]*[a-z0-9])?)\.svc(\.(.+))?$`)
 
 // migrateTelemetryHost rewrites the deprecated host and port of a telemetry sink to backendRefs, if
 // host is the DNS name of a Service. Other hosts need a Backend resource or a Service, which is up
-// to the user, so they're reported as errors.
-func migrateTelemetryHost(sink *yaml.Node, base string) migrate.Finding {
+// to the user, so they're reported as errors. A host under .svc with a domain other than
+// clusterDomain may be an external name, so it's reported too rather than redirected to a Service.
+func migrateTelemetryHost(sink *yaml.Node, base, clusterDomain string) migrate.Finding {
 	field := base + ".host"
 	host := migrate.Get(sink, "host")
 	port := telemetryPort(sink)
@@ -232,7 +235,13 @@ func migrateTelemetryHost(sink *yaml.Node, base string) migrate.Finding {
 		return migrated(field, "removed host and port, they were ignored because %s.backendRefs is set", base)
 	}
 
-	m := serviceHost.FindStringSubmatch(migrate.Scalar(host))
+	m := serviceHost.FindStringSubmatch(strings.TrimSuffix(migrate.Scalar(host), "."))
+	if m != nil && m[6] != "" && !strings.EqualFold(m[6], strings.TrimSuffix(clusterDomain, ".")) {
+		return errorf(field, "host %s:%d is not a Service DNS name in cluster domain %q, not migrated: "+
+			"pass --cluster-domain if the cluster uses another domain, or set backendRefs to a Service, "+
+			"or to a Backend with an fqdn endpoint (requires extensionApis.enableBackend)",
+			migrate.Scalar(host), port, clusterDomain)
+	}
 	if m == nil {
 		kind := "fqdn"
 		if net.ParseIP(migrate.Scalar(host)) != nil {

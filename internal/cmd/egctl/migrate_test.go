@@ -182,6 +182,7 @@ func TestMigrateOptionsValidation(t *testing.T) {
 		{name: "bad mode", args: []string{"-f", "x.yaml", "--mode", "apply"}, want: "invalid --mode"},
 		{name: "in-place stdin", args: []string{"-f", "-", "--mode", "in-place"}, want: "no file to write back to"},
 		{name: "in-place cluster", args: []string{"--from-cluster", "--mode", "in-place"}, want: "not supported with --from-cluster yet"},
+		{name: "bad cluster domain", args: []string{"-f", "x.yaml", "--cluster-domain", "bad_domain"}, want: "invalid --cluster-domain"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, _, err := runMigrate(t, tc.args...)
@@ -330,6 +331,7 @@ func TestMigrateDeprecatedFileBoundary(t *testing.T) {
 func TestMigrateDeprecatedReviewRegressions(t *testing.T) {
 	tests := []struct {
 		name, input, field string
+		args               []string
 		want               any
 	}{
 		{
@@ -505,6 +507,7 @@ spec:
         host: otel.monitoring.svc.corp.internal.
         port: 4318
 `,
+			args:  []string{"--cluster-domain", "corp.internal."},
 			field: "spec.telemetry.tracing.provider.backendRefs",
 			want:  []any{map[string]any{"name": "otel", "namespace": "monitoring", "port": 4318}},
 		},
@@ -513,14 +516,14 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			file := filepath.Join(t.TempDir(), "input.yaml")
 			require.NoError(t, os.WriteFile(file, []byte(tt.input), 0o600))
-			out, _, err := runMigrate(t, "-f", file, "--mode", "check-only")
+			out, _, err := runMigrate(t, append([]string{"-f", file, "--mode", "check-only"}, tt.args...)...)
 			require.Equal(t, migrate.ExitCodeWouldChange, exitCode(err), "%v", err)
 			require.Empty(t, out)
 			original, err := os.ReadFile(file)
 			require.NoError(t, err)
 			require.Equal(t, tt.input, string(original))
 
-			out, report, err := runMigrate(t, "-f", file)
+			out, report, err := runMigrate(t, append([]string{"-f", file}, tt.args...)...)
 			require.NoError(t, err)
 			if tt.name == "aliased identity" {
 				require.Contains(t, report, "policy")
@@ -534,12 +537,12 @@ spec:
 			require.NoError(t, got.Decode(&value))
 			require.Equal(t, tt.want, value)
 
-			_, _, err = runMigrate(t, "-f", file, "--mode", "in-place")
+			_, _, err = runMigrate(t, append([]string{"-f", file, "--mode", "in-place"}, tt.args...)...)
 			require.NoError(t, err)
 			data, err := os.ReadFile(file)
 			require.NoError(t, err)
 			require.Equal(t, out, string(data))
-			_, _, err = runMigrate(t, "-f", file, "--mode", "check-only")
+			_, _, err = runMigrate(t, append([]string{"-f", file, "--mode", "check-only"}, tt.args...)...)
 			require.NoError(t, err)
 		})
 	}
