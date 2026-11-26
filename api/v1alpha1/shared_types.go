@@ -367,7 +367,7 @@ type KubernetesServiceSpec struct {
 	// This field may only be set for services with type LoadBalancer and will be cleared if the type
 	// is changed to any other type.
 	// +kubebuilder:validation:items:Format=cidr
-	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:MaxItems=512
 	// +optional
 	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
 
