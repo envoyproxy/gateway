@@ -76,6 +76,8 @@ type HTTPFilterIR struct {
 
 	// RequestMirrorModifier holds the request mirror modifier defined on an attached HTTPRouteFilter.
 	RequestMirrorModifier *egv1a1.RequestMirrorHostnameModifier
+
+	SessionPersistenceStrict *bool
 }
 
 // Header value pattern according to RFC 7230
@@ -936,6 +938,15 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						).WithType(gwapiv1.RouteConditionAccepted)
 					}
 					filterContext.BackendPriority = new(uint32(*hrf.Spec.BackendPriority))
+				}
+				if hrf.Spec.SessionPersistence != nil {
+					if filterContext.SessionPersistenceStrict != nil {
+						return status.NewRouteStatusError(
+							errors.New("only one HTTPRouteFilter with sessionPersistence is supported per route rule"),
+							gwapiv1.RouteReasonUnsupportedValue,
+						).WithType(gwapiv1.RouteConditionAccepted)
+					}
+					filterContext.SessionPersistenceStrict = new(ptr.Deref(hrf.Spec.SessionPersistence.Strict, false))
 				}
 				if hrf.Spec.URLRewrite != nil {
 

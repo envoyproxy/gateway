@@ -232,5 +232,50 @@ done
 
 ```
 
+## Strict session persistence
+
+By default, a session can move to another endpoint when its destination becomes
+unavailable. Set `sessionPersistence.strict: true` to prevent this fallback.
+Requests then fail with HTTP 503 or gRPC `UNAVAILABLE` if the session destination
+is unavailable. Requests without a session use normal load balancing.
+
+Reference an `HTTPRouteFilter` from the same HTTPRoute or GRPCRoute rule that
+configures `sessionPersistence`. The filter must be in the route's namespace.
+Both cookie and header sessions are supported.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: strict-session
+spec:
+  sessionPersistence:
+    strict: true
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: strict-session
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - sessionPersistence:
+        type: Header
+        sessionName: x-session
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: strict-session
+      backendRefs:
+        - name: backend
+          port: 3000
+```
+
+Existing sessions can continue on draining endpoints. If a route uses a merged
+backend through `mergeBackends`, a draining endpoint is considered unavailable.
+
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/

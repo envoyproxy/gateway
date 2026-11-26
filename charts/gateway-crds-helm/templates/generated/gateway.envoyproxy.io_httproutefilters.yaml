@@ -561,6 +561,22 @@ spec:
                     - message: literal must be specified for Literal type
                       rule: '!(!has(self.literal) && self.type == ''Literal'')'
                 type: object
+              sessionPersistence:
+                description: |-
+                  SessionPersistence extends the session persistence settings of an HTTPRoute or
+                  GRPCRoute rule. The same rule must configure SessionPersistence. This filter is
+                  not supported on backend references.
+                properties:
+                  strict:
+                    description: |-
+                      Strict keeps an existing session on its destination. If the destination is
+                      unavailable, it returns HTTP 503 or gRPC UNAVAILABLE instead of falling back
+                      to another endpoint. Existing sessions can continue on draining endpoints
+                      in per-rule clusters. Merged backend clusters use their default override
+                      eligibility.
+                      Defaults to false, which allows load balancing to select another endpoint.
+                    type: boolean
+                type: object
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host

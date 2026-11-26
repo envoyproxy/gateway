@@ -1017,7 +1017,7 @@ func TestTranslateSessionPersistenceDefaultName(t *testing.T) {
 	}
 	cookieName := func(t *testing.T, route RouteContext, ruleIdx int) string {
 		t.Helper()
-		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{}, route, ruleIdx)
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{}, route, ruleIdx, nil)
 		require.Nil(t, err)
 		require.NotNil(t, sp.Cookie)
 		return sp.Cookie.Name
@@ -1042,7 +1042,7 @@ func TestTranslateSessionPersistenceDefaultName(t *testing.T) {
 	})
 
 	t.Run("explicit sessionName is used verbatim", func(t *testing.T) {
-		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new("my-session")}, httpRoute("default", "route-1"), 0)
+		sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new("my-session")}, httpRoute("default", "route-1"), 0, nil)
 		require.Nil(t, err)
 		require.Equal(t, "my-session", sp.Cookie.Name)
 	})
@@ -1050,7 +1050,7 @@ func TestTranslateSessionPersistenceDefaultName(t *testing.T) {
 	t.Run("empty explicit sessionName is rejected", func(t *testing.T) {
 		for _, route := range []RouteContext{httpRoute("default", "route-1"), grpcRoute("default", "route-1")} {
 			for _, spType := range []gwapiv1.SessionPersistenceType{gwapiv1.CookieBasedSessionPersistence, gwapiv1.HeaderBasedSessionPersistence} {
-				sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new(""), Type: new(spType)}, route, 0)
+				sp, err := translateSessionPersistence(&gwapiv1.SessionPersistence{SessionName: new(""), Type: new(spType)}, route, 0, nil)
 				require.Nil(t, sp)
 				require.NotNil(t, err)
 				require.Equal(t, gwapiv1.RouteReasonUnsupportedValue, err.Reason())

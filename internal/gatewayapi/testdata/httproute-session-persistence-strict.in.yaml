@@ -1,0 +1,71 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      namespace: default
+      name: strict-session
+    spec:
+      sessionPersistence:
+        strict: true
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: sessions
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: /cookie
+          sessionPersistence:
+            sessionName: session-cookie
+            type: Cookie
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: strict-session
+          backendRefs:
+            - name: service-1
+              port: 8080
+        - matches:
+            - path:
+                value: /header
+          sessionPersistence:
+            sessionName: x-session
+            type: Header
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: strict-session
+          backendRefs:
+            - name: service-1
+              port: 8080
+        - sessionPersistence:
+            sessionName: fallback-session
+            type: Cookie
+          backendRefs:
+            - name: service-1
+              port: 8080
