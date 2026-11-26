@@ -2587,8 +2587,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Namespace{},
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, ns *corev1.Namespace) []reconcile.Request {
-				// Gateway listener restricts route attachment with allowedRoutes.namespaces.from: Selector
-				// changing a namespace's labels after an HTTPRoute in it has been evaluated should trigger re-evaluation.
+				// Gateway listener restricts route attachment with allowedRoutes.namespaces.from: Selector,
+				// or a Gateway restricts ListenerSet attachment with allowedListeners.namespaces.from: Selector:
+				// changing a namespace's labels after a Route or ListenerSet in it has been evaluated should
+				// trigger re-evaluation.
 				// It's hard to determine which Gateway/GatewayClass(es) are affected by a namespace label change,
 				// so we enqueue all GatewayClasses for reconciliation.
 				// Any namespace holding a candidate Route is already tracked in allAssociatedNamespaces by
@@ -2598,7 +2600,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 				// namespace that actually contains a candidate route always shows up as a genuine diff in
 				// Resources.Namespaces and triggers a retranslation; a label change on any other namespace
 				// touches nothing tracked and correctly no-ops via the normal reflect.DeepEqual dedup.
-				if !r.hasSelectorAllowedRoutesListener(ctx) {
+				if !r.hasNamespaceSelectorListener(ctx) {
 					return nil
 				}
 				return r.enqueueClass(ctx, ns)
