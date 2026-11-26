@@ -83,6 +83,21 @@ spec:
   http1:
     preserveHeaderCase: false
 ---
+# CTP http1 settings configuring the backend is deprecated, so the backend side of
+# preserveHeaderCase is set with a BTP.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: http1-settings
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: http1-settings
+  http1:
+    preserveHeaderCase: true
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
