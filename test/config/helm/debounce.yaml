@@ -8,6 +8,5 @@
 config:
   envoyGateway:
     debounce:
-      enable: true
       after: 1s
       max: 10s

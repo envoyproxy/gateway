@@ -970,7 +970,7 @@ func WaitForRateLimitDomainsToBeLoaded(t *testing.T, suite *suite.ConformanceTes
 		// unmatched domain is treated as unlimited) - reintroducing the same "expected 429, got
 		// 200" race this helper exists to close. This matters most for profiles like
 		// gateway-namespace-mode that run more than one ratelimit replica - see
-		// rateLimitDeployment.replicas in test/config/envoy-gateaway-config/gateway-namespace-mode.yaml.
+		// rateLimitDeployment.replicas in test/config/envoy-gateway-config/gateway-namespace-mode.yaml.
 		for i := range pods.Items {
 			pod := &pods.Items[i]
 			cfg, err := dumpRateLimitConfigForPod(t, suite, pod.Name)
