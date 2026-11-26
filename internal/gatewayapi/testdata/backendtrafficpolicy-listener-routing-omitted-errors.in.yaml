@@ -1,0 +1,85 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-2
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+# Neither Service has EndpointSlices. The headless one has no endpoints on either listener;
+# the other one only lacks them on http-2, which routes to endpoints.
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: headless
+  spec:
+    clusterIP: None
+    ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: no-endpoints
+  spec:
+    clusterIP: 10.96.0.9
+    ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: http-1-routing
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-1
+    routingType: Service
+# Both listener groups report the headless Service; the route status lists it once.
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - matches:
+      - path:
+          value: /headless
+      backendRefs:
+      - name: headless
+        port: 8080
+    - matches:
+      - path:
+          value: /no-endpoints
+      backendRefs:
+      - name: no-endpoints
+        port: 8080
