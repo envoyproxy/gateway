@@ -11631,7 +11631,7 @@ spec:
                             items:
                               format: cidr
                               type: string
-                            maxItems: 500
+                            maxItems: 512
                             type: array
                           name:
                             description: |-
