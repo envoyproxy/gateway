@@ -145,8 +145,8 @@ func PrepareSnapshot(ctx context.Context, resources types.XdsResources) (*cachev
 	return snapshot, nil
 }
 
-// ReplaceEndpoints shares immutable non-EDS resources and copies EDS maps once.
-// Only replacement assignments are serialized and hashed.
+// ReplaceEndpoints returns a copy of the snapshot with the given endpoints swapped
+// in. Everything else is reused as is.
 func ReplaceEndpoints(snapshot *cachev3.Snapshot, replacements map[string]*endpointv3.ClusterLoadAssignment) (*cachev3.Snapshot, error) {
 	if len(replacements) == 0 {
 		return snapshot, nil
