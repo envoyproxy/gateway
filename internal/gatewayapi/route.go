@@ -3611,7 +3611,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 
 // TODO(robin): Always populate Resources.BackendEndpoints, including when the fast
 // path is disabled, and use them for full translation. Remove Resources.EndpointSlices
-// once its remaining consumers use the captured backend endpoints.
+// once its remaining consumers use the captured backend endpoints: https://github.com/envoyproxy/gateway/issues/10712
 func (t *Translator) serviceEndpoints(backend client.Object, kind, portName string, protocol corev1.Protocol) ([]*ir.DestinationEndpoint, *ir.DestinationAddressType, *ir.EndpointSource) {
 	// With the fast path enabled, use the provider's captured endpoints and revision
 	// together so the publisher can compare them with fast updates.

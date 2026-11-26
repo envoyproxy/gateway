@@ -62,7 +62,7 @@ type Resources struct {
 	ServiceImports  []*mcsapiv1a1.ServiceImport `json:"serviceImports,omitempty" yaml:"serviceImports,omitempty"`
 	// EndpointSlices supports full translation without BackendEndpoints and admin views.
 	// With the fast path enabled, it is a deduplicated view of the slices in BackendEndpoints.
-	// TODO(robin): Remove this field and use BackendEndpoints only once.
+	// TODO(robin): Remove this field and use BackendEndpoints only: https://github.com/envoyproxy/gateway/issues/10712
 	EndpointSlices []*discoveryv1.EndpointSlice `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
 	// BackendEndpoints contains each backend's endpoints and revision captured
 	// for full translation. The xDS publisher uses the revisions to compare

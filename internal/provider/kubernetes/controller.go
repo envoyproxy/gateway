@@ -965,7 +965,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		// of reconcile instead, so the slices and the BackendEndpoints revision come
 		// from the same read.
 		// TODO(robin): Always load endpoints through loadBackendEndpoints so there
-		// is a single source of endpoint data, and remove this listing.
+		// is a single source of endpoint data, and remove this listing: https://github.com/envoyproxy/gateway/issues/10712
 		if endpointSliceLabelKey != "" && !r.endpointFastPathEnabled() {
 			endpointSliceList := new(discoveryv1.EndpointSliceList)
 			opts := []client.ListOption{
