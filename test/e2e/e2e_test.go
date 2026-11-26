@@ -70,6 +70,14 @@ func TestE2E(t *testing.T) {
 		)
 	}
 
+	// Merged clusters are named after the backend, so the route operators in
+	// clusterStatName can't apply to them.
+	if tests.MergeBackendsEnabled() {
+		skipTests = append(skipTests,
+			tests.ClusterStatNameTest.ShortName,
+		)
+	}
+
 	enabledFeatures := sets.New(features.SupportGateway)
 	if tests.EnabledClusterTrustBundle() {
 		tlog.Logf(t, "ClusterTrustBundle feature is enabled")

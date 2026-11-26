@@ -1281,6 +1281,10 @@ func XDSNameSchemeV2() bool {
 	return DeployProfile == "xds-name-scheme-v2"
 }
 
+func MergeBackendsEnabled() bool {
+	return DeployProfile == "merge-backends"
+}
+
 func GetGatewayResourceNamespace() string {
 	if IsGatewayNamespaceMode() {
 		return "gateway-conformance-infra"
