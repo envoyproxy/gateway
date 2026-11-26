@@ -1140,6 +1140,19 @@ func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.En
 	}
 }
 
+// SetBackendEndpoints indexes the provider's captured endpoints by backend, so a
+// destination finds its backend's endpoints without a scan. The index stays nil
+// when there are none, which is the case unless EndpointFastPath is enabled.
+func (t *TranslatorContext) SetBackendEndpoints(backendEndpoints []endpoint.BackendEndpoints) {
+	if len(backendEndpoints) == 0 {
+		return
+	}
+	t.BackendEndpointsByKey = make(map[ir.ServiceKey]*endpoint.BackendEndpoints, len(backendEndpoints))
+	for i := range backendEndpoints {
+		t.BackendEndpointsByKey[backendEndpoints[i].Backend] = &backendEndpoints[i]
+	}
+}
+
 func (t *TranslatorContext) addEndpointSliceForBackend(kind, svcName string, slice *discoveryv1.EndpointSlice) {
 	key := backendServiceKey{
 		kind:      kind,
