@@ -213,7 +213,7 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
-  enableProxyProtocol: true
+  proxyProtocol: {}
 EOF
 ```
 
@@ -233,7 +233,7 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
-  enableProxyProtocol: true
+  proxyProtocol: {}
 ```
 
 {{% /tab %}}

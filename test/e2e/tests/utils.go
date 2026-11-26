@@ -970,7 +970,7 @@ func WaitForRateLimitDomainsToBeLoaded(t *testing.T, suite *suite.ConformanceTes
 		// unmatched domain is treated as unlimited) - reintroducing the same "expected 429, got
 		// 200" race this helper exists to close. This matters most for profiles like
 		// gateway-namespace-mode that run more than one ratelimit replica - see
-		// rateLimitDeployment.replicas in test/config/envoy-gateaway-config/gateway-namespace-mode.yaml.
+		// rateLimitDeployment.replicas in test/config/envoy-gateway-config/gateway-namespace-mode.yaml.
 		for i := range pods.Items {
 			pod := &pods.Items[i]
 			cfg, err := dumpRateLimitConfigForPod(t, suite, pod.Name)
@@ -1160,7 +1160,12 @@ func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption
 	}
 
 	tlog.Logf(t, "creating e2e artifacts directory %s", bundlePath)
-	if _, err := tb.CollectResult(t.Context(), rest, opts...); err != nil {
+	// Collection runs from t.Cleanup (see e2e.Hook), and t.Context() is canceled just before
+	// cleanup functions run, so it must not be used here: the pod log collector would fail
+	// with "context canceled".
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	if _, err := tb.CollectResult(ctx, rest, opts...); err != nil {
 		tlog.Logf(t, "failed to collect all data: %v", err)
 	}
 }

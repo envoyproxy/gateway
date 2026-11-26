@@ -9,6 +9,13 @@ package kubernetes
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
 	"os"
 	"path/filepath"
 	"slices"
@@ -17,10 +24,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -98,6 +110,7 @@ func TestProvider(t *testing.T) {
 		"httproute":                            testHTTPRoute,
 		"tlsroute":                             testTLSRoute,
 		"stale service cleanup route deletion": testServiceCleanupForMultipleRoutes,
+		"clustertrustbundle v1":                testClusterTrustBundleV1,
 	}
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
@@ -1571,4 +1584,127 @@ func requireResourceReady(t *testing.T, resources *message.ProviderResources, ga
 		}
 		return cmpFunc(res)
 	}, defaultWait, defaultTick)
+}
+
+// testClusterTrustBundleV1 verifies that ClusterTrustBundles are discovered, fetched and watched
+// on a cluster that only serves certificates.k8s.io/v1, which is the default since Kubernetes 1.37.
+func testClusterTrustBundleV1(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+	cli := provider.manager.GetClient()
+
+	// This test covers clusters that only serve certificates.k8s.io/v1, the default since
+	// Kubernetes 1.37. Skip on older API servers (e.g. ENVTEST_K8S_VERSION < 1.37) that don't serve it.
+	dc, err := discovery.NewDiscoveryClientForConfig(provider.manager.GetConfig())
+	require.NoError(t, err)
+	servesCTB := func(gv string) bool {
+		list, err := dc.ServerResourcesForGroupVersion(gv)
+		if kerrors.IsNotFound(err) {
+			return false
+		}
+		require.NoError(t, err)
+		return slices.ContainsFunc(list.APIResources, func(r metav1.APIResource) bool {
+			return r.Kind == resource.KindClusterTrustBundle
+		})
+	}
+	if !servesCTB(certificatesv1.SchemeGroupVersion.String()) {
+		t.Skipf("%s %s is not served by the API server under test", certificatesv1.SchemeGroupVersion, resource.KindClusterTrustBundle)
+	}
+	require.False(t, servesCTB(certificatesv1b1.SchemeGroupVersion.String()),
+		"expected %s %s not to be served", certificatesv1b1.SchemeGroupVersion, resource.KindClusterTrustBundle)
+
+	gc := test.GetGatewayClass("ctb-v1-test", egv1a1.GatewayControllerName, nil)
+	require.NoError(t, cli.Create(ctx, gc))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ctb-v1-test"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := test.GetGateway(types.NamespacedName{Namespace: ns.Name, Name: "ctb-v1-test"}, gc.Name, 8080)
+	require.NoError(t, cli.Create(ctx, gw))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+
+	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "ctb-v1-test"}, nil, map[string]int32{"https": 443})
+	require.NoError(t, cli.Create(ctx, svc))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, svc))
+	}()
+
+	ctb := test.GetClusterTrustBundle("ctb-v1-test")
+	ctb.Spec.TrustBundle = selfSignedCAPEM(t, "ctb-v1-test-ca")
+	require.NoError(t, cli.Create(ctx, ctb))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, ctb))
+	}()
+
+	btp := &gwapiv1.BackendTLSPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns.Name, Name: "ctb-v1-test"},
+		Spec: gwapiv1.BackendTLSPolicySpec{
+			TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+					Kind: resource.KindService,
+					Name: gwapiv1.ObjectName(svc.Name),
+				},
+			}},
+			Validation: gwapiv1.BackendTLSPolicyValidation{
+				CACertificateRefs: []gwapiv1.LocalObjectReference{{
+					Group: "certificates.k8s.io",
+					Kind:  resource.KindClusterTrustBundle,
+					Name:  gwapiv1.ObjectName(ctb.Name),
+				}},
+				Hostname: "example.com",
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, btp))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, btp))
+	}()
+
+	hasTrustBundle := func(want string) func(r *resource.Resources) bool {
+		return func(r *resource.Resources) bool {
+			for _, b := range r.ClusterTrustBundles {
+				if b.Name == ctb.Name && b.Spec.TrustBundle == want {
+					return true
+				}
+			}
+			return false
+		}
+	}
+
+	// The referenced ClusterTrustBundle is fetched through certificates.k8s.io/v1.
+	requireResourceReady(t, resources, gc.Name, hasTrustBundle(ctb.Spec.TrustBundle))
+
+	// Updates to the ClusterTrustBundle are picked up by the v1 watch.
+	updated := selfSignedCAPEM(t, "ctb-v1-test-ca-rotated")
+	require.NoError(t, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		latest := &certificatesv1.ClusterTrustBundle{}
+		if err := cli.Get(ctx, types.NamespacedName{Name: ctb.Name}, latest); err != nil {
+			return err
+		}
+		latest.Spec.TrustBundle = updated
+		return cli.Update(ctx, latest)
+	}))
+	requireResourceReady(t, resources, gc.Name, hasTrustBundle(updated))
+}
+
+// selfSignedCAPEM returns a PEM-encoded self-signed CA certificate with the given common name.
+func selfSignedCAPEM(t *testing.T, commonName string) string {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(time.Now().UnixNano()),
+		Subject:               pkix.Name{CommonName: commonName},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageCertSign,
+		BasicConstraintsValid: true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	require.NoError(t, err)
+	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
 }

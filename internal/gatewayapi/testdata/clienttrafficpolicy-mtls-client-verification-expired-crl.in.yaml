@@ -5,8 +5,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     tls:
@@ -25,8 +25,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-2
     tls:
@@ -42,8 +42,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-3
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-3
       sectionName: http-1
@@ -75,8 +75,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-4
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-3
       sectionName: tls-1

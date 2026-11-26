@@ -57,7 +57,8 @@ HOMEBREW_GOPROXY ?=
 
 KUBE_DEPLOY_PROFILE ?= default
 KUBE_DEPLOY_HELM_VALUES_FILE = $(ROOT_DIR)/test/config/helm/$(KUBE_DEPLOY_PROFILE).yaml
-KUBE_DEPLOY_EG_CONFIG_FILE = $(ROOT_DIR)/test/config/envoy-gateaway-config/$(KUBE_DEPLOY_PROFILE).yaml
+KUBE_DEPLOY_EG_CONFIG_DIR = $(ROOT_DIR)/test/config/envoy-gateway-config
+KUBE_DEPLOY_EG_CONFIG_FILE = $(KUBE_DEPLOY_EG_CONFIG_DIR)/$(KUBE_DEPLOY_PROFILE).yaml
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
@@ -311,7 +312,16 @@ e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/e2e/testdata/extension-server-crds.yaml
-	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
+	kubectl apply -f test/e2e/testdata/inferencepool-crd.yaml
+	# Render the e2e config from the shared base plus the profile's overrides. This
+	# uses the chart values.yaml that kube-deploy generated, so images match the
+	# ones loaded into the cluster.
+	$(GO_TOOL) helm template eg charts/gateway-helm -n envoy-gateway-system \
+		-s templates/envoy-gateway-config.yaml \
+		-f $(KUBE_DEPLOY_EG_CONFIG_DIR)/base.yaml \
+		-f $(KUBE_DEPLOY_HELM_VALUES_FILE) \
+		$(if $(wildcard $(KUBE_DEPLOY_EG_CONFIG_FILE)),-f $(KUBE_DEPLOY_EG_CONFIG_FILE)) \
+		| kubectl apply -f -
 	kubectl apply -f test/config/gatewayclass.yaml
 
 .PHONY: setup-mac-net-connect

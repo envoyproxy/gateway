@@ -1,0 +1,24 @@
+- clusterName: tls-backend-blocked
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.1.1
+            portValue: 443
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tls-backend-blocked/backend/0
+- clusterName: tls-backend-allowed
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.1.2
+            portValue: 443
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tls-backend-allowed/backend/0

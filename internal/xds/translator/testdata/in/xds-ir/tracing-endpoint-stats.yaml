@@ -31,8 +31,6 @@ tracing:
         addressType: FQDN
         name: "tracing-0/backend/0"
   provider:
-    host: otel-collector.monitoring.svc.cluster.local
-    port: 4317
     type: OpenTelemetry
 http:
   - name: "first-listener"

@@ -28,9 +28,9 @@ envoyProxyForGatewayClass:
                 loadBalancer:
                   type: ConsistentHash
                   consistentHash:
-                    type: Header
-                    header:
-                      name: X-some-header
+                    type: Headers
+                    headers:
+                    - name: X-some-header
                 proxyProtocol:
                   version: V2
                 tcpKeepalive:
@@ -76,9 +76,9 @@ envoyProxyForGatewayClass:
                 loadBalancer:
                   type: ConsistentHash
                   consistentHash:
-                    type: Header
-                    header:
-                      name: X-some-header
+                    type: Headers
+                    headers:
+                    - name: X-some-header
                 proxyProtocol:
                   version: V2
                 tcpKeepalive:
@@ -94,8 +94,10 @@ envoyProxyForGatewayClass:
                     connectTimeout: 15s
                 connection:
                   bufferLimit: 20Mi
-              host: otel-collector.monitoring.svc.cluster.local
-              port: 4317
+              backendRefs:
+              - name: otel-collector
+                namespace: monitoring
+                port: 4317
               resourceAttributes:
                 k8s.cluster.name: "cluster-1"
     provider:

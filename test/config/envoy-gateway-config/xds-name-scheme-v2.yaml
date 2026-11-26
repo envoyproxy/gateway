@@ -1,0 +1,8 @@
+# Lists replace rather than merge, so repeat the flag from the helm profile.
+config:
+  envoyGateway:
+    envoyProxy: null
+    runtimeFlags:
+      enabled:
+      - XDSNameSchemeV2
+      - EnvoyProxyPatch

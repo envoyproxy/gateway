@@ -41,8 +41,8 @@ envoyExtensionPolicies:
     namespace: envoy-gateway
     name: policy-for-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: not-found-listener
@@ -56,8 +56,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-for-httproute-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: not-found-route-rule

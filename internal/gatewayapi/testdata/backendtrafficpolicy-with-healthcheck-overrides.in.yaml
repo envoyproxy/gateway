@@ -148,8 +148,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-httproute-with-overrides
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-with-overrides
     healthCheck:
@@ -170,8 +170,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-httproute-with-no-overrides
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-with-no-overrides
     healthCheck:
@@ -190,8 +190,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-grpcroute-with-overrides
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-with-overrides
     healthCheck:
@@ -211,8 +211,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-grpcroute-with-no-overrides
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-with-no-overrides
     healthCheck:

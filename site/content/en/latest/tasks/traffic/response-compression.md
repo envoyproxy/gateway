@@ -29,10 +29,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: response-compression
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   compressor:
     - type: Brotli
       brotli: {}
@@ -54,10 +54,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: response-compression
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   compressor:
     - type: Brotli
       brotli: {}
@@ -88,34 +88,14 @@ kind: BackendTrafficPolicy
 metadata:
   name: response-compression
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
   compressor:
     - type: Gzip
       gzip: {}
       minContentLength: 1024
-```
-
-### Deprecated Configuration
-
-The following configuration uses the deprecated `compression` field. While still supported, it's recommended to migrate to the `compressor` field:
-
-```yaml
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: BackendTrafficPolicy
-metadata:
-  name: response-compression-deprecated
-spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: backend
-  compression:
-    - type: Brotli
-    - type: Gzip
-    - type: Zstd
 ```
 
 To specify the desired compression type, include the `Accept-Encoding` header in requests sent to the Envoy Gateway. The quality value (`q`) in the `Accept-Encoding` header determines the priority of each compression type. Envoy Gateway will select the compression type with the highest `q` value that matches a type configured in the `BackendTrafficPolicy` resource.

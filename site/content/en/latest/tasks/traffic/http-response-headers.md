@@ -488,10 +488,10 @@ metadata:
   name: enable-late-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     lateResponseHeaders:
       add:
@@ -548,10 +548,10 @@ metadata:
   name: enable-late-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     lateResponseHeaders:
       add:
@@ -634,10 +634,10 @@ metadata:
   name: default-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     lateResponseHeaders:
       addIfAbsent:
@@ -681,10 +681,10 @@ metadata:
   name: default-headers
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: eg
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   headers:
     lateResponseHeaders:
       addIfAbsent:

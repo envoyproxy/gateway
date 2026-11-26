@@ -262,13 +262,14 @@ func sendHTTP10Request(gwAddr, path, host string) (map[string]string, error) {
 }
 
 // HTTP1Settings verifies CTP http1 settings on a gateway-scoped policy:
-//   - preserveHeaderCase is applied to the upstream cluster codec
+//   - preserveHeaderCase keeps header case end to end, with a BTP setting it on the backend side
 //   - a BTP on a specific route overrides the CTP-seeded cluster codec
 //   - HTTP/1.0 downstream requests are proxied without acceptHttp10 on the cluster
 //   - useDefaultHost injects a Host for hostless HTTP/1.0 requests (dedicated gateway)
 //
-// Two routes share one gateway and one CTP. The "btp-override" route additionally
-// has a BTP that disables preserveHeaderCase at the cluster level.
+// The routes share one gateway and one CTP. The "http1-settings" route has a BTP that
+// enables preserveHeaderCase on the backend side, and the "btp-override" route has one
+// that disables it.
 // The useDefaultHost subtest uses a dedicated gateway with a concrete hostname.
 var HTTP1Settings = suite.ConformanceTest{
 	ShortName:   "HTTP1Settings",
@@ -314,12 +315,18 @@ var HTTP1Settings = suite.ConformanceTest{
 			s.ControllerName, http10AncestorRef)
 
 		BackendTrafficPolicyMustBeAccepted(t, s.Client,
+			types.NamespacedName{Name: "http1-settings", Namespace: ns},
+			s.ControllerName, ancestorRef)
+
+		BackendTrafficPolicyMustBeAccepted(t, s.Client,
 			types.NamespacedName{Name: "http1-settings-btp-override", Namespace: ns},
 			s.ControllerName, ancestorRef)
 
-		t.Run("CTP preserveHeaderCase seeds the backend cluster codec", func(t *testing.T) {
+		// CTP http1 settings configuring the backend is deprecated, see
+		// https://github.com/envoyproxy/gateway/issues/10308, so the backend side uses a BTP.
+		t.Run("BTP preserveHeaderCase keeps backend header case", func(t *testing.T) {
 			require.True(t, checkHeaderCasePreserved(t, s, gwAddr, "/preserve"),
-				"expected header case to be preserved with CTP http1.preserveHeaderCase")
+				"expected header case to be preserved with CTP and BTP http1.preserveHeaderCase")
 		})
 
 		t.Run("BTP http1 overrides CTP-seeded backend cluster codec", func(t *testing.T) {

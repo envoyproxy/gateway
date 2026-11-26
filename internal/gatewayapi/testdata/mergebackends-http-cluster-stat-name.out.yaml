@@ -1,40 +1,3 @@
-backendTrafficPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    name: btp-both-ref-fields
-    namespace: default
-  spec:
-    circuitBreaker:
-      maxConnections: 1024
-    mergeType: StrategicMerge
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: http-route-1
-    targetRefs:
-    - group: ""
-      kind: Service
-      name: service-1
-    targetSelectors:
-    - kind: HTTPRoute
-      matchLabels:
-        pick: me
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-      conditions:
-      - lastTransitionTime: null
-        message: Service, ServiceImport, and Backend targets cannot be combined with
-          other target kinds in the same BackendTrafficPolicy
-        reason: Invalid
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -52,7 +15,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -79,8 +42,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    labels:
-      pick: me
     name: http-route-1
     namespace: default
   spec:
@@ -91,6 +52,81 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+      matches:
+      - path:
+          value: /route-1
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: http-route-2
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /route-2
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: http-route-3
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - filters:
+        - requestHeaderModifier:
+            add:
+            - name: x-foo
+              value: bar
+          type: RequestHeaderModifier
+        name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /route-3
   status:
     parents:
     - conditions:
@@ -120,6 +156,9 @@ infraIR:
         spec:
           logging: {}
           mergeBackends: {}
+          telemetry:
+            metrics:
+              clusterStatName: '%ROUTE_NAME%/%BACKEND_REFS%'
         status: {}
       listeners:
       - name: envoy-gateway/gateway-1/http
@@ -152,6 +191,10 @@ xdsIR:
       setting:
         addressType: IP
         endpoints:
+        - host: 7.7.7.8
+          port: 8080
+        - host: 7.7.7.9
+          port: 8080
         - host: 7.7.7.7
           port: 8080
         metadata:
@@ -161,6 +204,7 @@ xdsIR:
           sectionName: "8080"
         name: service/default/service-1/8080/http
         protocol: HTTP
+      statName: default/service-1
     globalResources:
       proxyServiceCluster:
         metadata:
@@ -207,13 +251,86 @@ xdsIR:
             name: http-route-1
             namespace: default
           name: httproute/default/http-route-1/rule/0
+          statName: http-route-1/default/service-1
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: http-route-1
           namespace: default
-        name: httproute/default/http-route-1/rule/0/match/-1/*
+        name: httproute/default/http-route-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-1
+      - destination:
+          backendClusterRefs:
+          - name: service/default/service-1/8080/http
+            weight: 1
+          metadata:
+            kind: HTTPRoute
+            name: http-route-2
+            namespace: default
+          name: httproute/default/http-route-2/rule/0
+          statName: http-route-2/default/service-1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: http-route-2
+          namespace: default
+        name: httproute/default/http-route-2/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-2
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: http-route-3
+            namespace: default
+          name: httproute/default/http-route-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.8
+              port: 8080
+            - host: 7.7.7.9
+              port: 8080
+            - host: 7.7.7.7
+              port: 8080
+            filters:
+              addRequestHeaders:
+              - addIfAbsent: false
+                append: true
+                name: x-foo
+                value:
+                - bar
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/http-route-3/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+          statName: http-route-3/default/service-1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: http-route-3
+          namespace: default
+        name: httproute/default/http-route-3/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /route-3
+    metrics:
+      enableCircuitBreakerRemainingStats: false
+      enablePerEndpointStats: false
+      enableRequestResponseSizesStats: false
+      enableVirtualHostStats: false
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

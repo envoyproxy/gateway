@@ -81,10 +81,10 @@ securityPolicies:
       name: policy-for-http-route-1
       generation: 10
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       basicAuth:
         users:
           name: "users-secret1"
@@ -95,10 +95,10 @@ securityPolicies:
       name: policy-for-gateway-1               # This will only apply to the httproute-2
       generation: 20
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       basicAuth:
         users:
           name: "users-secret2"

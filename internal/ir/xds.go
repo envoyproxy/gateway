@@ -179,6 +179,8 @@ type Xds struct {
 	Metrics *Metrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
 	// HealthCheckLog holds gateway-level HC event logging config.
 	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty" yaml:"healthCheckLog,omitempty"`
+	// DrainStrategy is the drain strategy configured in the EnvoyProxy shutdown settings.
+	DrainStrategy egv1a1.DrainStrategy `json:"drainStrategy,omitempty" yaml:"drainStrategy,omitempty"`
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.
@@ -2322,6 +2324,9 @@ func (r *RouteDestination) ClusterPerSettingReasons() []string {
 	if len(r.Settings) > 1 && r.HasPreferLocalZone() {
 		reasons = append(reasons, "backends use preferLocal")
 	}
+	if r.HasCustomBackend() {
+		reasons = append(reasons, "backendRefs have custom backend kind")
+	}
 	if r.HasMixedUpstreamProtocolRequirements() {
 		reasons = append(reasons, "backends require different upstream protocols")
 	}
@@ -2532,6 +2537,15 @@ func (r *RouteDestination) ToBackendWeights() *BackendWeights {
 	return w
 }
 
+func (r *RouteDestination) HasCustomBackend() bool {
+	for _, s := range r.Settings {
+		if s.IsCustomBackend {
+			return true
+		}
+	}
+	return false
+}
+
 // BackendCluster is a shared, identity-deduplicated backend: exactly one backend identity, one
 // setting. Only ever constructed for genuinely merged backends.
 // +kubebuilder:object:generate=true
@@ -2543,6 +2557,9 @@ type BackendCluster struct {
 	Setting *DestinationSetting `json:"setting,omitempty" yaml:"setting,omitempty"`
 	// Metadata describes the backend resource (Service, Backend, etc.)
 	Metadata *ResourceMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	// StatName is the cluster's alt_stat_name. It is named after the backend, not a route,
+	// since the cluster is shared by every route that references the backend.
+	StatName *string `json:"statName,omitempty" yaml:"statName,omitempty"`
 	// Traffic holds the cluster-scoped settings from the accepted whole-gateway
 	// BackendTrafficPolicy, if any - gateway level is the only one guaranteed uniform across a
 	// merged cluster's routes.
@@ -2599,6 +2616,12 @@ type DestinationSetting struct {
 
 	// IsCustomBackend specifies whether the destination is a custom backend.
 	IsCustomBackend bool `json:"isCustomBackend,omitempty" yaml:"isCustomBackend,omitempty"`
+	// TODO: we might want to merge IsDynamicResolver and IsCustomBackend into a single field indicating the type of destination.
+
+	// CustomBackendRef is the custom backend resource this destination was built from.
+	// It is only set when IsCustomBackend is true, and is passed to the extension's cluster hook
+	// only for the cluster built from this destination.
+	CustomBackendRef *UnstructuredRef `json:"customBackendRef,omitempty" yaml:"customBackendRef,omitempty"`
 
 	// Weight associated with this destination,
 	// invalid endpoints are represents with a
@@ -2688,7 +2711,8 @@ func (d DestinationEndpoint) Validate() error {
 			errs = errors.Join(errs, ErrDestEndpointUDSHostInvalid)
 		}
 	} else { // IP or FQDN
-		err := validation.IsDNS1123Subdomain(d.Host)
+		hostnameToValidate := strings.TrimSuffix(d.Host, ".")
+		err := validation.IsDNS1123Subdomain(hostnameToValidate)
 		_, pErr := netip.ParseAddr(d.Host)
 
 		if err != nil && pErr != nil {
