@@ -105,11 +105,18 @@ func TestServiceHTTP3SharedTLSPort(t *testing.T) {
 						wantProtocol = ir.TLSProtocolType
 					}
 					policy := resources.ClientTrafficPolicies[0]
+					policy.Spec.PolicyTargetReferences = egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.GroupName, Kind: "Gateway", Name: gwapiv1.ObjectName(gw.Name),
+							},
+						}},
+					}
 					if terminate {
-						policy.Spec.TargetRef.SectionName = new(https.Name)
+						policy.Spec.TargetRefs[0].SectionName = new(https.Name)
 						validationPolicy := policy.DeepCopy()
 						validationPolicy.Name = "tls-client-validation"
-						validationPolicy.Spec.TargetRef.SectionName = new(tlsListener.Name)
+						validationPolicy.Spec.TargetRefs[0].SectionName = new(tlsListener.Name)
 						validationPolicy.Spec.HTTP3 = nil
 						validationPolicy.Spec.TLS = &egv1a1.ClientTLSSettings{ClientValidation: &egv1a1.ClientValidationContext{
 							CACertificateRefs: []gwapiv1.SecretObjectReference{{Name: "tls-secret-1"}},

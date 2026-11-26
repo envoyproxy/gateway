@@ -24451,6 +24451,9 @@ spec:
                       When specified, a JAX fingerprint derived from the client’s TLS handshake
                       is generated. The fingerprint can be logged in access logs or
                       forwarded to upstream services using request headers.
+                      Downstream TLS client fingerprinting is supported only for TLS over TCP.
+                      It is not supported for QUIC/HTTP/3 connections; configuring this field
+                      does not generate JA3/JA4 fingerprints for those connections.
 
                       Fingerprinting is disabled if not specified.
 
@@ -31329,6 +31332,9 @@ spec:
                       When specified, a JAX fingerprint derived from the client’s TLS handshake
                       is generated. The fingerprint can be logged in access logs or
                       forwarded to upstream services using request headers.
+                      Downstream TLS client fingerprinting is supported only for TLS over TCP.
+                      It is not supported for QUIC/HTTP/3 connections; configuring this field
+                      does not generate JA3/JA4 fingerprints for those connections.
 
                       Fingerprinting is disabled if not specified.
 
@@ -36865,6 +36871,9 @@ spec:
                       When specified, a JAX fingerprint derived from the client’s TLS handshake
                       is generated. The fingerprint can be logged in access logs or
                       forwarded to upstream services using request headers.
+                      Downstream TLS client fingerprinting is supported only for TLS over TCP.
+                      It is not supported for QUIC/HTTP/3 connections; configuring this field
+                      does not generate JA3/JA4 fingerprints for those connections.
 
                       Fingerprinting is disabled if not specified.
 
