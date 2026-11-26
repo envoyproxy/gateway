@@ -439,9 +439,10 @@ type HTTP1Settings struct {
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
 	// HeaderKeyFormat defines how Envoy formats the HTTP/1 header names it sends to
-	// the client. When unset, Envoy lowercases header names.
+	// the client. When unset, PreserveHeaderCase decides the case, and by default
+	// Envoy lowercases header names.
 	// This field configures the client connection only.
-	// HeaderKeyFormat and PreserveHeaderCase are mutually exclusive.
+	// HeaderKeyFormat cannot be set when PreserveHeaderCase is true.
 	//
 	// +optional
 	HeaderKeyFormat *HTTP1HeaderKeyFormat `json:"headerKeyFormat,omitempty"`

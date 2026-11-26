@@ -8,11 +8,10 @@
 package tests
 
 import (
-	"bufio"
 	"context"
-	"fmt"
 	"io"
-	"net"
+	nethttp "net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -20,13 +19,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
-
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -43,10 +38,13 @@ var HTTP1ProperCaseWordsTest = suite.ConformanceTest{
 		t.Run("proper case words", func(t *testing.T) {
 			gwNN := types.NamespacedName{Name: "http1-proper-case-gateway", Namespace: ns}
 			routeNN := types.NamespacedName{Name: "http1-proper-case-words", Namespace: ns}
-			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			acceptClientTrafficPolicy(t, suite, types.NamespacedName{Name: "http1-proper-case-ctp", Namespace: ns}, gwNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+				kubernetes.NewGatewayRef(gwNN), routeNN)
+			ClientTrafficPolicyMustBeAccepted(t, suite.Client,
+				types.NamespacedName{Name: "http1-proper-case-ctp", Namespace: ns},
+				suite.ControllerName, gatewayPolicyAncestor(ns, gwNN.Name))
 
-			requireHeaderNames(t, suite, net.JoinHostPort(gwHost, "80"), "/http1-proper-case", []string{
+			requireHeaderNames(t, suite, gwAddr, "/http1-proper-case", []string{
 				"Location",
 				"X-Added-By-Route",
 			}, []string{
@@ -58,9 +56,10 @@ var HTTP1ProperCaseWordsTest = suite.ConformanceTest{
 		t.Run("default lowercase header names", func(t *testing.T) {
 			gwNN := types.NamespacedName{Name: "http1-default-header-case-gateway", Namespace: ns}
 			routeNN := types.NamespacedName{Name: "http1-default-header-case", Namespace: ns}
-			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+				kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			requireHeaderNames(t, suite, net.JoinHostPort(gwHost, "80"), "/http1-default-case", []string{
+			requireHeaderNames(t, suite, gwAddr, "/http1-default-case", []string{
 				"location",
 				"x-added-by-route",
 			}, []string{
@@ -71,45 +70,33 @@ var HTTP1ProperCaseWordsTest = suite.ConformanceTest{
 	},
 }
 
-func acceptClientTrafficPolicy(
-	t *testing.T, suite *suite.ConformanceTestSuite,
-	policy, gwNN types.NamespacedName,
-) {
-	t.Helper()
-	ancestorRef := gwapiv1.ParentReference{
-		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-		Kind:      gatewayapi.KindPtr(resource.KindGateway),
-		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-		Name:      gwapiv1.ObjectName(gwNN.Name),
-	}
-	ClientTrafficPolicyMustBeAccepted(t, suite.Client, policy, suite.ControllerName, ancestorRef)
-}
-
 func requireHeaderNames(
 	t *testing.T, suite *suite.ConformanceTestSuite,
-	addr, path string, want, reject []string,
+	gwAddr, path string, want, reject []string,
 ) {
 	t.Helper()
 	var last string
-	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(context.Context) (bool, error) {
-		status, names, raw, reqErr := readHTTP1HeaderNames(addr, path, "www.example.com")
+	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
+		reqCtx, cancel := context.WithTimeout(ctx, suite.TimeoutConfig.RequestTimeout)
+		defer cancel()
+		status, names, raw, reqErr := readHTTP1HeaderNames(reqCtx, gwAddr, path)
 		last = raw
 		if reqErr != nil {
 			tlog.Logf(t, "request failed: %v", reqErr)
 			return false, nil
 		}
-		if status != 302 {
+		if status != nethttp.StatusFound {
 			tlog.Logf(t, "status %d\n%s", status, raw)
 			return false, nil
 		}
 		for _, name := range want {
-			if !headerNamePresent(names, name) {
+			if !slices.Contains(names, name) {
 				tlog.Logf(t, "missing header %q in %v\n%s", name, names, raw)
 				return false, nil
 			}
 		}
 		for _, name := range reject {
-			if headerNamePresent(names, name) {
+			if slices.Contains(names, name) {
 				tlog.Logf(t, "unexpected header %q in %v\n%s", name, names, raw)
 				return false, nil
 			}
@@ -119,63 +106,35 @@ func requireHeaderNames(
 	require.NoError(t, err, "header names did not match\n%s", last)
 }
 
-func headerNamePresent(names []string, want string) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
-}
-
-// readHTTP1HeaderNames reads the status and header names from the raw HTTP/1.1
-// response. net/http canonicalizes header names, so it cannot show wire case.
-func readHTTP1HeaderNames(addr, path, host string) (int, []string, string, error) {
-	conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
+// readHTTP1HeaderNames returns the status and the header names as Envoy wrote
+// them. net/http canonicalizes header names, so the names come from the raw
+// response bytes. RoundTrip does not follow the redirect.
+func readHTTP1HeaderNames(ctx context.Context, gwAddr, path string) (int, []string, string, error) {
+	req, err := nethttp.NewRequestWithContext(ctx, nethttp.MethodGet, "http://"+gwAddr+path, nil)
 	if err != nil {
 		return 0, nil, "", err
 	}
-	defer conn.Close()
-	if err = conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
-		return 0, nil, "", err
-	}
-	if _, err = fmt.Fprintf(conn, "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", path, host); err != nil {
-		return 0, nil, "", err
-	}
+	req.Host = "www.example.com"
+	req.Close = true
 
-	reader := bufio.NewReader(conn)
-	statusLine, err := reader.ReadString('\n')
+	tt := newTeeTransport(nil)
+	resp, err := tt.RoundTrip(req)
 	if err != nil {
-		return 0, nil, statusLine, err
+		return 0, nil, tt.RawResponse(), err
 	}
-	var status int
-	if _, err = fmt.Sscanf(statusLine, "HTTP/1.%d %d", new(int), &status); err != nil {
-		return 0, nil, statusLine, fmt.Errorf("status line %q: %w", strings.TrimSpace(statusLine), err)
+	defer resp.Body.Close()
+	if _, err = io.Copy(io.Discard, resp.Body); err != nil {
+		return 0, nil, tt.RawResponse(), err
 	}
 
-	var raw strings.Builder
-	raw.WriteString(statusLine)
-	var names []string
-	for {
-		line, readErr := reader.ReadString('\n')
-		raw.WriteString(line)
-		trimmed := strings.TrimRight(line, "\r\n")
-		if trimmed == "" || readErr != nil && line == "" {
-			if readErr != nil && readErr != io.EOF {
-				return status, names, raw.String(), readErr
-			}
-			break
-		}
-		name, _, ok := strings.Cut(trimmed, ":")
-		if ok {
+	raw := tt.RawResponse()
+	head, _, _ := strings.Cut(raw, "\r\n\r\n")
+	lines := strings.Split(head, "\r\n")
+	names := make([]string, 0, len(lines))
+	for _, line := range lines[1:] {
+		if name, _, ok := strings.Cut(line, ":"); ok {
 			names = append(names, name)
 		}
-		if readErr != nil {
-			if readErr == io.EOF {
-				break
-			}
-			return status, names, raw.String(), readErr
-		}
 	}
-	return status, names, raw.String(), nil
+	return resp.StatusCode, names, raw, nil
 }

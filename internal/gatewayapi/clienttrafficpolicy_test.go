@@ -637,4 +637,22 @@ func TestTranslateHTTP1HeaderKeyFormat(t *testing.T) {
 		require.EqualError(t, err, "preserveHeaderCase and headerKeyFormat are mutually exclusive")
 		require.Nil(t, httpIR.HTTP1)
 	})
+
+	t.Run("unknown type is rejected", func(t *testing.T) {
+		httpIR := &ir.HTTPListener{}
+		err := translateHTTP1Settings(&egv1a1.HTTP1Settings{
+			HeaderKeyFormat: &egv1a1.HTTP1HeaderKeyFormat{Type: "PreserveCase"},
+		}, nil, httpIR)
+		require.EqualError(t, err, `unsupported headerKeyFormat type "PreserveCase"`)
+		require.Nil(t, httpIR.HTTP1)
+	})
+
+	t.Run("empty type is rejected", func(t *testing.T) {
+		httpIR := &ir.HTTPListener{}
+		err := translateHTTP1Settings(&egv1a1.HTTP1Settings{
+			HeaderKeyFormat: &egv1a1.HTTP1HeaderKeyFormat{},
+		}, nil, httpIR)
+		require.EqualError(t, err, `unsupported headerKeyFormat type ""`)
+		require.Nil(t, httpIR.HTTP1)
+	})
 }
