@@ -114,33 +114,28 @@ func (r *gatewayAPIReconciler) addRouteFilterConfigMap(
 	}
 }
 
-// processRouteFilterSecretRef adds the referenced Secret in a HTTPRouteFilter
-// to the resourceTree
+// processRouteFilterSecretRef adds the Secret referenced by a HTTPRouteFilter
+// to the resourceTree, and the ReferenceGrant that allows it when the Secret is
+// in another namespace.
 func (r *gatewayAPIReconciler) processRouteFilterSecretRef(
 	ctx context.Context, filter *egv1a1.HTTPRouteFilter,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
 	if filter.Spec.CredentialInjection != nil {
-		name := string(filter.Spec.CredentialInjection.Credential.ValueRef.Name)
-		secret := new(corev1.Secret)
-		err := r.client.Get(ctx, types.NamespacedName{Namespace: filter.Namespace, Name: name}, secret)
 		// we don't return an error here, because we want to continue
 		// reconciling the rest of the HTTPRouteFilter despite that this
 		// reference is invalid.
 		// This HTTPRouteFilter will be marked as invalid in its status
 		// when translating to IR because the referenced secret can't be
-		// found.
-		if err != nil {
+		// found or isn't permitted.
+		if err := r.processSecretRef(ctx, resourceMap, resourceTree,
+			resource.KindHTTPRouteFilter, filter.Namespace, filter.Name,
+			filter.Spec.CredentialInjection.Credential.ValueRef); err != nil {
 			r.log.Error(err,
 				"failed to process CredentialInjection ValueRef for HTTPRouteFilter",
 				"filter", filter, "ValueRef", filter.Spec.CredentialInjection.Credential.ValueRef.Name)
 			return
 		}
 		resourceMap.allAssociatedNamespaces.Insert(filter.Namespace)
-		if !resourceMap.allAssociatedSecrets.Has(utils.NamespacedName(secret).String()) {
-			resourceMap.allAssociatedSecrets.Insert(utils.NamespacedName(secret).String())
-			resourceTree.Secrets = append(resourceTree.Secrets, secret)
-			r.log.Info("processing Secret", "namespace", filter.Namespace, "name", name)
-		}
 	}
 }
