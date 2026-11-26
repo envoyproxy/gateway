@@ -685,6 +685,12 @@ func (r *gatewayAPIReconciler) validateServiceImportForReconcile(obj client.Obje
 		return true
 	}
 
+	if r.spCRDExists {
+		if r.isSecurityPolicyReferencingBackend(&nsName) {
+			return true
+		}
+	}
+
 	if r.eepCRDExists {
 		if r.isEnvoyExtensionPolicyReferencingBackend(&nsName) {
 			return true

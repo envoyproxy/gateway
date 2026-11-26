@@ -1,0 +1,1 @@
+Fixed changes to a ServiceImport referenced by a SecurityPolicy's ExtAuth backendRefs not being reconciled, which left the SecurityPolicy unresolved or Envoy using stale ports until an unrelated reconcile.
