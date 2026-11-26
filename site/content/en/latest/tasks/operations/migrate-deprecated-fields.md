@@ -124,7 +124,8 @@ Use `--eg-namespace` if Envoy Gateway isn't installed in `envoy-gateway-system`.
 
 Resources managed by Helm, Argo CD or Flux are printed unchanged and their deprecated fields are
 reported as `error`: the tool would revert the change on its next sync, so fix them in their source
-instead.
+instead. A resource is treated as managed by Argo CD if it has the `app.kubernetes.io/instance` or
+`argocd.argoproj.io/instance` label, or the `argocd.argoproj.io/tracking-id` annotation.
 
 ## Fields that are reported but not migrated
 

@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestInlineDocument(t *testing.T) {
@@ -234,5 +235,38 @@ func TestListInputRejected(t *testing.T) {
 	} {
 		_, err := newFileInput("-", []byte(input))
 		require.ErrorContains(t, err, "-: document 1: list resource")
+	}
+}
+
+func TestManagedBy(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		labels      map[string]string
+		annotations map[string]string
+		want        string
+	}{
+		{name: "unmanaged"},
+		{name: "helm label", labels: map[string]string{"app.kubernetes.io/managed-by": "Helm"}, want: "Helm"},
+		{name: "helm annotation", annotations: map[string]string{"meta.helm.sh/release-name": "eg"}, want: "Helm"},
+		{
+			name: "helm takes precedence over its instance label",
+			labels: map[string]string{
+				"app.kubernetes.io/managed-by": "Helm",
+				"app.kubernetes.io/instance":   "eg",
+			},
+			want: "Helm",
+		},
+		{name: "argo cd default tracking label", labels: map[string]string{"app.kubernetes.io/instance": "app"}, want: "Argo CD"},
+		{name: "argo cd custom label", labels: map[string]string{"argocd.argoproj.io/instance": "app"}, want: "Argo CD"},
+		{name: "argo cd tracking annotation", annotations: map[string]string{"argocd.argoproj.io/tracking-id": "app:/Gateway:default/eg"}, want: "Argo CD"},
+		{name: "flux kustomization", labels: map[string]string{"kustomize.toolkit.fluxcd.io/name": "apps"}, want: "Flux"},
+		{name: "flux helm release", labels: map[string]string{"helm.toolkit.fluxcd.io/name": "eg"}, want: "Flux"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			o := &metav1.PartialObjectMetadata{}
+			o.SetLabels(tc.labels)
+			o.SetAnnotations(tc.annotations)
+			require.Equal(t, tc.want, managedBy(o))
+		})
 	}
 }

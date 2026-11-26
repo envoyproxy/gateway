@@ -437,7 +437,12 @@ func managedBy(o client.Object) string {
 	switch {
 	case labels["app.kubernetes.io/managed-by"] == "Helm" || annotations["meta.helm.sh/release-name"] != "":
 		return "Helm"
-	case labels["argocd.argoproj.io/instance"] != "" || annotations["argocd.argoproj.io/tracking-id"] != "":
+	// Argo CD tracks resources with the app.kubernetes.io/instance label by default before v3.0,
+	// with the tracking-id annotation from v3.0, and with a custom label if configured.
+	// app.kubernetes.io/instance is also a common label outside Argo CD, but treating such an object
+	// as managed only means it's reported instead of rewritten, which is the safe outcome.
+	case labels["app.kubernetes.io/instance"] != "" || labels["argocd.argoproj.io/instance"] != "" ||
+		annotations["argocd.argoproj.io/tracking-id"] != "":
 		return "Argo CD"
 	case labels["kustomize.toolkit.fluxcd.io/name"] != "" || labels["helm.toolkit.fluxcd.io/name"] != "":
 		return "Flux"
