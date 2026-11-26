@@ -49,8 +49,8 @@ spec:
 | Invalid JWT | 401 Unauthorized (403 for an audience mismatch), even if valid Basic credentials are also presented |
 
 Each listed method lets requests without its own credentials through, and a check placed
-after both methods rejects a request that neither authenticated. That check responds with 403
-and does not send a `WWW-Authenticate` challenge, because Envoy's RBAC filter has no
+after both methods rejects a request that neither authenticated. That check currently responds
+with 403 and does not send a `WWW-Authenticate` challenge, because Envoy's RBAC filter has no
 configurable deny status.
 
 If a filter placed before the check changes the request's route, for example a Lua
