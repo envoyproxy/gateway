@@ -13,6 +13,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	nvd.nist.gov \
 	github.com \
 	linkedin.com \
+	httpd.apache.org \
 	jwt.io \
 	presence.decionis.com \
 	githubusercontent.com \
