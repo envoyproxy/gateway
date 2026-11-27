@@ -33,6 +33,9 @@ The Helm chart for Envoy Gateway
 | commonLabels | object | `{}` | Labels to apply to all resources |
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | crds.enabled | bool | `true` | Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately. |
+| crds.envoyGateway.managed | bool | `false` | Render the Envoy Gateway CRDs as templates of the release, so Helm installs and upgrades them with the chart instead of applying them once from the crds/ directory. Install or upgrade the release with `--take-ownership` to adopt CRDs that are already in the cluster, or install it with `--skip-crds` when every CRD set is managed or installed separately. |
+| crds.gatewayAPI.managed | bool | `false` | Render the Gateway API CRDs (experimental channel) as templates of the release, like `crds.envoyGateway.managed`. |
+| crds.keep | bool | `true` | Add `helm.sh/resource-policy: keep` to managed CRDs, so Helm leaves them and their resources in place on `helm uninstall` and when they leave the release. To delete them instead, apply `false` with a `helm upgrade` while the set is still managed, before the uninstall or the upgrade that turns it off. |
 | createNamespace | bool | `false` |  |
 | deployment.annotations | object | `{}` |  |
 | deployment.envoyGateway.extraEnv | list | `[]` | Additional environment variables for the envoy-gateway container. |

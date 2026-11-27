@@ -139,6 +139,38 @@ If the provider-managed Gateway API CRDs are not compatible with your Envoy Gate
 resources, do not mix them with another copy installed by Envoy Gateway. Use a compatible Gateway API CRD installation
 method for the cluster first, then install Envoy Gateway with `--set crds.enabled=false`.
 
+## Managing CRDs with Helm
+
+Helm applies the CRDs in the chart's `crds/` directory once, on install, and never upgrades them. To have Helm install
+and upgrade the CRDs with every release instead, render them as templates of the release:
+
+* `crds.envoyGateway.managed=true` manages the Envoy Gateway CRDs.
+* `crds.gatewayAPI.managed=true` manages the Gateway API CRDs (experimental channel).
+
+Helm still applies the `crds/` directory on install, so install the release with `--skip-crds`, or with
+`--take-ownership` (Helm 3.17 or later) to adopt CRDs that are already in the cluster, for example from an earlier
+release of this chart. `--skip-crds` skips every CRD in `crds/`, so use it only when each set is either managed or
+installed separately:
+
+```shell
+helm install eg oci://docker.io/envoyproxy/gateway-helm \
+  --version {{< helm-version >}} \
+  -n envoy-gateway-system \
+  --create-namespace \
+  --skip-crds \
+  --set crds.envoyGateway.managed=true \
+  --set crds.gatewayAPI.managed=true
+```
+
+Managed CRDs carry `helm.sh/resource-policy: keep`, so Helm leaves them in place on `helm uninstall` and when they
+leave the release, for example when a managed set is turned off again. To have them deleted instead, together with
+every resource of those kinds, first apply `crds.keep=false` with a `helm upgrade` while the set is still managed, then
+uninstall or turn the set off: Helm reads the annotation from the release's previous manifest, so setting both in one
+step keeps the CRDs. The rendered CRDs are part of the release record, which
+Helm stores in a Secret of at most 1 MiB. Managing the Envoy Gateway CRDs alone uses about half of that limit,
+managing both sets about three quarters, and both sets grow with each release. Tools that render the chart with
+`helm template --include-crds`, such as Argo CD, emit the CRDs twice unless they skip `crds/` (`skipCrds` in Argo CD).
+
 ## Upgrading from the previous version
 
 [Helm](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations) does not update CRDs
@@ -146,6 +178,19 @@ that live in the `/crds` folder in the Helm Chart. So you will manually need to 
 Follow the steps outlined in [this](./install-yaml/#upgrading-from-the-previous-version) section if you're upgrading from a previous version.
 
 Note: make sure to upgrade the CRDs first, then upgrade Envoy Gateway. Otherwise, Envoy Gateway may not find the new CRD versions and could fail to reconcile existing resources.
+
+A release that [manages its CRDs with Helm](#managing-crds-with-helm) upgrades them with `helm upgrade` instead, and
+in the right order: Helm applies the CRDs before the Envoy Gateway Deployment in the same upgrade. To switch an existing
+release to managed CRDs, let the upgrade adopt the CRDs that `crds/` installed:
+
+```shell
+helm upgrade eg oci://docker.io/envoyproxy/gateway-helm \
+  --version {{< helm-version >}} \
+  -n envoy-gateway-system \
+  --take-ownership \
+  --set crds.envoyGateway.managed=true \
+  --set crds.gatewayAPI.managed=true
+```
 
 {{% alert title="Gateway API v1.6 CRD upgrade required before Envoy Gateway upgrade" color="warning" %}}
 This release reconciles `TCPRoute` and `UDPRoute` via the `gateway.networking.k8s.io/v1` API group (promoted in Gateway API v1.6).
