@@ -1006,7 +1006,7 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // - Empty/no Authorization is allowed and results in no-op on L4.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
-	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
+	if p.Spec.Authentication != nil || p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
 		return fmt.Errorf("only authorization is supported for %s (routes/listeners)", proto)
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
@@ -1282,6 +1282,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		hasNonExtAuthError bool
 	)
 
+	errs = validateAuthentication(policy)
 	if policy.Spec.CORS != nil {
 		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
 			err = perr.WithMessage(err, "CORS")
@@ -1408,14 +1409,15 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 		// Pre-create security features to avoid repeated allocations
 		securityFeatures := &ir.SecurityFeatures{
-			CORS:          cors,
-			CSRF:          csrf,
-			JWT:           jwt,
-			OIDC:          oidc,
-			APIKeyAuth:    apiKeyAuth,
-			BasicAuth:     basicAuth,
-			ExtAuth:       extAuth,
-			Authorization: authorization,
+			AuthenticationAny: authenticationAny(policy),
+			CORS:              cors,
+			CSRF:              csrf,
+			JWT:               jwt,
+			OIDC:              oidc,
+			APIKeyAuth:        apiKeyAuth,
+			BasicAuth:         basicAuth,
+			ExtAuth:           extAuth,
+			Authorization:     authorization,
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
@@ -1642,6 +1644,7 @@ func (t *Translator) translateSecurityPolicyForListeners(
 		hasNonExtAuthError    bool
 	)
 
+	errs = validateAuthentication(policy)
 	if policy.Spec.CORS != nil {
 		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
 			err = perr.WithMessage(err, "CORS")
@@ -1737,14 +1740,15 @@ func (t *Translator) translateSecurityPolicyForListeners(
 
 	// Pre-create security features and error response to avoid repeated allocations
 	securityFeatures := &ir.SecurityFeatures{
-		CORS:          cors,
-		CSRF:          csrf,
-		JWT:           jwt,
-		OIDC:          oidc,
-		APIKeyAuth:    apiKeyAuth,
-		BasicAuth:     basicAuth,
-		ExtAuth:       extAuth,
-		Authorization: authorization,
+		AuthenticationAny: authenticationAny(policy),
+		CORS:              cors,
+		CSRF:              csrf,
+		JWT:               jwt,
+		OIDC:              oidc,
+		APIKeyAuth:        apiKeyAuth,
+		BasicAuth:         basicAuth,
+		ExtAuth:           extAuth,
+		Authorization:     authorization,
 	}
 
 	routesWithDirectResponse := sets.New[string]()
@@ -2008,7 +2012,7 @@ func (t *Translator) buildJWT(
 	}
 
 	return &ir.JWT{
-		AllowMissing:         ptr.Deref(policy.Spec.JWT.Optional, false),
+		AllowMissing:         authenticationAny(policy) || ptr.Deref(policy.Spec.JWT.Optional, false),
 		AllowMissingOrFailed: ptr.Deref(policy.Spec.JWT.FailOpen, false),
 		Providers:            providers,
 		Name:                 jwtName(policy, owners),
@@ -2038,6 +2042,13 @@ func jwtName(policy *egv1a1.SecurityPolicy, owners *securityPolicyOwners) string
 		// Kubernetes namespaces and names cannot contain '+', so the separator never
 		// reads as part of a policy name.
 		name += "+" + utils.NamespacedName(owners.mergedParent).String()
+	}
+	if authenticationAny(policy) {
+		// Connections still on the previous listener resolve this name against its
+		// requirement_map. Under one name they would pair anyOf's allow_missing with
+		// a route that no longer enables the gate, and pass requests without
+		// credentials; a distinct name makes them refuse requests until they drain.
+		name += authenticationAnySuffix
 	}
 	if len(name) <= maxJWTNameLength {
 		return name
@@ -3210,7 +3221,8 @@ func (t *Translator) buildBasicAuth(
 	}
 
 	return &ir.BasicAuth{
-		Name:                  irConfigName(ownerPolicy),
+		AllowMissing:          authenticationAny(policy),
+		Name:                  basicAuthName(policy, ownerPolicy),
 		Users:                 usersSecretBytes,
 		ForwardUsernameHeader: basicAuth.ForwardUsernameHeader,
 	}, nil

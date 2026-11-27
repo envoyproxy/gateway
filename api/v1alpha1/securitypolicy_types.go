@@ -54,6 +54,12 @@ type SecurityPolicy struct {
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? !(self.targetRef.kind in ['TCPRoute', 'TLSRoute'] && has(self.targetRef.sectionName)) : true", message="sectionName is not supported for TCPRoute/TLSRoute targets"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, !(ref.kind in ['TCPRoute', 'TLSRoute'] && has(ref.sectionName))) : true", message="sectionName is not supported for TCPRoute/TLSRoute targets"
 // +kubebuilder:validation:XValidation:rule="(!has(self.mergeType) && has(self.authorization) && has(self.authorization.rules) && self.authorization.rules.exists(r, has(r.principal) ? has(r.principal.jwt) : false)) ? has(self.jwt) : true", message="if authorization.rules.principal.jwt is used, jwt must be defined, unless mergeType is set and the jwt providers are inherited from the parent policy"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && !has(self.mergeType)) ? ((!('JWT' in self.authentication.anyOf) || has(self.jwt)) && (!('BasicAuth' in self.authentication.anyOf) || has(self.basicAuth))) : true", message="every method in authentication.anyOf must be configured, unless mergeType is set and it is inherited from the parent policy"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && has(self.oidc)) ? ((!has(self.oidc.forwardAccessToken) || !self.oidc.forwardAccessToken) && (!has(self.oidc.passThroughAuthHeader) || !self.oidc.passThroughAuthHeader)) : true", message="authentication.anyOf does not support oidc.forwardAccessToken or oidc.passThroughAuthHeader"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && has(self.oidc) && has(self.oidc.forwardIDToken)) ? self.oidc.forwardIDToken.header.lowerAscii() != 'authorization' : true", message="authentication.anyOf does not support oidc.forwardIDToken on the Authorization header"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && has(self.extAuth)) ? (!has(self.extAuth.recomputeRoute) || !self.extAuth.recomputeRoute) : true", message="authentication.anyOf does not support extAuth.recomputeRoute"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && 'JWT' in self.authentication.anyOf && has(self.jwt)) ? ((!has(self.jwt.failOpen) || !self.jwt.failOpen) && self.jwt.providers.all(p, !has(p.recomputeRoute) || !p.recomputeRoute)) : true", message="authentication.anyOf with JWT does not support jwt.failOpen or recomputeRoute on JWT providers"
+// +kubebuilder:validation:XValidation:rule="(has(self.authentication) && has(self.authentication.anyOf) && 'BasicAuth' in self.authentication.anyOf && has(self.basicAuth)) ? !has(self.basicAuth.forwardUsernameHeader) : true", message="authentication.anyOf with BasicAuth does not support basicAuth.forwardUsernameHeader"
 type SecurityPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 
@@ -68,6 +74,11 @@ type SecurityPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self != 'Replace'",message="Replace is not a valid MergeType for SecurityPolicy"
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
+
+	// Authentication defines how the configured authentication methods combine.
+	//
+	// +optional
+	Authentication *Authentication `json:"authentication,omitempty"`
 
 	// APIKeyAuth defines the configuration for the API Key Authentication.
 	//
@@ -125,3 +136,42 @@ type SecurityPolicyList struct {
 func init() {
 	localSchemeBuilder.Register(&SecurityPolicy{}, &SecurityPolicyList{})
 }
+
+// Authentication defines how the configured authentication methods combine.
+type Authentication struct {
+	// AnyOf lists authentication methods of which any one is enough to
+	// authenticate a request. Every configured method not listed stays required.
+	// Without AnyOf, every configured method applies on its own terms, so JWT and
+	// BasicAuth are both required unless jwt.optional or jwt.failOpen relaxes JWT.
+	//
+	// Each listed method lets a request without its credentials through, and a
+	// request without credentials for any listed method is rejected. A request
+	// presenting invalid credentials for a listed method is rejected.
+	// jwt.optional has no effect when JWT is listed. Authorization rules with a
+	// jwt principal never match a request authenticated by BasicAuth.
+	//
+	// AnyOf currently requires both JWT and BasicAuth. It does not support
+	// oidc.forwardAccessToken, oidc.passThroughAuthHeader, oidc.forwardIDToken on
+	// the Authorization header or on a header a JWT provider reads,
+	// extAuth.recomputeRoute, jwt.failOpen, JWT route recomputation or
+	// basicAuth.forwardUsernameHeader. A JWT header extractor on the
+	// Authorization header must use the valuePrefix "Bearer ".
+	//
+	// +listType=set
+	// +kubebuilder:validation:MinItems=2
+	// +kubebuilder:validation:MaxItems=2
+	// +optional
+	AnyOf []AuthenticationMethod `json:"anyOf,omitempty"`
+}
+
+// AuthenticationMethod names an authentication method of a SecurityPolicy.
+//
+// +kubebuilder:validation:Enum=JWT;BasicAuth
+type AuthenticationMethod string
+
+const (
+	// AuthenticationMethodJWT is the jwt authentication method.
+	AuthenticationMethodJWT AuthenticationMethod = "JWT"
+	// AuthenticationMethodBasicAuth is the basicAuth authentication method.
+	AuthenticationMethodBasicAuth AuthenticationMethod = "BasicAuth"
+)

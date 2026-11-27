@@ -1,0 +1,159 @@
+- ignorePortInHostMatching: true
+  name: default/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.foo.com
+    name: default/gateway-1/http/www_foo_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /any
+      name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1/authentication-any:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuthPerRoute
+          users:
+            inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+        envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-1:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+          checkSettings: {}
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: default/policy-for-http-route-1/authentication-any
+        envoy.filters.http.oauth2:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
+          config:
+            authScopes:
+            - openid
+            authType: BASIC_AUTH
+            authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            cookieConfigs:
+              codeVerifierCookieConfig:
+                path: /any/oauth2/callback
+              oauthNonceCookieConfig:
+                path: /any/oauth2/callback
+            credentials:
+              clientId: client.oauth.foo.com
+              cookieNames:
+                bearerToken: AccessToken-5F93C2E4
+                codeVerifier: CodeVerifier-5F93C2E4
+                idToken: IdToken-5F93C2E4
+                oauthExpires: OauthExpires-5F93C2E4
+                oauthHmac: OauthHMAC-5F93C2E4
+                oauthNonce: OauthNonce-5F93C2E4
+                refreshToken: RefreshToken-5F93C2E4
+              hmacSecret:
+                name: oauth2/hmac_secret/securitypolicy/default/policy-for-http-route-1
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+              tokenSecret:
+                name: oauth2/client_secret/securitypolicy/default/policy-for-http-route-1
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+            preserveAuthorizationHeader: true
+            redirectPathMatcher:
+              path:
+                exact: /any/oauth2/callback
+            redirectUri: https://www.foo.com/any/oauth2/callback
+            signoutPath:
+              path:
+                exact: /any/logout
+            statPrefix: securitypolicy/default/policy-for-http-route-1
+            tokenEndpoint:
+              cluster: oauth_foo_com_443
+              timeout: 10s
+              uri: https://oauth.foo.com/token
+            useRefreshToken: false
+        envoy.filters.http.rbac/authentication-any:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            rules:
+              policies:
+                authenticated:
+                  permissions:
+                  - any: true
+                  principals:
+                  - metadata:
+                      filter: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1/authentication-any
+                      path:
+                      - key: username
+                      value:
+                        presentMatch: true
+                  - metadata:
+                      filter: envoy.filters.http.jwt_authn
+                      path:
+                      - key: default/policy-for-http-route-1/authentication-any
+                      value:
+                        presentMatch: true
+  - domains:
+    - www.bar.com
+    name: default/gateway-1/http/www_bar_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /basic
+      name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
+      route:
+        cluster: httproute/default/httproute-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuthPerRoute
+          users:
+            inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+  - domains:
+    - www.baz.com
+    name: default/gateway-1/http/www_baz_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /public
+      name: httproute/default/httproute-3/rule/0/match/0/www_baz_com
+      route:
+        cluster: httproute/default/httproute-3/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - www.qux.com
+    name: default/gateway-1/http/www_qux_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /other-any
+      name: httproute/default/httproute-4/rule/0/match/0/www_qux_com
+      route:
+        cluster: httproute/default/httproute-4/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-4/authentication-any:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuthPerRoute
+          users:
+            inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: default/policy-for-http-route-4/authentication-any
+        envoy.filters.http.rbac/authentication-any:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBACPerRoute
+          rbac:
+            rules:
+              policies:
+                authenticated:
+                  permissions:
+                  - any: true
+                  principals:
+                  - metadata:
+                      filter: envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-4/authentication-any
+                      path:
+                      - key: username
+                      value:
+                        presentMatch: true
+                  - metadata:
+                      filter: envoy.filters.http.jwt_authn
+                      path:
+                      - key: default/policy-for-http-route-4/authentication-any
+                      value:
+                        presentMatch: true
