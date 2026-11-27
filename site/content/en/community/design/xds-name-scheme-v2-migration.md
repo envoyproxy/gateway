@@ -234,12 +234,26 @@ For each EnvoyPatchPolicy, for each `jsonPatches[i]`:
 | `op: add` with an empty path (adds a new resource) | unchanged | none: the user names the new resource |
 
 The tool looks for v1 names of renamed resources everywhere in a patch: the target, `jsonPath`,
-and `operation.value`. A patch counts as migrated only if none is left. A name inside a value has
+and `operation.value`. A patch is reported as migrated only if it finds none left. A name inside a value has
 no scheme-independent form, so the user has to change it when turning the flag on; the report
 gives the v2 value to use.
 
 Selectors are scheme-independent, so the rewritten policy works before and after the flip. Users
 can apply it at any time, and the flip doesn't have to happen at the same moment.
+
+#### Best effort
+
+The migration is best effort. It rewrites the forms of reference listed above, but it doesn't
+evaluate the patches, so "migrated" means the tool found nothing more to change, not that the
+patched xDS is the same under v2. It can miss, for example:
+
+- a scheme-dependent value other than a name, such as a `jsonPath` filter on the HCM stat prefix
+  (`http-10080` becomes `http-80`);
+- a patch that depends on an earlier one, such as a VirtualHost filter rewritten to its original
+  domain after an earlier patch, in this policy or another, changed that domain.
+
+Users review the rewritten policies and test them with the flag on in a non-production
+environment before applying them to production.
 
 #### Inputs and limits
 
@@ -369,7 +383,7 @@ flowchart LR
 
 | Release | Change | User action |
 |---|---|---|
-| N | `selector`, `egctl x migrate xds-name-scheme`, extension hook context, EnvoyProxy `xdsMetadata.listeners` (off). The flag stays off by default | Migrate EnvoyPatchPolicies; move extensions off xDS names. Optionally turn the flag on to verify before upgrading |
+| N | `selector`, `egctl x migrate xds-name-scheme`, extension hook context, EnvoyProxy `xdsMetadata.listeners` (off). The flag stays off by default | Migrate EnvoyPatchPolicies; move extensions off xDS names. Turn the flag on in a non-production environment to verify before upgrading |
 | N+1 and later | Flag and v1 naming removed; v2 is always on | Remove the flag from EnvoyGateway config |
 
 The new API ships first so users can migrate while v1 names still work. The flag is removed in
