@@ -577,8 +577,8 @@ RLS cannot follow that pattern:
 
 * It serves mTLS to its proxies, so it needs its certificate and private key in its own namespace.
 * The `envoyproxy/ratelimit` configuration client authenticates only with a client certificate or
-  static headers; it cannot reload a short-lived projected ServiceAccount token. It therefore keeps
-  using its RLS certificate as the configuration client certificate, as described in
+  static headers; it cannot reload a short-lived projected ServiceAccount token. It therefore uses a
+  configuration client certificate stored next to its serving certificate, as described in
   [RLS identities and certificates](#rls-identities-and-certificates).
 
 The controller therefore needs permission to create, update and delete Secrets in the namespace where
@@ -593,6 +593,15 @@ In both modes the chart grants it only when `enableDedicatedRateLimit` is true. 
 manage RBAC themselves must grant it before enabling dedicated RLS. Envoy Gateway writes only the
 Secrets it owns for a dedicated RLS, selected by the labels in [Service identity](#service-identity),
 and never modifies Secrets it did not create.
+
+**Configuration server address.** The shared RLS reaches the configuration server through the short
+Service name `envoy-gateway:18001`, which only resolves from the controller namespace. Every dedicated
+RLS instead uses the fully qualified name `envoy-gateway.<controller-namespace>.svc.<dns-domain>:18001`,
+in both modes, using the configured `DNSDomain`. That name is already a SAN of the control plane
+certificate that certgen issues, so the RLS can verify the server against it. A wrong address fails
+silently: the RLS starts without its configuration (`FORCE_START_WITHOUT_INITIAL_CONFIG`), becomes
+ready, and allows every request for its unknown domains. The rendered address is therefore covered by
+the namespace placement tests in the [acceptance plan](#acceptance-and-validation-plan).
 
 In Gateway namespace mode, the configuration server also receives connections from Gateway namespaces,
 not only from the controller namespace. Every request is authenticated and limited to the caller's own
@@ -628,8 +637,9 @@ runs in (see [Namespace](#namespace)). The Service name is derived from the Gate
 so the FQDN is unique in both deployment modes, and `<dns-domain>` uses the existing configured `DNSDomain`, as control-plane
 certificate generation does today. Resource names, Redis key prefixes and certificate identities remain
 stable when a Gateway is recreated with the same namespace and name in the same installation. The
-configuration server maps this identity to the corresponding scope's snapshot. The RLS checks this DNS
-SAN through `GRPC_CLIENT_TLS_SAN`; proxies verify the same FQDN in the RLS server certificate. The
+configuration server maps this identity, carried in the URI SAN of the RLS configuration client
+certificate described below, to the corresponding scope's snapshot. The RLS checks this DNS SAN through
+`GRPC_CLIENT_TLS_SAN`; proxies verify the same FQDN in the RLS server certificate. The
 separate RLS CA remains the trust boundary. The RLS CA never issues wildcard SANs.
 
 Reusing a Gateway name assumes the same trust ownership. Certificates from the previous Gateway remain
@@ -641,7 +651,7 @@ matches the CA, identity and required SANs. This does not retain certificate Sec
 RLS cleanup lifecycle or persist proxy client certificates: if cleanup removed them, reconciliation
 issues new certificates with the same identity.
 
-**Certificates the controller issues.** For each dedicated RLS, the controller signs two certificates
+**Certificates the controller issues.** For each dedicated RLS, the controller signs three certificates
 with the RLS CA:
 
 * A **proxy client certificate** with the Gateway identity as its only SAN and the `clientAuth` usage.
@@ -651,27 +661,44 @@ with the RLS CA:
   Secret. Each controller replica issues its own; all are valid because the RLS checks the CA and the
   SAN, not a specific certificate. A controller restart issues new ones, which proxies receive over SDS
   without restarting.
-* An **RLS certificate** with the RLS Service DNS names, including its identity FQDN, as SANs, and both
-  the `serverAuth` and `clientAuth` usages. It is stored in the RLS's own certificate Secret in the
-  RLS's namespace, together with the RLS CA certificate and the control plane CA certificate, and is
-  written by the controller that provisions infrastructure. It reuses an existing valid certificate matching the current CA,
-  Gateway identity and Service names; it does not periodically renew certificates. Restarts and infrastructure-leader changes
-  do not themselves reissue it or change the certificate version annotation.
+* An **RLS serving certificate** with the RLS Service DNS names, including its identity FQDN, as SANs,
+  and only the `serverAuth` usage.
+* An **RLS configuration client certificate** with only the `clientAuth` usage and a single URI SAN
+  derived from the scope identity, for example
+  `urn:envoy-gateway:ratelimit:<gateway-namespace>:<gateway-name>`. It has no DNS SAN.
+
+Both RLS certificates are stored in the RLS's own certificate Secret in the RLS's namespace, together
+with the RLS CA certificate and the control plane CA certificate, and are written by the controller
+that provisions infrastructure. Reconciliation reuses existing valid certificates matching the current
+CA, Gateway identity and Service names; it does not periodically renew certificates. Restarts and
+infrastructure-leader changes do not themselves reissue them or change the certificate version
+annotation.
+
+The serving and configuration client roles use separate certificates so that nothing in the RLS Secret
+is accepted as a caller by any dedicated RLS. A dedicated RLS accepts a client only with the
+`clientAuth` usage and a DNS SAN equal to its `GRPC_CLIENT_TLS_SAN`. The serving certificate has the
+right DNS SAN but no `clientAuth`; the configuration client certificate has `clientAuth` but no DNS
+SAN. In Gateway namespace mode this matters when Gateways share a namespace: someone who can read
+Gateway B's RLS Secret there still cannot call B's RLS. A single certificate with both usages would
+carry B's SAN and `clientAuth` and be accepted.
 
 **What each side checks.**
 
-* The **dedicated RLS** serves with its RLS certificate, trusts only the RLS CA for clients, and sets
-  `GRPC_CLIENT_TLS_SAN` to its Gateway identity.
+* The **dedicated RLS** serves with its RLS serving certificate, trusts only the RLS CA for clients,
+  and sets `GRPC_CLIENT_TLS_SAN` to its Gateway identity. It thereby requires the `clientAuth` usage
+  and that DNS SAN from every caller.
 * **Proxies** verify the dedicated RLS against the RLS CA, delivered over xDS rather than read from a
   file, and require its Service DNS name as the SAN. A proxy cannot be pointed at another RLS that
   holds a valid RLS CA certificate.
 * The **configuration server** accepts client certificates from both the control plane CA (the shared
-  RLS) and the RLS CA (dedicated RLS). For a client with an RLS CA certificate, it serves only the
-  snapshot whose node ID maps to the current Gateway identity in that certificate, so a dedicated RLS
-  cannot fetch another Gateway's rules. Clients authenticated by the control plane CA may request only
-  the shared snapshot; they cannot access dedicated snapshots. This authorization applies to every
-  configuration request, including requests on an existing stream. The dedicated RLS uses its RLS certificate as the client certificate and
-  verifies the configuration server against the control plane CA.
+  RLS) and the RLS CA (dedicated RLS). For a client with an RLS CA certificate, it accepts only a
+  configuration client certificate, with `clientAuth` and the URI SAN above, and serves only the
+  snapshot whose node ID maps to the scope identity in that URI SAN, so a dedicated RLS cannot fetch
+  another Gateway's rules. Clients authenticated by the control plane CA may request only the shared
+  snapshot; they cannot access dedicated snapshots. This authorization applies to every configuration
+  request, including requests on an existing stream. The dedicated RLS presents its configuration
+  client certificate and verifies the configuration server against the control plane CA, at the
+  address in [Namespace](#namespace).
 
 ```mermaid
 sequenceDiagram
@@ -682,18 +709,18 @@ sequenceDiagram
     participant RB as Gateway B RLS
 
     CG->>EG: RLS CA Secret (certificate and key)
-    EG->>RA: RLS certificate Secret, GRPC_CLIENT_TLS_SAN = identity A
+    EG->>RA: RLS Secret (serving and config client certificates), GRPC_CLIENT_TLS_SAN = identity A
     EG->>PA: client certificate (SAN identity A) and RLS CA over SDS
     PA->>RA: mTLS, SAN matches, accepted
     PA-->>RB: mTLS, SAN mismatch, rejected
-    RA->>EG: config request, node ID matches certificate, rules for A only
+    RA->>EG: config request, node ID matches URI SAN, rules for A only
 ```
 
 **Certificate lifetime.** The RLS CA, proxy client certificates and RLS certificates use the existing
 certgen lifetime of 1,825 days (five years). Every issued leaf certificate's expiry is capped at its
 CA's expiry; custom CAs may have a shorter remaining lifetime. V1 does not automatically renew
 certificates. Provisioning issues missing certificates when a valid CA is available and reuses valid
-matching certificates. Expiry alone does not trigger replacement: an expired persisted RLS certificate
+matching certificates. Expiry alone does not trigger replacement: an expired persisted RLS serving or configuration client certificate
 remains an operator-managed failure. Controller restarts reissue in-memory
 proxy client certificates, still capped at the same CA expiry, and deliver them over SDS without proxy
 restarts. This does not extend the CA's lifetime.
@@ -738,10 +765,14 @@ confidential:
   [Operator responsibility for tenant isolation](#operator-responsibility-for-tenant-isolation)).
 * A Gateway owner can read their own proxies' client certificate, but that only lets them call their
   own Gateway's RLS.
-* In Gateway namespace mode, a Gateway owner who can read Secrets in their namespace can also read
-  their RLS certificate and key. That lets them serve as their own RLS to their own proxies, or fetch
-  their own Gateway's rules from the configuration server. Both are already theirs; the certificate
-  carries no other Gateway's identity.
+* In Gateway namespace mode, anyone who can read Secrets in a Gateway's namespace can read the RLS
+  Secrets of every Gateway there. Neither certificate in them is accepted as a caller by any dedicated
+  RLS (see [RLS identities and certificates](#rls-identities-and-certificates)), so caller isolation
+  between Gateways that share a namespace still holds. What remains is limited: the configuration
+  client certificate lets the reader fetch that Gateway's rate limit rules, and the serving key lets
+  them pose as that Gateway's RLS, but only to proxies whose traffic they can already redirect, which
+  needs write access to that Gateway's resources in the namespace. Operators who place Gateways of
+  different owners in one namespace should restrict Secret reads there.
 * Every xDS client requests only its own Gateway's configuration. This is a precondition Envoy
   Gateway already relies on for listener and backend certificates (see [Assumptions](#assumptions));
   without it, a custom proxy image or extra container can obtain another Gateway's client certificate.
@@ -771,6 +802,15 @@ requires in the controller namespace, such as the RLS CA, the control plane cert
 Secrets of any RLS, are never accepted, even with a grant. The exception does not apply to `urlRef`,
 and it does not apply in Gateway namespace mode, where a Secret in the controller namespace could only
 reach the RLS by copying it to where the Gateway owner can read it.
+
+The controller must be able to see these grants and Secrets even when it watches only selected
+namespaces. When `provider.kubernetes.watch.namespaces` omits the controller namespace, Gateway API
+informers, including `ReferenceGrant`, watch only the listed namespaces today, and the Helm chart gives
+the controller only Secret and EndpointSlice reads in its own namespace. While `enableDedicatedRateLimit`
+is true, Envoy Gateway therefore also watches `ReferenceGrant` resources in the controller namespace,
+as it already does for Secrets there, and the Helm chart adds `get`, `list` and `watch` on
+`referencegrants` to the infra-manager Role in the controller namespace. Without this, a valid grant
+would be invisible and the reference would report `InvalidCredentials`.
 
 How the RLS reads them depends on where the Secret is relative to the RLS (see [Namespace](#namespace)):
 
@@ -868,7 +908,8 @@ The condition message identifies the selected scope and Service without exposing
 dedicated RLS, `RateLimitReady=True` requires all of the following for the current desired configuration:
 
 * All credential references resolve successfully and any owned credential copies are up to date.
-* The RLS certificate Secret holds a current certificate issued by the RLS CA, and a proxy client
+* The RLS certificate Secret holds current serving and configuration client certificates issued by
+  the RLS CA, and a proxy client
   certificate for the Gateway is currently valid under that CA.
 * Infrastructure reconciliation has succeeded. The Deployment has observed its latest generation,
   completed the desired rollout, and has at least one available replica, with no old replicas remaining.
@@ -1083,7 +1124,9 @@ Implementation must cover the following cases with meaningful automated tests:
   are rejected during the handshake, also when pointed at that RLS through `EnvoyPatchPolicy`; the
   shared client certificate is rejected by every dedicated RLS and still accepted by the shared RLS.
   Proxies reject a dedicated RLS whose certificate does not match its Service name. The configuration
-  server refuses a dedicated RLS that requests another identity's node ID.
+  server refuses a dedicated RLS that requests another identity's node ID, and refuses an RLS serving
+  certificate used as a client. Neither certificate in a dedicated RLS's Secret is accepted as a caller
+  by that RLS or by another Gateway's RLS in the same namespace.
 * **Certificates:** a fresh install and an upgraded install both get the RLS CA Secret without changing
   existing certificates; a missing or invalid RLS CA reports `CertificateUnavailable` and leaves the
   shared RLS working; controller restarts deliver reissued proxy client certificates without proxy
@@ -1101,7 +1144,10 @@ Implementation must cover the following cases with meaningful automated tests:
   is created in the Gateway's namespace with an owner reference to the Gateway, and nothing for it in
   the controller namespace. The Helm chart grants Secret write access only with `enableDedicatedRateLimit`,
   in the controller namespace in the default mode and in Gateway namespaces in Gateway namespace mode,
-  and the controller never modifies Secrets it did not create.
+  and the controller never modifies Secrets it did not create. In both modes every dedicated RLS is
+  rendered with the fully qualified configuration server address and loads its rules from a pod in a
+  namespace other than the controller's. With `watch.namespaces` that omits the controller namespace,
+  a `ReferenceGrant` there still enables the default-mode TLS exception.
 * **Counter reuse:** switching back to a previously used shared or dedicated keyspace preserves matching
   unexpired counters rather than promising a reset.
 * **Credentials:** initial missing references, rotation, deletion and ReferenceGrant revocation update
