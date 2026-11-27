@@ -1837,6 +1837,86 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  true,
 		},
 		{
+			name: "service referenced by the second backendRef of a SecurityPolicy ExtAuth HTTP service",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-http-multi",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						ExtAuth: &egv1a1.ExtAuth{
+							HTTP: &egv1a1.HTTPExtAuthService{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-http-service-a",
+											},
+										},
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-http-service-b",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-http-service-b"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by the second backendRef of a SecurityPolicy ExtAuth GRPC service",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-grpc-multi",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						ExtAuth: &egv1a1.ExtAuth{
+							GRPC: &egv1a1.GRPCExtAuthService{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-grpc-service-a",
+											},
+										},
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-grpc-service-b",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-grpc-service-b"}, nil, nil),
+			expect:  true,
+		},
+		{
 			name: "service referenced by EnvoyExtensionPolicy ExtPrc GRPC service",
 			configs: []client.Object{
 				&egv1a1.EnvoyExtensionPolicy{

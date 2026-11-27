@@ -29,6 +29,10 @@ func TestMergeGateways(t *testing.T) {
 	if tests.IsGatewayNamespaceMode() {
 		t.Skip("MergeGateways tests are not supported in Gateway Namespace Mode")
 	}
+	// mergeGateways can't be enabled together with mergeBackends.
+	if tests.MergeBackendsEnabled() {
+		t.Skip("MergeGateways tests are not supported with mergeBackends enabled")
+	}
 	flag.Parse()
 
 	c, cfg := kubetest.NewClient(t)

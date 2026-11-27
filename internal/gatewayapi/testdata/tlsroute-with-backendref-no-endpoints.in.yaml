@@ -1,0 +1,58 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: tls
+      protocol: TLS
+      hostname: foo.com
+      port: 443
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: All
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    namespace: default
+    name: tlsroute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - backendRefs:
+      - name: service-with-no-endpoints
+        port: 8443
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: service-with-no-endpoints
+  spec:
+    clusterIP: 1.1.1.1
+    ports:
+    - name: https
+      port: 8443
+      protocol: TCP
+      targetPort: 8443
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    namespace: default
+    name: endpointslice-service-with-no-endpoints
+    labels:
+      kubernetes.io/service-name: service-with-no-endpoints
+  addressType: IPv4
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
