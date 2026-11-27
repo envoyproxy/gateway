@@ -69,13 +69,9 @@ needs to be isolated.
   certificate to the shared RLS, which keeps accepting every proxy as today.
 * Automatic certificate renewal or revocation before expiry. Operators manage certificate expiry (see
   [RLS identities and certificates](#rls-identities-and-certificates)).
-* Restart-safe cleanup of dedicated RLS resources. A dedicated RLS's resources are removed when Envoy
-  Gateway observes its Gateway being deleted or dropping `rateLimit`. If that change happens while Envoy
-  Gateway is stopped, they can be left behind. In Gateway namespace mode they carry an owner reference
-  to the Gateway, as proxy resources do, so deleting the Gateway still garbage-collects them; dropping
-  `rateLimit` while Envoy Gateway is stopped does not. In the default deployment mode the same is true
-  today of per-Gateway proxy resources, and a startup sweep or Gateway finalizer should cover both
-  together in a separate change.
+* Restart-safe cleanup of per-Gateway proxy resources. Dedicated RLS resources are swept after every
+  start (see [Cleanup](#cleanup)), but proxy resources left behind while Envoy Gateway was stopped are
+  not; that needs a separate change.
 * Hardening tenant namespaces or proxy workloads. Proxy `patch`, privileged containers, host
   networking and host path mounts can already let a tenant's proxy escape its namespace's network
   isolation, for every namespace-based NetworkPolicy and not only for the RLS. This proposal relies on
@@ -220,6 +216,31 @@ extensionApis:
   enableDedicatedRateLimitWorkloadOverrides: false   # defaults to false
 ```
 
+The switch does not grant the controller the RBAC that dedicated RLS needs. That comes from a separate
+Helm value, `dedicatedRateLimit.rbac.enabled`, because the switch can be changed at runtime without a
+Helm upgrade (see [Namespace](#namespace)). Envoy Gateway does not change its own RBAC. Admins must
+therefore confirm the controller's permissions each time they turn the feature on or off:
+
+* **After turning it on**, confirm that the controller can write Secrets where dedicated RLS run, and,
+  in the default mode with `watch.namespaces`, read `ReferenceGrant` resources in the controller
+  namespace. For example, with a default Helm installation:
+
+  ```shell
+  SA=system:serviceaccount:envoy-gateway-system:envoy-gateway
+  # Default mode: the controller namespace. Gateway namespace mode: each Gateway namespace.
+  kubectl auth can-i create secrets --as=$SA -n <namespace>
+  kubectl auth can-i delete secrets --as=$SA -n <namespace>
+  kubectl auth can-i list referencegrants.gateway.networking.k8s.io --as=$SA -n envoy-gateway-system
+  ```
+
+  Missing permissions also surface as a startup warning and as `RateLimitReady=False` with reason
+  `ProvisioningFailed` on each affected Gateway.
+* **After turning it off**, confirm that no dedicated RLS remains, for example with
+  `kubectl get deployments -A -l gateway.envoyproxy.io/ratelimit-scope=gateway`, and then decide
+  whether to keep the permission. Keep it if the feature may be turned on again; otherwise set
+  `dedicatedRateLimit.rbac.enabled: false` to return the controller to its previous privileges.
+  Removal does not depend on the permission (see [Cleanup](#cleanup)).
+
 The table shows what happens to a Gateway whose own `EnvoyProxy` sets `rateLimit`, for each
 combination of the two switches. For an otherwise valid Gateway and `EnvoyProxy` configuration, the
 switches alone do not change `Accepted=True`. The table describes steady-state behavior after
@@ -240,10 +261,41 @@ switch does not reject the Gateway or remove its listeners. With dedicated RLS d
 configured, global rate limit policies are rejected as today.
 
 Disabling the setting after dedicated RLS is in use has the same effect: each affected Gateway moves
-back to the shared RLS, if configured, and its dedicated RLS is removed after that change converges,
-with the transition behavior in [Changing the configuration](#changing-the-configuration).
+back to the shared RLS, if configured, and its dedicated RLS is removed, with the transition behavior
+in [Changing the configuration](#changing-the-configuration). The control plane reloads with the new
+setting, so removal comes from the sweep after that reload and from Secret ownership, not from the
+previous runner's state (see [Cleanup](#cleanup)).
 Re-enabling the setting moves it to a dedicated RLS again. RLS workload fields on an `EnvoyProxy`
 without `rateLimit` have no effect either way.
+
+> **Warning: turning off `enableDedicatedRateLimit` is disruptive.** It is a control-plane-wide
+> change that affects every Gateway with a dedicated RLS at once, not a per-Gateway rollback.
+> Before turning it off, admins should understand that:
+>
+> * **Enforcement can be lost or traffic denied.** The sweep after the reload deletes every dedicated
+>   RLS without waiting for proxies to move to the shared RLS. Until each proxy has switched, its rate
+>   limit calls fail: with `failClosed: true` those requests are denied, and with `failClosed: false`
+>   they pass unlimited. A proxy that has switched but still calls a previous RLS can also bypass limits
+>   (see [Changing the configuration](#changing-the-configuration)).
+> * **Without a shared RLS, global rate limits stop.** If `EnvoyGateway.rateLimit` is not set, the
+>   global rate limit policies of those Gateways are rejected, and their routes serve without global
+>   rate limiting until the setting is re-enabled.
+> * **Per-Gateway behavior reverts to the shared settings.** Each Gateway takes the shared RLS's
+>   `timeout`, `failClosed`, telemetry and connection settings. A Gateway configured to fail closed can
+>   start failing open.
+> * **Isolation and capacity are gone.** All of that traffic moves to the shared RLS and its Redis,
+>   which must have the capacity for it. Counters move to the shared keyspace, and `shared: true`
+>   buckets that were separate per RLS merge into one, so combined limits can become stricter (see
+>   [Shared rules](#shared-rules)).
+> * **It is not an emergency switch.** It does not revoke Redis credentials or stop an RLS faster than
+>   other changes; revoke credentials at Redis instead (see [Redis credentials](#redis-credentials)).
+>
+> To retire dedicated RLS safely, externally gate traffic to each affected Gateway during planned
+> maintenance, then remove `rateLimit` from its `EnvoyProxy` one at a time. Reconciliation does not
+> wait for proxies to switch before deleting the dedicated RLS; disconnected proxies can retain old
+> configuration. Before restoring traffic, verify that every proxy that will serve it has the intended
+> configuration and that the intended rate limits are enforced. Keep proxies whose configuration
+> cannot be verified out of service. Turn the setting off only after no Gateway uses a dedicated RLS.
 
 The two settings are control-plane-wide opt-ins. `enableDedicatedRateLimit` allows Gateway owners to
 configure a dedicated RLS using built-in workload defaults. It does not permit RLS workload customization.
@@ -509,7 +561,7 @@ For the same reason, a dedicated RLS does not use the `envoy-rate-limit` TLS Sec
 exist when only dedicated RLS are configured. Each dedicated RLS gets its own certificate Secret,
 named from the scope identity (see [RLS identities and certificates](#rls-identities-and-certificates)).
 
-Dedicated RLS pods carry the following labels:
+Every dedicated RLS resource, and its pods, carries the following labels:
 
 | Label                                            | Value                                             |
 | ------------------------------------------------ | ------------------------------------------------- |
@@ -576,6 +628,9 @@ xDS CA through a ConfigMap and authenticate to xDS with a projected ServiceAccou
 RLS cannot follow that pattern:
 
 * It serves mTLS to its proxies, so it needs its certificate and private key in its own namespace.
+  This mTLS, like the TLS between the RLS and the configuration server, is always on, as it is for the
+  shared RLS today; no setting turns it off, because caller isolation depends on it. Only TLS to Redis
+  is optional. Every dedicated RLS therefore has a certificate Secret, whatever its Redis settings.
 * The `envoyproxy/ratelimit` configuration client authenticates only with a client certificate or
   static headers; it cannot reload a short-lived projected ServiceAccount token. It therefore uses a
   configuration client certificate stored next to its serving certificate, as described in
@@ -587,21 +642,71 @@ each dedicated RLS runs:
 * **Default mode:** in the controller namespace, for RLS certificate Secrets and Redis credential
   copies. The Helm chart adds it to the infra-manager Role in that namespace.
 * **Gateway namespace mode:** in Gateway namespaces, for RLS certificate Secrets. The Helm chart adds
-  it to the cluster infra-manager role.
+  it to whichever role already grants infrastructure access there: the cluster infra-manager
+  ClusterRole when the controller watches all namespaces or uses a namespace selector, or each
+  per-namespace infra-manager Role when `provider.kubernetes.watch.namespaces` lists namespaces.
 
-In both modes the chart grants it only when `enableDedicatedRateLimit` is true. Installations that
-manage RBAC themselves must grant it before enabling dedicated RLS. Envoy Gateway writes only the
-Secrets it owns for a dedicated RLS, selected by the labels in [Service identity](#service-identity),
-and never modifies Secrets it did not create.
+**A separate Helm knob grants this permission.** The chart adds it only when
+`dedicatedRateLimit.rbac.enabled` is true (default `false`), independently of
+`enableDedicatedRateLimit`:
+
+```yaml
+dedicatedRateLimit:
+  rbac:
+    enabled: true   # defaults to false
+```
+
+The RBAC cannot follow `enableDedicatedRateLimit` itself, because that switch lives in the
+`EnvoyGateway` configuration, which admins can change and reload without a Helm upgrade. RBAC derived
+from it would drift from the running setting: turning the switch on outside Helm would leave every
+dedicated RLS unable to start. With a separate knob, installations that never use dedicated RLS keep
+today's least-privilege controller, and admins who plan to offer it enable the knob once and can then
+turn `enableDedicatedRateLimit` on and off at runtime.
+
+Enabling the knob is a standing increase in the controller's privileges: it can create, modify and
+delete Secrets wherever it manages infrastructure, not only read them as today. The added risk is
+limited to a compromised or faulty controller, which can already read those Secrets and create pods
+that mount them. Envoy Gateway writes only the Secrets it owns for a dedicated RLS, selected by the
+labels in [Service identity](#service-identity), and never modifies Secrets it did not create.
+Installations that manage RBAC themselves grant the same permissions before enabling dedicated RLS.
+
+If `enableDedicatedRateLimit` is true but the permission is missing, Envoy Gateway logs a warning at
+startup, and each dedicated RLS reports `RateLimitReady=False` with reason `ProvisioningFailed` and a
+message naming the missing permission. Turning the knob off while dedicated RLS exist does not block
+their removal (see [Cleanup](#cleanup)).
+
+#### Cleanup
+
+Removing a dedicated RLS must not depend on the controller still holding Secret permissions or
+remembering the RLS:
+
+* **Secrets are owned by the RLS Deployment.** Every Secret of a dedicated RLS (its certificate Secret
+  and, in the default mode, its credential copies) has a single owner reference, to that RLS's
+  Deployment in the same namespace. Deleting the Deployment lets Kubernetes garbage-collect the
+  Secrets, so removal needs only the infrastructure permissions the controller always has, and still
+  works where an admin has removed the Secret permission. The Deployment, in turn, carries an owner reference to the Gateway in Gateway namespace
+  mode, so deleting the Gateway removes everything.
+* **Stale resources are swept after every start.** A configuration reload starts a new
+  infrastructure runner without the previous desired state, and changes made while Envoy Gateway was
+  stopped are never observed. So after each start, including a reload, once the infrastructure leader
+  has processed the first complete set of desired infrastructure, Envoy Gateway lists dedicated RLS
+  resources by the `gateway.envoyproxy.io/ratelimit-scope` label in the namespaces it manages and
+  deletes those whose scope is not desired. That covers a Gateway that was deleted or dropped
+  `rateLimit` while Envoy Gateway was stopped, and turning off `enableDedicatedRateLimit`. The sweep
+  uses direct API reads, because the label-filtered informer caches select only the shared RLS and
+  proxy names. It never runs before the first complete set, so a partial view cannot delete a live
+  RLS.
 
 **Configuration server address.** The shared RLS reaches the configuration server through the short
 Service name `envoy-gateway:18001`, which only resolves from the controller namespace. Every dedicated
 RLS instead uses the fully qualified name `envoy-gateway.<controller-namespace>.svc.<dns-domain>:18001`,
 in both modes, using the configured `DNSDomain`. That name is already a SAN of the control plane
 certificate that certgen issues, so the RLS can verify the server against it. A wrong address fails
-silently: the RLS starts without its configuration (`FORCE_START_WITHOUT_INITIAL_CONFIG`), becomes
-ready, and allows every request for its unknown domains. The rendered address is therefore covered by
-the namespace placement tests in the [acceptance plan](#acceptance-and-validation-plan).
+quietly. With `FORCE_START_WITHOUT_INITIAL_CONFIG`, which Envoy Gateway sets so the RLS does not block
+on the configuration server at startup, the RLS serves without any configuration and still reports
+healthy. Every check then returns an error, which proxies treat according to `failClosed`: requests
+pass unlimited by default, or are all denied with `failClosed: true`. The rendered address is therefore
+covered by the namespace placement tests in the [acceptance plan](#acceptance-and-validation-plan).
 
 In Gateway namespace mode, the configuration server also receives connections from Gateway namespaces,
 not only from the controller namespace. Every request is authenticated and limited to the caller's own
@@ -808,8 +913,10 @@ namespaces. When `provider.kubernetes.watch.namespaces` omits the controller nam
 informers, including `ReferenceGrant`, watch only the listed namespaces today, and the Helm chart gives
 the controller only Secret and EndpointSlice reads in its own namespace. While `enableDedicatedRateLimit`
 is true, Envoy Gateway therefore also watches `ReferenceGrant` resources in the controller namespace,
-as it already does for Secrets there, and the Helm chart adds `get`, `list` and `watch` on
-`referencegrants` to the infra-manager Role in the controller namespace. Without this, a valid grant
+as it already does for Secrets there. The Helm chart adds `get`, `list` and `watch` on
+`referencegrants` to the infra-manager Role in the controller namespace when
+`dedicatedRateLimit.rbac.enabled` is true, together with the Secret permission (see
+[Namespace](#namespace)). Without this, a valid grant
 would be invisible and the reference would report `InvalidCredentials`.
 
 How the RLS reads them depends on where the Secret is relative to the RLS (see [Namespace](#namespace)):
@@ -1004,9 +1111,9 @@ to transfer or synchronize counters.
 
 Without `EnvoyProxy.spec.rateLimit` on a Gateway's `EnvoyProxy`, nothing changes: same shared RLS, same
 resource names, same behaviour. Dedicated RLS is disabled by default, so upgrading does not let anyone
-create RLS workloads until an admin sets `extensionApis.enableDedicatedRateLimit`, and the Helm chart
-grants the controller Secret write access, in the controller namespace or in Gateway namespaces
-depending on the deployment mode, only once that switch is enabled. The certgen job of an upgraded installation creates the RLS CA
+create RLS workloads until an admin sets `extensionApis.enableDedicatedRateLimit`. The controller's
+RBAC is unchanged too until an admin sets the Helm value `dedicatedRateLimit.rbac.enabled`, which
+must be set before, or together with, the switch (see [Namespace](#namespace)). The certgen job of an upgraded installation creates the RLS CA
 Secret and leaves existing certificates unchanged; installations with custom certificates must create
 it before enabling dedicated RLS. `rateLimit` on a GatewayClass's `EnvoyProxy` is ignored in this
 iteration, so adding GatewayClass support later only changes behaviour for configurations that are
@@ -1020,6 +1127,10 @@ support lands.
   deployments, but requires deciding how class and Gateway blocks interact under each `mergeType`,
   tracking which level supplied the merged block, and handling the class RLS lifecycle as Gateways join
   and leave. Deferred; see [TODO](#gatewayclass-scope).
+* **Secret RBAC tied to `enableDedicatedRateLimit`, or granted unconditionally.** Deriving the chart's
+  RBAC from the runtime switch breaks when admins change the switch without a Helm upgrade. Granting
+  it in every installation would raise the controller's privileges even where dedicated RLS is never
+  used. A separate, default-off Helm knob avoids both.
 * **Dedicated RLS in the controller namespace in every mode.** The controller would never write Secrets
   in Gateway namespaces and the RLS would reach Redis Secrets only through copies. But in Gateway
   namespace mode it would place tenant-configured pods next to the RLS CA Secret and the control plane,
@@ -1097,6 +1208,12 @@ These are the author's recommendations and are open for review.
   credential changes. Credential revocation is enforced at Redis.
 * Report infrastructure and credential readiness through `RateLimitReady`. Operational failures
   preserve RLS selection and rate limit filters; configuration ACK tracking is deferred.
+* Grant the controller's Secret write and controller-namespace `ReferenceGrant` read permissions
+  through a separate, default-off Helm value, `dedicatedRateLimit.rbac.enabled`, not through
+  `enableDedicatedRateLimit`, which can change at runtime. Admins confirm the permissions after
+  turning the feature on or off.
+* Make each dedicated RLS's Secrets owned by its Deployment, and sweep stale dedicated RLS resources
+  by label after every start, so removal works after reloads, offline changes and feature disablement.
 * Use ordinary reconciliation for scope changes and require planned maintenance when continuous
   enforcement is needed, including with `failClosed: true`.
 
@@ -1142,11 +1259,15 @@ Implementation must cover the following cases with meaningful automated tests:
 * **Namespace placement:** in the default mode every dedicated RLS resource is created in the controller
   namespace; in Gateway namespace mode every dedicated RLS resource, including its certificate Secret,
   is created in the Gateway's namespace with an owner reference to the Gateway, and nothing for it in
-  the controller namespace. The Helm chart grants Secret write access only with `enableDedicatedRateLimit`,
-  in the controller namespace in the default mode and in Gateway namespaces in Gateway namespace mode,
-  and the controller never modifies Secrets it did not create. In both modes every dedicated RLS is
-  rendered with the fully qualified configuration server address and loads its rules from a pod in a
-  namespace other than the controller's. With `watch.namespaces` that omits the controller namespace,
+  the controller namespace. The Helm chart grants Secret write access, and `ReferenceGrant` reads in
+  the controller namespace, only with `dedicatedRateLimit.rbac.enabled`, in the controller namespace
+  in the default mode and in Gateway namespaces in Gateway namespace mode, and the controller never
+  modifies Secrets it did not create. With the knob enabled, turning `enableDedicatedRateLimit` on by
+  editing the `EnvoyGateway` configuration alone provisions working dedicated RLS; without it, each
+  dedicated RLS reports `ProvisioningFailed`; with `watch.namespaces` in Gateway
+  namespace mode, the grant is on each per-namespace Role. In both modes every dedicated RLS is
+  rendered with the fully qualified configuration server address; in Gateway namespace mode it loads
+  its rules from a pod in a namespace other than the controller's. With `watch.namespaces` that omits the controller namespace,
   a `ReferenceGrant` there still enables the default-mode TLS exception.
 * **Counter reuse:** switching back to a previously used shared or dedicated keyspace preserves matching
   unexpired counters rather than promising a reset.
@@ -1165,7 +1286,11 @@ Implementation must cover the following cases with meaningful automated tests:
 * **Reconciliation:** controller restart reconstructs scope selection and readiness; Gateway deletion
   removes only its resources; updates preserve scope-specific selectors and HPA targets; the shared RLS
   Service and PDB never select dedicated pods; in dedicated-only mode, and when one of several dedicated
-  RLS is deleted, the remaining dedicated RLS keep their ServiceAccounts and ConfigMaps.
+  RLS is deleted, the remaining dedicated RLS keep their ServiceAccounts and ConfigMaps. Every dedicated
+  RLS Secret is owned only by its Deployment and is garbage-collected with it. Turning off
+  `enableDedicatedRateLimit`, through Helm or by editing the configuration, removes every dedicated
+  RLS and its Secrets, also when `dedicatedRateLimit.rbac.enabled` is turned off at the same time. Removing `rateLimit` or deleting a Gateway while Envoy Gateway is
+  stopped is cleaned up after the next start, and the sweep never deletes a desired RLS.
 * **API:** an `EnvoyProxy` whose `rateLimit` omits `failClosed` is accepted and behaves as `false`;
   generated API docs for `urlRef` and `certificateRef` describe both the `EnvoyGateway` and the
   `EnvoyProxy` namespace rules.
@@ -1184,7 +1309,10 @@ Implementation must cover the following cases with meaningful automated tests:
   Implementing or testing an operator's admission policies is outside this proposal. Document that
   caller isolation depends on keeping the RLS CA Secret away from tenants, how to supply the RLS CA
   with custom certificates, and that pull secrets must exist in each Gateway namespace in Gateway
-  namespace mode.
+  namespace mode. The installation guide repeats the warning about turning off
+  `enableDedicatedRateLimit` next to the setting, with the per-Gateway retirement procedure, and
+  documents the `dedicatedRateLimit.rbac.enabled` Helm value and the permission checks to run after
+  turning the feature on or off.
 
 Use schema/CEL tests for API validation, Gateway translation fixtures for selection and conditions,
 infrastructure tests for rendered resources, and xDS/configuration tests for
