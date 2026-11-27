@@ -24246,7 +24246,7 @@ spec:
                             items:
                               format: cidr
                               type: string
-                            maxItems: 64
+                            maxItems: 512
                             type: array
                           name:
                             description: |-
@@ -32265,6 +32265,15 @@ spec:
                                   when creating a new trace instance. If set to false, a 64bit trace
                                   id will be used.
                                 type: boolean
+                              traceContextMode:
+                                description: |-
+                                  TraceContextMode determines which trace context headers are used to extract
+                                  the trace context from downstream requests and to inject it into upstream requests.
+                                  Defaults to UseB3.
+                                enum:
+                                - UseB3
+                                - UseB3WithW3CPropagation
+                                type: string
                             type: object
                         required:
                         - type

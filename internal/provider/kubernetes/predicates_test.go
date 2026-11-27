@@ -1474,6 +1474,64 @@ func TestValidateServiceImportForReconcile(t *testing.T) {
 	}
 }
 
+func TestValidateBackendForReconcileEnvoyProxyTelemetry(t *testing.T) {
+	backendRefs := func(name string) egv1a1.BackendCluster {
+		return egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
+			BackendObjectReference: gwapiv1.BackendObjectReference{
+				Group: new(gwapiv1.Group(egv1a1.GroupName)),
+				Kind:  new(gwapiv1.Kind(egv1a1.KindBackend)),
+				Name:  gwapiv1.ObjectName(name),
+				Port:  new(gwapiv1.PortNumber(4317)),
+			},
+		}}}
+	}
+	envoyProxy := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Name: "telemetry", Namespace: "default"},
+		Spec: egv1a1.EnvoyProxySpec{
+			Telemetry: &egv1a1.ProxyTelemetry{
+				AccessLog: &egv1a1.ProxyAccessLog{
+					Settings: []egv1a1.ProxyAccessLogSetting{{
+						Sinks: []egv1a1.ProxyAccessLogSink{{
+							Type:          egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{BackendCluster: backendRefs("accesslog-collector")},
+						}},
+					}},
+				},
+				Metrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{{
+						Type:          egv1a1.MetricSinkTypeOpenTelemetry,
+						OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{BackendCluster: backendRefs("metrics-collector")},
+					}},
+				},
+				Tracing: &egv1a1.ProxyTracing{
+					Provider: egv1a1.TracingProvider{
+						Type:           egv1a1.TracingProviderTypeOpenTelemetry,
+						BackendCluster: backendRefs("tracing-collector"),
+					},
+				},
+			},
+		},
+	}
+
+	r := gatewayAPIReconciler{
+		log:         logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+		epCRDExists: true,
+		client: fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(envoyProxy).
+			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+			WithIndex(&egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
+			Build(),
+	}
+
+	for _, name := range []string{"accesslog-collector", "metrics-collector", "tracing-collector"} {
+		t.Run(name, func(t *testing.T) {
+			backend := &egv1a1.Backend{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "default"}}
+			require.True(t, r.validateBackendForReconcile(backend))
+		})
+	}
+}
+
 func TestValidateServiceForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc", 8080)
 	mergeGatewaysConfig := test.GetEnvoyProxy(types.NamespacedName{Namespace: "default", Name: "merge-gateways-config"}, true)
@@ -1834,6 +1892,86 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				},
 			},
 			service: test.GetService(types.NamespacedName{Name: "oidc-provider-service", Namespace: "idp"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by the second backendRef of a SecurityPolicy ExtAuth HTTP service",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-http-multi",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						ExtAuth: &egv1a1.ExtAuth{
+							HTTP: &egv1a1.HTTPExtAuthService{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-http-service-a",
+											},
+										},
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-http-service-b",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-http-service-b"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "service referenced by the second backendRef of a SecurityPolicy ExtAuth GRPC service",
+			configs: []client.Object{
+				&egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ext-auth-grpc-multi",
+					},
+					Spec: egv1a1.SecurityPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Kind: "Gateway",
+									Name: "scheduled-status-test",
+								},
+							},
+						},
+						ExtAuth: &egv1a1.ExtAuth{
+							GRPC: &egv1a1.GRPCExtAuthService{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-grpc-service-a",
+											},
+										},
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "ext-auth-grpc-service-b",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			service: test.GetService(types.NamespacedName{Name: "ext-auth-grpc-service-b"}, nil, nil),
 			expect:  true,
 		},
 		{
