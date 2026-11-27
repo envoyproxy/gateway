@@ -1,0 +1,11 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+
+deployment:
+  pod:
+    annotations:
+      checksum/config: user-supplied-value
+      example.com/team: gateway
