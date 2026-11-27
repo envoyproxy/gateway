@@ -69,8 +69,22 @@ and RouteConfiguration serves, keyed by the xDS name it just generated:
 
 ```go
 // in ResourceVersionTable, not sent to Envoy
-GatewayListeners map[typedName][]ir.ResourceMetadata // Gateway ns/name + sectionName
+GatewayListeners map[typedName][]ir.GatewayListenerRef
+
+// GatewayListenerRef identifies a Gateway listener, or a ListenerSet listener.
+type GatewayListenerRef struct {
+	GatewayNamespace     string
+	GatewayName          string
+	ListenerSetNamespace string // set when the listener comes from a ListenerSet
+	ListenerSetName      string
+	SectionName          string
+	Port                 uint32
+}
 ```
+
+It is a new type rather than `ir.ResourceMetadata`, which holds a single name and is filled with
+the parent Gateway even for ListenerSet listeners. Two ListenerSets can reuse a section name, so
+an origin without the ListenerSet couldn't tell their listeners apart.
 
 A shared resource lists every Gateway listener it serves. The index is the same under both
 schemes, so it is what the selector resolves against.
@@ -205,7 +219,10 @@ egctl x migrate xds-name-scheme --from-cluster -A
 
 The tool doesn't reimplement the naming rules. It runs the existing translator (as
 `egctl x translate` does) on the input Gateways twice, once per scheme, and pairs the resources by
-a key that doesn't depend on the name:
+a key that doesn't depend on the name. Both runs leave out the EnvoyPatchPolicies: a patch only
+finds its target under one scheme, and could change a port or a reference the pairing relies on.
+The map comes from the same unpatched baseline on both sides, and the policies are scanned
+against it separately.
 
 | xDS resource | Pairing key |
 |---|---|
@@ -231,10 +248,10 @@ For each EnvoyPatchPolicy, for each `jsonPatches[i]`:
 | `jsonPath` too complex to rewrite safely | unchanged | error: listed for a manual fix |
 | `name` is a v1 name of a QUIC Listener, or of a resource that serves only ListenerSet listeners | unchanged | error: no selector exists; listed for a manual fix, with the v2 name |
 | A v1 name of a renamed resource elsewhere in the patch, e.g. an HCM `rds.route_config_name` in `operation.value`, or a `jsonPath` filter on a filter chain or RouteConfiguration name | unchanged | error: listed for a manual fix, with the v2 value |
-| `op: add` with an empty path (adds a new resource) | unchanged | none: the user names the new resource |
+| `op: add` with an empty path (adds a new resource) | unchanged | none for the new resource's own name, which the user picks; v1 names inside it, e.g. an HCM `rds.route_config_name`, are checked like any other value |
 
 The tool looks for v1 names of renamed resources everywhere in a patch: the target, `jsonPath`,
-and `operation.value`. A patch is reported as migrated only if it finds none left. A name inside a value has
+and `operation.value`, including the body of a new resource added with an empty path. A patch is reported as migrated only if it finds none left. A name inside a value has
 no scheme-independent form, so the user has to change it when turning the flag on; the report
 gives the v2 value to use.
 
@@ -340,7 +357,16 @@ metadata:
         namespace: default
         name: eg
         sectionName: http-alt
+      - kind: ListenerSet
+        namespace: team-a
+        name: team-a-listeners
+        sectionName: http
+        gateway:
+          namespace: default
+          name: eg
 ```
+
+A ListenerSet listener names its ListenerSet and its parent Gateway, as in the index.
 
 It is turned on per data plane with a new EnvoyProxy field, off by default:
 
