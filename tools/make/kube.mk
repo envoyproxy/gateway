@@ -7,8 +7,8 @@ ENVTEST_K8S_VERSIONS ?= 1.34.1 1.35.0 1.36.2 1.37.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
-GATEWAY_API_MINOR_VERSION ?= 1.6
-GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).1
+GATEWAY_API_MINOR_VERSION ?= 1.7
+GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -41,9 +41,7 @@ E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 # If E2E_DEBUG is not explicitly defined, set it based on the ACTIONS_STEP_DEBUG environment variable.
 E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 E2E_DISABLE_PARALLEL ?= false
-# If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
-# TODO: remove --allow-crds-mismatch once we bump the Gateway API version to v1.7.0 or later in the e2e tests.
-E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG) --cleanup-test-resources=$(E2E_CLEANUP) --disable-parallel-tests=$(E2E_DISABLE_PARALLEL) --allow-crds-mismatch
+E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG) --cleanup-test-resources=$(E2E_CLEANUP) --disable-parallel-tests=$(E2E_DISABLE_PARALLEL)
 
 # Define the Gateway API channel used in tests
 E2E_GATEWAY_API_CHANNEL ?= experimental

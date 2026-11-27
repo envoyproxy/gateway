@@ -66,7 +66,7 @@ func testJAFingerprint(t *testing.T, suite *suite.ConformanceTestSuite, routeNam
 	// Use the certificate and key for TLS setup, CA cert for validation (self-signed cert)
 	req.ServerCertificate = certPem
 
-	http.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
+	http.AwaitConvergence(t, suite.TimeoutConfig, func(elapsed time.Duration) bool {
 		cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
 		if err != nil {
 			tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)

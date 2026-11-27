@@ -99,8 +99,7 @@ var BackendHealthCheckHTTPProtocolTest = suite.ConformanceTest{
 					metric, clusterName, gtwName)
 				http.AwaitConvergence(
 					t,
-					suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-					suite.TimeoutConfig.MaxTimeToConsistency,
+					suite.TimeoutConfig,
 					func(_ time.Duration) bool {
 						v, err := promClient.QuerySum(ctx, promQL)
 						if err != nil {

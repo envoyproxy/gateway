@@ -116,7 +116,7 @@ var ExtensionServerInferencePoolTest = suite.ConformanceTest{
 				// clusters that converge independently (e.g. the EDS cluster of pool-svc may not
 				// have endpoints yet while the ORIGINAL_DST cluster of pool-a already works).
 				// Wait until every expected backend has answered successfully before measuring.
-				http.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+				http.AwaitConvergence(t, suite.TimeoutConfig,
 					func(elapsed time.Duration) bool {
 						seen := map[string]bool{}
 						for range 20 {

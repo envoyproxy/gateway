@@ -128,8 +128,7 @@ var MetricWorkqueueAndRestclientTest = suite.ConformanceTest{
 		verifyMetrics := func(t *testing.T, metricQuery, metricName string) {
 			httputils.AwaitConvergence(
 				t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					v, err := promClient.QuerySum(ctx, metricQuery)
 					if err != nil {

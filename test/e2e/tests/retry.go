@@ -75,8 +75,7 @@ var RetryTest = suite.ConformanceTest{
 			})
 
 			http.AwaitConvergence(t,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
+				suite.TimeoutConfig,
 				func(_ time.Duration) bool {
 					// check retry stats from Prometheus
 					v, err := promClient.QuerySum(t.Context(), promQL)

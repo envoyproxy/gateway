@@ -60,7 +60,8 @@ grpcRoutes:
       - method:
           service: helloworld.Greeter
       sessionPersistence:
-        sessionName: test-session
+        cookie:
+          name: test-session
         type: Cookie
   status:
     parents:
