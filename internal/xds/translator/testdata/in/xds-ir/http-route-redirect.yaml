@@ -8,6 +8,18 @@ http:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
   routes:
+  - name: "regex-redirect-route"
+    hostname: "*"
+    pathMatch:
+      safeRegex: '^/blogs/([0-9]+)$'
+    redirect:
+      scheme: https
+      statusCode: 301
+      hostname: example.com
+      path:
+        regexMatchReplace:
+          pattern: '^/blogs/([0-9]+)$'
+          substitution: '/post-\1'
   - name: "redirect-route-1"
     hostname: "*"
     destination:

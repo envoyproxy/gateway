@@ -73,6 +73,9 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener, backe
 	case httpRoute.DirectResponse != nil:
 		router.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
 	case httpRoute.Redirect != nil:
+		if path := httpRoute.Redirect.Path; path != nil && path.RegexMatchReplace != nil {
+			addRegexRedirectMatch(router.Match, path.RegexMatchReplace.Pattern)
+		}
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch, backendIndex)
@@ -521,7 +524,14 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 		}
 	}
 	if redirection.Path != nil {
-		if redirection.Path.FullReplace != nil {
+		if regex := redirection.Path.RegexMatchReplace; regex != nil {
+			routeAction.PathRewriteSpecifier = &routev3.RedirectAction_RegexRewrite{
+				RegexRewrite: &matcherv3.RegexMatchAndSubstitute{
+					Pattern:      &matcherv3.RegexMatcher{Regex: regex.Pattern},
+					Substitution: regex.Substitution,
+				},
+			}
+		} else if redirection.Path.FullReplace != nil {
 			routeAction.PathRewriteSpecifier = &routev3.RedirectAction_PathRedirect{
 				PathRedirect: *redirection.Path.FullReplace,
 			}
