@@ -1,0 +1,6 @@
+KIND                  NAMESPACE/NAME                                          FIELD                                    RESULT    NOTE
+BackendTrafficPolicy  default/compression (backendtrafficpolicy.in.yaml)      spec.compression                         migrated  moved to spec.compressor, with an empty settings block added for 2 compressor type(s)
+BackendTrafficPolicy  default/compression (backendtrafficpolicy.in.yaml)      spec.targetRef                           migrated  moved to spec.targetRefs
+BackendTrafficPolicy  default/compressor-set (backendtrafficpolicy.in.yaml)   spec.compression                         migrated  removed, it was ignored because spec.compressor is set
+BackendTrafficPolicy  default/consistent-hash (backendtrafficpolicy.in.yaml)  spec.loadBalancer.consistentHash.header  migrated  replaced type Header and header with type Headers and headers
+BackendTrafficPolicy  default/unused-header (backendtrafficpolicy.in.yaml)    spec.loadBalancer.consistentHash.header  migrated  removed, it is unused with type SourceIP

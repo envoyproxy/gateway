@@ -325,6 +325,17 @@ By default, this will only uninstall the envoy-gateway workload resource, if we 
 egctl x uninstall --with-crds
 ```
 
+## egctl experimental migrate
+
+This subcommand rewrites Envoy Gateway resources from files or the cluster. `egctl x migrate deprecated`
+migrates the deprecated API fields that are removed in v1.11 to their replacements:
+
+```shell
+egctl x migrate deprecated -f manifests/ --mode check-only
+```
+
+See [Migrate Deprecated API Fields](./migrate-deprecated-fields.md) for details.
+
 ## egctl experimental translate
 
 This subcommand allows users to translate from an input configuration type to an output configuration type.

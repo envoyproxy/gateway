@@ -1,0 +1,15 @@
+KIND                 NAMESPACE/NAME                                           FIELD                               RESULT    NOTE
+ClientTrafficPolicy  default/all-deprecated (clienttrafficpolicy.in.yaml)     spec.enableProxyProtocol            migrated  replaced with spec.proxyProtocol: {}
+ClientTrafficPolicy  default/all-deprecated (clienttrafficpolicy.in.yaml)     spec.headers.preserveXRequestID     migrated  replaced with spec.headers.requestID: PreserveOrGenerate
+ClientTrafficPolicy  default/all-deprecated (clienttrafficpolicy.in.yaml)     spec.targetRef                      migrated  moved to spec.targetRefs
+ClientTrafficPolicy  default/all-deprecated (clienttrafficpolicy.in.yaml)     spec.tls.clientValidation.optional  migrated  replaced with spec.tls.clientValidation.mode: VerifyIfGiven
+ClientTrafficPolicy  default/false-values (clienttrafficpolicy.in.yaml)       spec.enableProxyProtocol            migrated  removed, false is the default
+ClientTrafficPolicy  default/false-values (clienttrafficpolicy.in.yaml)       spec.headers.preserveXRequestID     migrated  removed, false is the default
+ClientTrafficPolicy  default/new-fields-set (clienttrafficpolicy.in.yaml)     spec.enableProxyProtocol            migrated  removed, it was ignored because spec.proxyProtocol is set
+ClientTrafficPolicy  default/new-fields-set (clienttrafficpolicy.in.yaml)     spec.headers.preserveXRequestID     migrated  removed, it was ignored because spec.headers.requestID is set
+ClientTrafficPolicy  default/new-fields-set (clienttrafficpolicy.in.yaml)     spec.targetRef                      migrated  removed, spec.targetRefs already holds the same reference
+ClientTrafficPolicy  default/new-fields-set (clienttrafficpolicy.in.yaml)     spec.tls.clientValidation.optional  migrated  removed, it was ignored because spec.tls.clientValidation.mode is set
+ClientTrafficPolicy  default/target-conflict (clienttrafficpolicy.in.yaml)    spec.targetRef                      error     both targetRef and targetRefs are set: only targetRef is used today, move it into targetRefs and decide which references to keep
+ClientTrafficPolicy  default/null-replacements (clienttrafficpolicy.in.yaml)  spec.enableProxyProtocol            migrated  replaced with spec.proxyProtocol: {}
+ClientTrafficPolicy  default/null-replacements (clienttrafficpolicy.in.yaml)  spec.headers.preserveXRequestID     migrated  replaced with spec.headers.requestID: PreserveOrGenerate
+ClientTrafficPolicy  default/null-replacements (clienttrafficpolicy.in.yaml)  spec.tls.clientValidation.optional  migrated  removed, false is the default

@@ -1,0 +1,82 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: telemetry
+  namespace: envoy-gateway-system
+spec:
+  lua:
+    validationType: InsecureSyntax
+  telemetry:
+    tracing:
+      provider:
+        type: OpenTelemetry
+        # The in-cluster collector.
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
+    metrics:
+      sinks:
+      - type: OpenTelemetry
+        openTelemetry:
+          host: collector.example.com
+          port: 4318
+    accessLog:
+      settings:
+      - sinks:
+        - type: OpenTelemetry
+          openTelemetry:
+            host: 10.0.0.12
+        - type: OpenTelemetry
+          openTelemetry:
+            backendRefs:
+            - name: otel-collector
+              namespace: monitoring
+              port: 4317
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: lua
+  namespace: envoy-gateway-system
+spec:
+  luaValidation: Disabled
+  lua:
+    strictValidation:
+      allowedEnvVars:
+      - HOME
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: lua-strict
+  namespace: envoy-gateway-system
+spec:
+  lua:
+    strictValidation:
+      allowedEnvVars:
+      - HOME
+---
+# The port of the second sink is an alias of the first one.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: aliases
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      provider:
+        type: OpenTelemetry
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4318
+    metrics:
+      sinks:
+      - type: OpenTelemetry
+        openTelemetry:
+          backendRefs:
+          - name: otel-collector
+            namespace: monitoring
+            port: 4318

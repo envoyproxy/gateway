@@ -746,7 +746,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 // setEnvoyProxyWarnings sets the Warning condition on the ancestor status of ep, combining
 // every reason the EnvoyProxy is warned about, or removes it when there is none.
 func (t *Translator) setEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, invalidFields []validation.InvalidField) {
-	warnings := []*status.EnvoyProxyWarning{status.DeprecatedFieldsWarning(deprecatedFieldsUsedInEnvoyProxy(ep))}
+	warnings := []*status.EnvoyProxyWarning{status.DeprecatedFieldsWarning(deprecation.EnvoyProxy(ep))}
 	if t.EnvoyProxyPatchDisabled {
 		warnings = append(warnings, status.PatchDisabledWarning(disabledPatchFieldsUsedInEnvoyProxy(ep)))
 	}
@@ -775,12 +775,6 @@ func fieldErrors(fields []validation.InvalidField) []error {
 		errs = append(errs, f)
 	}
 	return errs
-}
-
-func deprecatedFieldsUsedInEnvoyProxy(ep *egv1a1.EnvoyProxy) map[string]status.DeprecatedField {
-	deprecatedFields := make(map[string]status.DeprecatedField)
-	deprecation.AddDeprecatedEnvoyProxySpecFields(deprecatedFields, "spec", &ep.Spec, false)
-	return deprecatedFields
 }
 
 // disabledPatchFieldsUsedInEnvoyProxy returns the Kubernetes resource `patch`

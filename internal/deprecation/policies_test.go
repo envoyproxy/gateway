@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package gatewayapi
+package deprecation
 
 import (
 	"testing"
@@ -12,13 +12,12 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 	backendRef := &gwapiv1.BackendObjectReference{Name: "backend"}
-	removed := func(replacement string) status.DeprecatedField {
-		return status.DeprecatedField{Replacement: replacement, RemovedIn: "v1.11"}
+	removed := func(replacement string) DeprecatedField {
+		return DeprecatedField{Replacement: replacement, RemovedIn: "v1.11"}
 	}
 
 	t.Run("BackendTrafficPolicy consistent hash header", func(t *testing.T) {
@@ -29,10 +28,10 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 				Header: &egv1a1.Header{Name: "x-user"},
 			},
 		}
-		require.Equal(t, map[string]status.DeprecatedField{
+		require.Equal(t, map[string]DeprecatedField{
 			"spec.loadBalancer.consistentHash.type: Header": removed("spec.loadBalancer.consistentHash.type: Headers"),
 			"spec.loadBalancer.consistentHash.header":       removed("spec.loadBalancer.consistentHash.headers"),
-		}, deprecatedFieldsUsedInBackendTrafficPolicy(policy))
+		}, BackendTrafficPolicy(policy))
 	})
 
 	t.Run("EnvoyExtensionPolicy extProc backendRef", func(t *testing.T) {
@@ -41,9 +40,9 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 			{BackendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{}}}},
 			{BackendCluster: egv1a1.BackendCluster{BackendRef: backendRef}},
 		}
-		require.Equal(t, map[string]status.DeprecatedField{
+		require.Equal(t, map[string]DeprecatedField{
 			"spec.extProc[1].backendRef": removed("spec.extProc[1].backendRefs"),
-		}, deprecatedFieldsUsedInEnvoyExtensionPolicy(policy))
+		}, EnvoyExtensionPolicy(policy))
 	})
 
 	t.Run("EnvoyExtensionPolicy extension backend consistent hash header", func(t *testing.T) {
@@ -57,12 +56,12 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 				}},
 			}},
 		}
-		require.Equal(t, map[string]status.DeprecatedField{
+		require.Equal(t, map[string]DeprecatedField{
 			"spec.backends[1].backendSettings.loadBalancer.consistentHash.type: Header": removed(
 				"spec.backends[1].backendSettings.loadBalancer.consistentHash.type: Headers"),
 			"spec.backends[1].backendSettings.loadBalancer.consistentHash.header": removed(
 				"spec.backends[1].backendSettings.loadBalancer.consistentHash.headers"),
-		}, deprecatedFieldsUsedInEnvoyExtensionPolicy(policy))
+		}, EnvoyExtensionPolicy(policy))
 	})
 
 	t.Run("SecurityPolicy JWT and OIDC backendRef", func(t *testing.T) {
@@ -71,10 +70,10 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 			{RemoteJWKS: &egv1a1.RemoteJWKS{BackendCluster: egv1a1.BackendCluster{BackendRef: backendRef}}},
 		}}
 		policy.Spec.OIDC = &egv1a1.OIDC{Provider: egv1a1.OIDCProvider{BackendCluster: egv1a1.BackendCluster{BackendRef: backendRef}}}
-		require.Equal(t, map[string]status.DeprecatedField{
+		require.Equal(t, map[string]DeprecatedField{
 			"spec.jwt.providers[0].remoteJWKS.backendRef": removed("spec.jwt.providers[0].remoteJWKS.backendRefs"),
 			"spec.oidc.provider.backendRef":               removed("spec.oidc.provider.backendRefs"),
-		}, deprecatedFieldsUsedInSecurityPolicy(policy))
+		}, SecurityPolicy(policy))
 	})
 
 	t.Run("consistent hash header in nested backendSettings", func(t *testing.T) {
@@ -88,12 +87,12 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 				}},
 			}},
 		}}}
-		require.Equal(t, map[string]status.DeprecatedField{
+		require.Equal(t, map[string]DeprecatedField{
 			"spec.extAuth.grpc.backendSettings.loadBalancer.consistentHash.type: Header": removed(
 				"spec.extAuth.grpc.backendSettings.loadBalancer.consistentHash.type: Headers"),
 			"spec.extAuth.grpc.backendSettings.loadBalancer.consistentHash.header": removed(
 				"spec.extAuth.grpc.backendSettings.loadBalancer.consistentHash.headers"),
-		}, deprecatedFieldsUsedInSecurityPolicy(policy))
+		}, SecurityPolicy(policy))
 	})
 
 	t.Run("EnvoyProxy telemetry sinks", func(t *testing.T) {
@@ -115,14 +114,14 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 				}},
 			}},
 		}
-		require.Equal(t, map[string]status.DeprecatedField{
+		require.Equal(t, map[string]DeprecatedField{
 			"spec.telemetry.tracing.provider.backendSettings.loadBalancer.consistentHash.type: Header": removed(
 				"spec.telemetry.tracing.provider.backendSettings.loadBalancer.consistentHash.type: Headers"),
 			"spec.telemetry.metrics.sinks[0].openTelemetry.host":           removed("spec.telemetry.metrics.sinks[0].openTelemetry.backendRefs"),
 			"spec.telemetry.accessLog.settings[0].sinks[0].als.backendRef": removed("spec.telemetry.accessLog.settings[0].sinks[0].als.backendRefs"),
 			"spec.telemetry.accessLog.settings[0].sinks[1].openTelemetry.host": removed(
 				"spec.telemetry.accessLog.settings[0].sinks[1].openTelemetry.backendRefs"),
-		}, deprecatedFieldsUsedInEnvoyProxy(ep))
+		}, EnvoyProxy(ep))
 	})
 
 	t.Run("EnvoyProxy telemetry sinks with explicit port", func(t *testing.T) {
@@ -148,10 +147,29 @@ func TestDeprecatedFieldsScheduledForRemoval(t *testing.T) {
 				}},
 			}},
 		}
-		require.Equal(t, map[string]status.DeprecatedField{
+		require.Equal(t, map[string]DeprecatedField{
 			"spec.telemetry.tracing.provider.port": removed("spec.telemetry.tracing.provider.backendRefs"),
 			"spec.telemetry.accessLog.settings[0].sinks[0].openTelemetry.port": removed(
 				"spec.telemetry.accessLog.settings[0].sinks[0].openTelemetry.backendRefs"),
-		}, deprecatedFieldsUsedInEnvoyProxy(ep))
+		}, EnvoyProxy(ep))
 	})
+}
+
+func TestClientTrafficPolicy(t *testing.T) {
+	removed := func(replacement string) DeprecatedField {
+		return DeprecatedField{Replacement: replacement, RemovedIn: "v1.11"}
+	}
+	require.Empty(t, ClientTrafficPolicy(&egv1a1.ClientTrafficPolicy{}))
+
+	policy := &egv1a1.ClientTrafficPolicy{}
+	policy.Spec.TargetRef = &gwapiv1.LocalPolicyTargetReferenceWithSectionName{}
+	policy.Spec.EnableProxyProtocol = new(bool)
+	policy.Spec.Headers = &egv1a1.HeaderSettings{PreserveXRequestID: new(bool)}
+	policy.Spec.TLS = &egv1a1.ClientTLSSettings{ClientValidation: &egv1a1.ClientValidationContext{Optional: true}}
+	require.Equal(t, map[string]DeprecatedField{
+		"spec.targetRef":                     removed("spec.targetRefs"),
+		"spec.enableProxyProtocol":           removed("spec.proxyProtocol"),
+		"spec.headers.preserveXRequestID":    removed("spec.headers.requestID"),
+		"spec.tls.clientValidation.optional": {Replacement: "spec.tls.clientValidation.mode"},
+	}, ClientTrafficPolicy(policy))
 }

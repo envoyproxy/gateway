@@ -245,19 +245,6 @@ func BuildBTPIndexes(
 	}
 }
 
-// deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
-func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]status.DeprecatedField {
-	deprecatedFields := make(map[string]status.DeprecatedField)
-	if policy.Spec.TargetRef != nil {
-		deprecatedFields["spec.targetRef"] = deprecatedFieldScheduledForRemoval("spec.targetRefs")
-	}
-	if len(policy.Spec.Compression) > 0 {
-		deprecatedFields["spec.compression"] = deprecatedFieldScheduledForRemoval("spec.compressor")
-	}
-	deprecation.AddDeprecatedLoadBalancerFields(deprecatedFields, "spec.loadBalancer", policy.Spec.LoadBalancer)
-	return deprecatedFields
-}
-
 func (t *Translator) ProcessBackendTrafficPolicies(
 	resources *resource.Resources,
 	gateways []*GatewayContext,
@@ -706,7 +693,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 		}
 	}
 
-	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.BackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 	return matchedGWs, notMerged
@@ -1080,7 +1067,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.BackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -1229,7 +1216,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.BackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 
@@ -1302,7 +1289,7 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.BackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -1371,7 +1358,7 @@ func (t *Translator) processBackendTrafficPolicyForListenerSet(
 	}
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.BackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 }
@@ -1408,7 +1395,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 			resolveErr,
 		)
 		// The policy is still admitted, so report its deprecated fields too.
-		if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+		if deprecatedFields := deprecation.BackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 			status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 		}
 		return
@@ -1437,7 +1424,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 
 	// Check for deprecated fields and set warning if any are found
-	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+	if deprecatedFields := deprecation.BackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
 		status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 	}
 
