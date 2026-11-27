@@ -163,9 +163,16 @@ spec:
   where only one of them happens to give the resource its name, so this makes it explicit
   rather than new.
 - A selector that matches nothing reports `ResourceNotFound`, as `name` does today.
-- The first iteration supports only `sectionName`. Other match fields, such as a port, can be
-  added later without breaking anything: a new optional field is additive, and making
-  `sectionName` optional with an exactly-one-of rule only relaxes validation.
+- `sectionName` names a listener of the Gateway itself, as in a Gateway API `parentRef`. A
+  resource that serves only ListenerSet listeners can't be selected; listener names can repeat
+  across ListenerSets, so `sectionName` alone wouldn't identify one.
+- With HTTP/3, one Gateway listener has a TCP and a QUIC Listener. A Listener selector matches
+  the TCP one; the QUIC Listener can only be targeted by `name`.
+- The first iteration supports only `sectionName`. Patches on ListenerSet-only or QUIC Listeners
+  keep using `name`, and the migration tool lists them for a manual change when the flag is
+  turned on. Other match fields, such as a ListenerSet, a protocol or a port, can be added later
+  without breaking anything: a new optional field is additive, and making `sectionName` optional
+  with an exactly-one-of rule only relaxes validation.
 
 VirtualHosts aren't top-level xDS resources. Patches reach them through a `jsonPath` on the
 RouteConfiguration, usually filtering on `name`. Filter on `domains` instead, which is the same
@@ -184,13 +191,13 @@ shared flags (`-f`, `--from-cluster`, `-n`/`-A`, `--mode print|in-place|check-on
 format and the exit codes.
 
 ```shell
-# Rewrite EnvoyPatchPolicies in files; Gateways must be in the same input
+# Rewrite EnvoyPatchPolicies in files; Gateways, routes and policies must be in the same input
 egctl x migrate xds-name-scheme -f manifests/
 
 # CI gate: exit 1 if any EnvoyPatchPolicy still depends on a name v2 changes
 egctl x migrate xds-name-scheme -f manifests/ --mode check-only
 
-# Read Gateways and EnvoyPatchPolicies from the cluster
+# Read everything from the cluster
 egctl x migrate xds-name-scheme --from-cluster -A
 ```
 
@@ -220,19 +227,29 @@ For each EnvoyPatchPolicy, for each `jsonPatches[i]`:
 | `name` is already a v2 name | `selector` the same way | migrated |
 | `name` of a type v2 doesn't rename | unchanged | none |
 | `jsonPath` filters on a v1 VirtualHost name | filter on `domains` | migrated |
-| `name` matches no resource in the input | unchanged | error: Gateway missing from the input, or the patch is already broken |
+| `name` matches no resource in the input | unchanged | error: a Gateway, route or policy is missing from the input, or the patch is already broken |
 | `jsonPath` too complex to rewrite safely | unchanged | error: listed for a manual fix |
+| `name` is a v1 name of a QUIC Listener, or of a resource that serves only ListenerSet listeners | unchanged | error: no selector exists; listed for a manual fix, with the v2 name |
+| A v1 name of a renamed resource elsewhere in the patch, e.g. an HCM `rds.route_config_name` in `operation.value`, or a `jsonPath` filter on a filter chain or RouteConfiguration name | unchanged | error: listed for a manual fix, with the v2 value |
 | `op: add` with an empty path (adds a new resource) | unchanged | none: the user names the new resource |
+
+The tool looks for v1 names of renamed resources everywhere in a patch: the target, `jsonPath`,
+and `operation.value`. A patch counts as migrated only if none is left. A name inside a value has
+no scheme-independent form, so the user has to change it when turning the flag on; the report
+gives the v2 value to use.
 
 Selectors are scheme-independent, so the rewritten policy works before and after the flip. Users
 can apply it at any time, and the flip doesn't have to happen at the same moment.
 
 #### Inputs and limits
 
-- Gateways, ListenerSets and GatewayClasses are needed to compute names. With `-f`, they must be
-  in the input; if an EnvoyPatchPolicy's `targetRef` isn't, the tool reports an error for it
-  rather than guessing.
-- EnvoyProxy affects names only through `mergeGateways`, so it is read too.
+- Names depend on more than Gateways. VirtualHosts come from the HTTPRoutes and GRPCRoutes
+  attached to a listener, a QUIC Listener exists only when a ClientTrafficPolicy enables HTTP/3,
+  and EnvoyProxy changes names through `mergeGateways`. The tool reads the same resources as
+  `egctl x translate`: Gateways, ListenerSets, GatewayClasses, EnvoyProxies, routes and
+  ClientTrafficPolicies.
+- With `--from-cluster` it reads them all. With `-f` they must be in the input; a patch whose
+  resource is missing gets an error rather than a guess.
 - The tool doesn't touch extension servers or dashboards. Extension authors use the new hook
   context, see [Extension servers](#3-extension-servers); the release notes cover dashboards.
 
@@ -375,8 +392,10 @@ handles without a gap. The drain comes from the filter chains, not the Listener 
 - **Unit:** golden tests for the listener index, the selector resolution under both schemes, and
   the egctl rewrite rules (the same `testdata/migrate/<path>` layout as `deprecated`).
 - **Round trip:** for every EnvoyPatchPolicy golden input, run the egctl rewrite, then translate
-  with the flag on and off. The patched xDS must be identical to translating the original policy
-  with the flag off.
+  with the flag on and off. Map the v2 names in the flag-on output back to v1 with the tool's
+  name map, and the HCM stat prefix likewise; then both outputs must be identical to translating
+  the original policy with the flag off. Without the mapping the comparison would fail on the
+  renames themselves.
 - **E2E:** extend `test/e2e/upgrade` to flip the flag on a live gateway while a load generator
   runs. Assert zero failed requests, and that an EnvoyPatchPolicy using `selector` is still
   applied after the flip. This guards the gap-free Listener rename against Envoy regressions.
