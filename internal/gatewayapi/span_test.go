@@ -19,6 +19,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 // recordSpans installs a span recorder for the duration of the test and returns it.
@@ -38,6 +39,7 @@ func recordSpans(t *testing.T) *tracetest.SpanRecorder {
 
 func newTracingTestTranslator() *Translator {
 	return &Translator{
+		BootstrapValidator:    bootstrap.Validator{},
 		GatewayControllerName: egv1a1.GatewayControllerName,
 		GatewayClassName:      "envoy-gateway-class",
 		Logger:                logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
