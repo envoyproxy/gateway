@@ -48,9 +48,9 @@ That is documented rather than avoided.
 
 ## Design
 
-Three pieces. Selectors make a patch independent of the naming scheme. The migration tool rewrites
-existing patches to use them. Extension servers get the same mapping through the hook context.
-None of them changes the default; the flag is removed a release later.
+Selectors make a patch independent of the naming scheme, and the migration tool rewrites existing
+patches to use them. Neither changes the default; the flag is removed a release later. Extension
+servers get the same mapping in a follow-up, see [Extension servers](#3-extension-servers).
 
 ```mermaid
 flowchart LR
@@ -93,7 +93,7 @@ It stays in the translator rather than going into xDS `metadata`. A metadata-onl
 Listener or filter chain makes Envoy drain it, so Listener metadata would drain the shared
 listener every time a Gateway listener is added on its port, a drain that doesn't happen today.
 
-Extension servers get the same index through the hook context, see
+Extension servers can get the same index later, see
 [Extension servers](#3-extension-servers). The selector doesn't need anything sent to Envoy.
 
 #### EnvoyPatchPolicy API
@@ -247,13 +247,15 @@ For each EnvoyPatchPolicy, for each `jsonPatches[i]`:
 | `name` matches no resource in the input | unchanged | error: a Gateway, route or policy is missing from the input, or the patch is already broken |
 | `jsonPath` too complex to rewrite safely | unchanged | error: listed for a manual fix |
 | `name` is a v1 name of a QUIC Listener, or of a resource that serves only ListenerSet listeners | unchanged | error: no selector exists; listed for a manual fix, with the v2 name |
-| A v1 name of a renamed resource elsewhere in the patch, e.g. an HCM `rds.route_config_name` in `operation.value`, or a `jsonPath` filter on a filter chain or RouteConfiguration name | unchanged | error: listed for a manual fix, with the v2 value |
-| `op: add` with an empty path (adds a new resource) | unchanged | none for the new resource's own name, which the user picks; v1 names inside it, e.g. an HCM `rds.route_config_name`, are checked like any other value |
+| A v1 name of a renamed resource elsewhere in the patch, e.g. an HCM `rds.route_config_name` in `operation.value`, or a `jsonPath` filter on a filter chain or RouteConfiguration name | unchanged | error: listed for a manual fix |
+| `op: add` with an empty path (adds a new resource) | unchanged | none for the new resource's own name, which the user picks, nor for later patches that target it by that name; v1 names inside it, e.g. an HCM `rds.route_config_name`, are checked like any other value |
 
 The tool looks for v1 names of renamed resources everywhere in a patch: the target, `jsonPath`,
-and `operation.value`, including the body of a new resource added with an empty path. A patch is reported as migrated only if it finds none left. A name inside a value has
-no scheme-independent form, so the user has to change it when turning the flag on; the report
-gives the v2 value to use.
+and `operation.value`, including the body of a new resource added with an empty path. A patch is
+reported as migrated only if it finds none left. A name inside a value has no scheme-independent
+form, so the user has to change it when turning the flag on. The report shows where the name is
+but not its replacement: one v1 name can stand for several resources that v2 names differently,
+e.g. `tcp-80` for the Listener and `http-80` for its RouteConfiguration.
 
 Selectors are scheme-independent, so the rewritten policy works before and after the flip. Users
 can apply it at any time, and the flip doesn't have to happen at the same moment.
@@ -277,128 +279,32 @@ environment before applying them to production.
 - Names depend on more than Gateways. VirtualHosts come from the HTTPRoutes and GRPCRoutes
   attached to a listener, a QUIC Listener exists only when a ClientTrafficPolicy enables HTTP/3,
   and EnvoyProxy changes names through `mergeGateways`. The tool reads the same resources as
-  `egctl x translate`: Gateways, ListenerSets, GatewayClasses, EnvoyProxies, routes and
-  ClientTrafficPolicies.
+  `egctl x translate`, including Gateways, ListenerSets, GatewayClasses, EnvoyProxies, routes,
+  ClientTrafficPolicies, and the TLS Secrets and ReferenceGrants that HTTPS listeners need.
+  This list isn't complete: any resource that decides whether a listener, route or VirtualHost
+  is built can affect the map, and more may turn up during implementation.
 - With `--from-cluster` it reads them all. With `-f` they must be in the input; a patch whose
   resource is missing gets an error rather than a guess.
-- The tool doesn't touch extension servers or dashboards. Extension authors use the new hook
-  context, see [Extension servers](#3-extension-servers); the release notes cover dashboards.
+- The tool doesn't touch extension servers or dashboards. For extension servers see
+  [Extension servers](#3-extension-servers); the release notes cover dashboards.
 
 ### 3. Extension servers
 
+This proposal focuses on EnvoyPatchPolicy. For extension servers it only sets the direction; the
+details are left to a follow-up.
+
 Extension servers that look up Listeners or RouteConfigurations by name break on the flip, the
 same way EnvoyPatchPolicies do. They need a name-independent way to map each xDS resource back to
-the Gateway listeners behind it. There are two channels, with different risk.
+the Gateway listeners behind it. The listener index above can provide that in two ways:
 
-#### Hook context (default, no flag)
+- **Hook context:** add the Gateway listeners behind each resource to the context message every
+  hook already receives (`proto/extension/context.proto`). New proto fields are additive, so
+  existing extensions ignore them, and nothing reaches Envoy, so there is no drain.
+- **xDS metadata:** for tools that read the xDS Envoy receives, e.g. a config dump, write the same
+  index into `filter_metadata["envoy-gateway"]`, opt-in through an EnvoyProxy setting. A metadata
+  change to a Listener or filter chain drains it, so this stays off by default.
 
-Every hook already receives a context message next to the xDS resource
-(`proto/extension/context.proto`). Add the index there:
-
-```protobuf
-// GatewayListenerRef identifies a Gateway listener, or a ListenerSet listener, an xDS resource serves.
-message GatewayListenerRef {
-  string namespace = 1;
-  string name = 2;
-  string section_name = 3;
-  string listener_set_namespace = 4;  // set when the listener comes from a ListenerSet
-  string listener_set_name = 5;
-  uint32 port = 6;
-}
-
-message PostHTTPListenerExtensionContext {
-  repeated ExtensionResource extension_resources = 1;
-  repeated GatewayListenerRef gateway_listeners = 2;  // new
-}
-
-message PostTranslateExtensionContext {
-  repeated ExtensionResource extension_resources = 1;
-  // new: xDS resource name -> what it serves, for every Listener, filter chain and
-  // RouteConfiguration in the request
-  map<string, XdsResourceOrigin> listeners = 2;
-  map<string, XdsResourceOrigin> filter_chains = 3;
-  map<string, XdsResourceOrigin> route_configurations = 4;
-}
-
-message XdsResourceOrigin {
-  repeated GatewayListenerRef gateway_listeners = 1;
-}
-```
-
-`PostVirtualHostExtensionContext` gets `gateway_listeners` plus the HTTPRoutes attached to the
-VirtualHost.
-
-This is safe to ship on by default: the fields are additive, so existing extensions ignore them,
-and nothing reaches Envoy, so it can't cause a drain. It is enough for extensions that act inside
-a hook, which is how most extensions work.
-
-The first iteration carries only the Gateway listeners behind each resource, which is what an
-extension needs to stop depending on xDS names. The routes and policies behind each filter chain
-and RouteConfiguration in `PostTranslateModify` can be added later as new proto fields, which
-existing extensions ignore, once extension authors ask for them.
-
-#### xDS metadata (opt-in, an EnvoyProxy setting)
-
-Some extensions or tools read the xDS that Envoy actually receives, e.g. from a config dump, an
-xDS proxy, or a later hook that has lost the context. For those, EG can write the same index into
-`filter_metadata["envoy-gateway"]` on Listener, FilterChain and RouteConfiguration, as it already
-does for Routes and VirtualHosts (`buildXdsMetadata`):
-
-```yaml
-metadata:
-  filter_metadata:
-    envoy-gateway:
-      resources:
-      - kind: Gateway
-        namespace: default
-        name: eg
-        sectionName: http
-      - kind: Gateway
-        namespace: default
-        name: eg
-        sectionName: http-alt
-      - kind: ListenerSet
-        namespace: team-a
-        name: team-a-listeners
-        sectionName: http
-        gateway:
-          namespace: default
-          name: eg
-```
-
-A ListenerSet listener names its ListenerSet and its parent Gateway, as in the index.
-
-It is turned on per data plane with a new EnvoyProxy field, off by default:
-
-```yaml
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: EnvoyProxy
-metadata:
-  name: with-listener-metadata
-  namespace: envoy-gateway-system
-spec:
-  xdsMetadata:
-    # Add the Gateway listeners each resource serves to its xDS metadata.
-    # Changing this drains every listener of this proxy once.
-    listeners: true
-```
-
-It's an API field rather than a runtime flag because it's a lasting choice, not a temporary guard
-for a breaking change. It belongs on EnvoyProxy rather than EnvoyGateway because the cost is a
-drain of that proxy's listeners. Users can enable it on one Gateway first, and only on Gateways
-whose extensions or tools need it, while EnvoyGateway would apply it to every data plane at once.
-`xdsMetadata` leaves room for later options, such as the routes and policies behind each resource.
-
-| Resource | Drain on metadata change | Risk |
-|---|---|---|
-| Listener | Whole listener, on every Gateway listener added to or removed from its port | High |
-| FilterChain | That filter chain; the shared HTTP default chain drains on the same events | Medium |
-| RouteConfiguration | None, delivered over RDS | None |
-
-RouteConfiguration metadata carries no drain risk, so it could ship ungated. Keeping all three
-behind one field gives extensions one switch to opt into, and the default can change later if
-the drain proves acceptable in practice. Turning the field on or off also drains every listener
-of that proxy once, which the field's documentation says.
+The follow-up should land before the flag is removed.
 
 ## Rollout
 
@@ -409,7 +315,7 @@ flowchart LR
 
 | Release | Change | User action |
 |---|---|---|
-| N | `selector`, `egctl x migrate xds-name-scheme`, extension hook context, EnvoyProxy `xdsMetadata.listeners` (off). The flag stays off by default | Migrate EnvoyPatchPolicies; move extensions off xDS names. Turn the flag on in a non-production environment to verify before upgrading |
+| N | `selector`, `egctl x migrate xds-name-scheme`. The flag stays off by default | Migrate EnvoyPatchPolicies. Turn the flag on in a non-production environment to verify before upgrading |
 | N+1 and later | Flag and v1 naming removed; v2 is always on | Remove the flag from EnvoyGateway config |
 
 The new API ships first so users can migrate while v1 names still work. The flag is removed in
