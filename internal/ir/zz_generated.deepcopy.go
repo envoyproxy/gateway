@@ -1193,6 +1193,13 @@ func (in *Compression) DeepCopyInto(out *Compression) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.ContentTypes != nil {
+		in, out := &in.ContentTypes, &out.ContentTypes
+		*out = make([]v1alpha1.StringMatch, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Gzip != nil {
 		in, out := &in.Gzip, &out.Gzip
 		*out = new(v1alpha1.GzipCompressor)

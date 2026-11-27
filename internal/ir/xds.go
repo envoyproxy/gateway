@@ -1287,6 +1287,9 @@ type Compression struct {
 	ChooseFirst bool `json:"chooseFirst,omitempty" yaml:"chooseFirst,omitempty"`
 	// MinContentLength defines the minimum response size in bytes to apply compression.
 	MinContentLength *uint32 `json:"minContentLength,omitempty" yaml:"minContentLength,omitempty"`
+	// ContentTypes restricts compression to responses whose content type matches.
+	// If empty, the Envoy default content types are compressed.
+	ContentTypes []egv1a1.StringMatch `json:"contentTypes,omitempty" yaml:"contentTypes,omitempty"`
 	// Gzip holds the custom settings for the Gzip compressor library.
 	// It is only set when Type is Gzip and at least one setting is specified.
 	Gzip *egv1a1.GzipCompressor `json:"gzip,omitempty" yaml:"gzip,omitempty"`

@@ -98,6 +98,43 @@ spec:
       minContentLength: 1024
 ```
 
+### Configuring Content Types
+
+By default, Envoy only compresses responses whose `Content-Type` is in its [default list](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/compressor/v3/compressor.proto#envoy-v3-api-field-extensions-filters-http-compressor-v3-compressor-commondirectionconfig-content-type), which covers HTML, CSS, JavaScript, JSON, XML, SVG and plain text.
+Use the `contentTypes` field to compress other content types, such as WebAssembly modules, web app manifests, feeds or uncompressed fonts.
+
+Each entry is a string match with a `type` of `Exact` (the default), `Prefix`, `Suffix` or `RegularExpression`. Parameters such as `; charset=utf-8` are ignored, and `Exact`, `Prefix` and `Suffix` matches are case-insensitive.
+Setting `contentTypes` replaces the default list, so it must include every content type that should be compressed.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-compression
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  compressor:
+    - type: Gzip
+      gzip: {}
+      contentTypes:
+        - type: Prefix
+          value: text/
+        - value: application/javascript
+        - value: application/json
+        - value: application/xml
+        - type: Suffix # e.g. application/manifest+json
+          value: +json
+        - type: Suffix # e.g. image/svg+xml and application/rss+xml
+          value: +xml
+        - value: application/wasm
+        - value: application/vnd.ms-fontobject
+        - type: RegularExpression
+          value: ^font/(otf|ttf)$
+```
+
 To specify the desired compression type, include the `Accept-Encoding` header in requests sent to the Envoy Gateway. The quality value (`q`) in the `Accept-Encoding` header determines the priority of each compression type. Envoy Gateway will select the compression type with the highest `q` value that matches a type configured in the `BackendTrafficPolicy` resource.
 
 ```shell

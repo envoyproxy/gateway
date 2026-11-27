@@ -3294,17 +3294,12 @@ func buildCompression(compression, compressor []*egv1a1.Compression) ([]*ir.Comp
 			if (c.Type == egv1a1.GzipCompressorType && c.Gzip != nil) ||
 				(c.Type == egv1a1.BrotliCompressorType && c.Brotli != nil) ||
 				(c.Type == egv1a1.ZstdCompressorType && c.Zstd != nil) {
-				irCompression := ir.Compression{
-					Type:        c.Type,
-					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
-				}
-				setCompressorSettings(&irCompression, c)
-				minContentLength, err := minContentLengthToUint32(c.MinContentLength)
+				// only the first compressor is marked as ChooseFirst
+				irCompression, err := buildIRCompression(c, i == 0)
 				if err != nil {
 					return nil, err
 				}
-				irCompression.MinContentLength = minContentLength
-				result = append(result, &irCompression)
+				result = append(result, irCompression)
 			}
 		}
 		return result, nil
@@ -3322,20 +3317,35 @@ func buildCompression(compression, compressor []*egv1a1.Compression) ([]*ir.Comp
 		}
 		types.Insert(c.Type)
 
-		irCompression := ir.Compression{
-			Type:        c.Type,
-			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
-		}
-		setCompressorSettings(&irCompression, c)
-		minContentLength, err := minContentLengthToUint32(c.MinContentLength)
+		// only the first compressor is marked as ChooseFirst
+		irCompression, err := buildIRCompression(c, i == 0)
 		if err != nil {
 			return nil, err
 		}
-		irCompression.MinContentLength = minContentLength
-		result = append(result, &irCompression)
+		result = append(result, irCompression)
 	}
 
 	return result, nil
+}
+
+func buildIRCompression(c *egv1a1.Compression, chooseFirst bool) (*ir.Compression, error) {
+	irCompression := &ir.Compression{
+		Type:        c.Type,
+		ChooseFirst: chooseFirst,
+	}
+	setCompressorSettings(irCompression, c)
+	minContentLength, err := minContentLengthToUint32(c.MinContentLength)
+	if err != nil {
+		return nil, err
+	}
+	irCompression.MinContentLength = minContentLength
+	if err := egv1a1validation.ValidateCompressionContentTypes(c.ContentTypes); err != nil {
+		return nil, err
+	}
+	for _, contentType := range c.ContentTypes {
+		irCompression.ContentTypes = append(irCompression.ContentTypes, *contentType.DeepCopy())
+	}
+	return irCompression, nil
 }
 
 // minContentLengthToUint32 converts the CRD quantity to the uint32 Envoy expects.

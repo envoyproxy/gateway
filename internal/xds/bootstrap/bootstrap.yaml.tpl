@@ -185,10 +185,10 @@ static_resources:
               {{- with .PrometheusCompression.LibrarySettings }}
 {{ indent 18 . }}
               {{- end }}
-              {{- with .PrometheusCompression.MinContentLength }}
+              {{- with .PrometheusCompression.ResponseCommonConfig }}
               response_direction_config:
                 common_config:
-                  min_content_length: {{ . }}
+{{ indent 18 . }}
               {{- end }}
           {{- end }}
           - name: envoy.filters.http.router

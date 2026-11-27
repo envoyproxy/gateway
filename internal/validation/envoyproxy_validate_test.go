@@ -1173,6 +1173,30 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "prometheus compression with an invalid content type regex",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Prometheus: &egv1a1.ProxyPrometheusProvider{
+								Compression: &egv1a1.Compression{
+									Type: egv1a1.GzipCompressorType,
+									ContentTypes: []egv1a1.StringMatch{
+										{Type: new(egv1a1.StringMatchRegularExpression), Value: "^text/(plain"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for i := range testCases {

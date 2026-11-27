@@ -1,0 +1,1 @@
+Added `contentTypes` to the BackendTrafficPolicy `compressor` settings (and the EnvoyProxy Prometheus `compression` settings) to configure which response content types are compressed, using exact, prefix, suffix or regular expression matches, instead of always using Envoy's default list of content types.

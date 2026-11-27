@@ -15,7 +15,9 @@ import (
 	"strings"
 	"text/template"
 
+	compressorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/compressor/v3"
 	protobuf "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -171,9 +173,10 @@ type prometheusCompressionParameters struct {
 	// LibrarySettings is the YAML encoded settings of the compression library.
 	// It is empty when no custom settings are configured.
 	LibrarySettings string
-	// MinContentLength is the minimum response size in bytes to apply compression.
-	// It is zero when not configured.
-	MinContentLength uint32
+	// ResponseCommonConfig is the YAML encoded common config of the response direction,
+	// such as the minimum content length and the content types.
+	// It is empty when no custom settings are configured.
+	ResponseCommonConfig string
 }
 
 type adminServerParameters struct {
@@ -254,12 +257,25 @@ func buildPrometheusCompressionParameters(compression *egv1a1.Compression) (*pro
 		params.LibrarySettings = string(data)
 	}
 
+	if err := validation.ValidateCompressionContentTypes(compression.ContentTypes); err != nil {
+		return nil, fmt.Errorf("invalid prometheus compression: %w", err)
+	}
+	commonConfig := &compressorv3.Compressor_CommonDirectionConfig{
+		ContentTypeMatcher: filters.CompressorContentTypeMatchers(compression.ContentTypes),
+	}
 	if compression.MinContentLength != nil {
 		if err := validation.ValidateMinContentLength(compression.MinContentLength); err != nil {
 			return nil, fmt.Errorf("invalid prometheus compression: %w", err)
 		}
 		minContentLength, _ := compression.MinContentLength.AsInt64()
-		params.MinContentLength = uint32(minContentLength)
+		commonConfig.MinContentLength = wrapperspb.UInt32(uint32(minContentLength))
+	}
+	if protobuf.Size(commonConfig) > 0 {
+		data, err := proto.ToYAML(commonConfig)
+		if err != nil {
+			return nil, err
+		}
+		params.ResponseCommonConfig = string(data)
 	}
 
 	return params, nil

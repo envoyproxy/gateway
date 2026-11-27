@@ -21,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/regex"
 )
 
 var statNameRegex = regexp.MustCompile("%[^%]*%")
@@ -383,6 +384,22 @@ func validateProxyMetricSink(sink *egv1a1.ProxyMetricSink) []error {
 func validatePrometheusCompression(compression *egv1a1.Compression) error {
 	if err := ValidateMinContentLength(compression.MinContentLength); err != nil {
 		return fmt.Errorf("invalid prometheus compression: %w", err)
+	}
+	if err := ValidateCompressionContentTypes(compression.ContentTypes); err != nil {
+		return fmt.Errorf("invalid prometheus compression: %w", err)
+	}
+	return nil
+}
+
+// ValidateCompressionContentTypes validates the regular expressions of the compression content types.
+func ValidateCompressionContentTypes(contentTypes []egv1a1.StringMatch) error {
+	for _, contentType := range contentTypes {
+		if ptr.Deref(contentType.Type, egv1a1.StringMatchExact) != egv1a1.StringMatchRegularExpression {
+			continue
+		}
+		if err := regex.Validate(contentType.Value); err != nil {
+			return fmt.Errorf("invalid contentTypes: %w", err)
+		}
 	}
 	return nil
 }

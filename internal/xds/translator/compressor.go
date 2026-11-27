@@ -44,14 +44,17 @@ func (*compressor) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 	}
 
 	var (
-		filter *hcmv3.HttpFilter
-		err    error
+		filter     *hcmv3.HttpFilter
+		filterName string
+		err        error
 	)
 
 	for _, route := range irListener.Routes {
 		if route.Traffic != nil && route.Traffic.Compression != nil {
 			for _, irComp := range route.Traffic.Compression {
-				filterName := compressorFilterName(irComp.Type)
+				if filterName, err = compressorFilterName(irComp); err != nil {
+					return err
+				}
 				if !hcmContainsFilter(mgr, filterName) {
 					if filter, err = buildCompressorFilter(irComp); err != nil {
 						return err
@@ -65,47 +68,75 @@ func (*compressor) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 	return err
 }
 
-func compressorFilterName(compressorType egv1a1.CompressorType) string {
-	return fmt.Sprintf("%s.%s", egv1a1.EnvoyFilterCompressor.String(), strings.ToLower(string(compressorType)))
+// compressorFilterName returns the name of the listener-level compressor filter for the compression.
+func compressorFilterName(compression *ir.Compression) (string, error) {
+	name := fmt.Sprintf("%s.%s", egv1a1.EnvoyFilterCompressor.String(), strings.ToLower(string(compression.Type)))
+	if len(compression.ContentTypes) == 0 {
+		return name, nil
+	}
+
+	// CompressorPerRoute can't override the content types, so every distinct filter config with
+	// content types gets a filter of its own, named after a hash of the config. Routes without
+	// content types keep sharing a single filter per compressor type.
+	compressorProto, err := buildCompressorProto(compression)
+	if err != nil {
+		return "", err
+	}
+	hash, err := protoHash(compressorProto)
+	if err != nil {
+		return "", err
+	}
+	return name + "/" + hash, nil
+}
+
+// buildCompressorProto builds the listener-level config of the compressor filter.
+func buildCompressorProto(compression *ir.Compression) (*compressorv3.Compressor, error) {
+	// The filter is shared by multiple routes, so it always uses the default compressor
+	// library settings. Routes with custom settings override the compressor library.
+	compressorLibrary, err := filters.CompressorLibrary(compression.Type, nil, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	compressorProto := &compressorv3.Compressor{
+		CompressorLibrary: compressorLibrary,
+		ChooseFirst:       compression.ChooseFirst,
+	}
+
+	if compression.MinContentLength != nil || len(compression.ContentTypes) > 0 {
+		commonConfig := &compressorv3.Compressor_CommonDirectionConfig{
+			ContentTypeMatcher: filters.CompressorContentTypeMatchers(compression.ContentTypes),
+		}
+		if compression.MinContentLength != nil {
+			commonConfig.MinContentLength = wrapperspb.UInt32(*compression.MinContentLength)
+		}
+		compressorProto.ResponseDirectionConfig = &compressorv3.Compressor_ResponseDirectionConfig{
+			CommonConfig: commonConfig,
+		}
+	}
+
+	return compressorProto, nil
 }
 
 // buildCompressorFilter builds a compressor filter with the provided compressionType.
 func buildCompressorFilter(compression *ir.Compression) (*hcmv3.HttpFilter, error) {
-	var (
-		compressorProto   *compressorv3.Compressor
-		compressorLibrary *corev3.TypedExtensionConfig
-		compressorAny     *anypb.Any
-		err               error
-	)
-
-	// The filter is shared by all the routes of the listener, so it always uses the default
-	// compressor library settings. Routes with custom settings override the compressor library.
-	if compressorLibrary, err = filters.CompressorLibrary(compression.Type, nil, nil, nil); err != nil {
+	filterName, err := compressorFilterName(compression)
+	if err != nil {
 		return nil, err
 	}
 
-	compressorProto = &compressorv3.Compressor{
-		CompressorLibrary: compressorLibrary,
+	compressorProto, err := buildCompressorProto(compression)
+	if err != nil {
+		return nil, err
 	}
 
-	if compression.ChooseFirst {
-		compressorProto.ChooseFirst = true
-	}
-
-	if compression.MinContentLength != nil {
-		compressorProto.ResponseDirectionConfig = &compressorv3.Compressor_ResponseDirectionConfig{
-			CommonConfig: &compressorv3.Compressor_CommonDirectionConfig{
-				MinContentLength: wrapperspb.UInt32(*compression.MinContentLength),
-			},
-		}
-	}
-
-	if compressorAny, err = proto.ToAnyWithValidation(compressorProto); err != nil {
+	compressorAny, err := proto.ToAnyWithValidation(compressorProto)
+	if err != nil {
 		return nil, err
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: compressorFilterName(compression.Type),
+		Name: filterName,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: compressorAny,
 		},
@@ -132,6 +163,7 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 
 	var (
 		perFilterCfg  map[string]*anypb.Any
+		filterName    string
 		compressorAny *anypb.Any
 		err           error
 	)
@@ -144,7 +176,9 @@ func (*compressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir
 	}
 
 	for _, irComp := range irRoute.Traffic.Compression {
-		filterName := compressorFilterName(irComp.Type)
+		if filterName, err = compressorFilterName(irComp); err != nil {
+			return err
+		}
 		if _, ok := perFilterCfg[filterName]; ok {
 			// This should not happen since this is the only place where the filter
 			// config is added in a route.

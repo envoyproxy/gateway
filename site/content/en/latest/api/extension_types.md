@@ -1274,6 +1274,7 @@ _Appears in:_
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
 | `zstd` | _[ZstdCompressor](#zstdcompressor)_ |  false  |  | The configuration for Zstd compressor. |
 | `minContentLength` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MinContentLength defines the minimum response size in bytes to apply compression.<br />Responses smaller than this threshold will not be compressed.<br />Must be at least 30 bytes as enforced by Envoy Proxy.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 30 bytes |
+| `contentTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | ContentTypes defines the response content types that are compressed.<br />A response is compressed if its Content-Type matches any of these matchers.<br />Parameters such as "; charset=utf-8" are ignored, and Exact, Prefix and Suffix<br />matches are case-insensitive.<br />If unset, Envoy's default list of content types is used. Setting this replaces<br />the default list, so it must include every content type that should be compressed.<br />The default list can be found here:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/compressor/v3/compressor.proto#envoy-v3-api-field-extensions-filters-http-compressor-v3-compressor-commondirectionconfig-content-type |
 
 
 #### CompressorType
@@ -6928,6 +6929,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [Compression](#compression)
 - [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
 - [HTTPHeaderMutation](#httpheadermutation)
