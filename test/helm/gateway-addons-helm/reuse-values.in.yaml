@@ -1,0 +1,18 @@
+# Simulate reused values from a release predating dashboard.mode. Setting null
+# removes the new default during Helm's values coalescing.
+dashboard:
+  mode: null
+prometheus:
+  enabled: false
+grafana:
+  enabled: false
+fluent-bit:
+  enabled: false
+alloy:
+  enabled: false
+loki:
+  enabled: false
+tempo:
+  enabled: false
+opentelemetry-collector:
+  enabled: false
