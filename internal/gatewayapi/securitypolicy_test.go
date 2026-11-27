@@ -204,6 +204,30 @@ func Test_extractRedirectPath(t *testing.T) {
 			wantErr:     false,
 		},
 		{
+			name:        "with query",
+			redirectURL: "https://www.example.com/petstore/oauth2/callback?external=true",
+			want:        "/petstore/oauth2/callback",
+			wantErr:     false,
+		},
+		{
+			name:        "with query and header value syntax",
+			redirectURL: "%REQ(x-forwarded-proto)%://%REQ(:authority)%/petstore/oauth2/callback?a=1&b=2",
+			want:        "/petstore/oauth2/callback",
+			wantErr:     false,
+		},
+		{
+			name:        "with fragment",
+			redirectURL: "https://www.example.com/petstore/oauth2/callback#section",
+			want:        "/petstore/oauth2/callback",
+			wantErr:     false,
+		},
+		{
+			name:        "query without path",
+			redirectURL: "https://www.example.com/?external=true",
+			want:        "",
+			wantErr:     true,
+		},
+		{
 			name:        "without path",
 			redirectURL: "https://www.example.com/",
 			want:        "",
