@@ -71,9 +71,11 @@ needs to be isolated.
   [RLS identities and certificates](#rls-identities-and-certificates)).
 * Restart-safe cleanup of dedicated RLS resources. A dedicated RLS's resources are removed when Envoy
   Gateway observes its Gateway being deleted or dropping `rateLimit`. If that change happens while Envoy
-  Gateway is stopped, they can be left behind in the controller namespace. The same is true today of
-  per-Gateway proxy resources in the default deployment mode, and a startup sweep or Gateway finalizer
-  should cover both together in a separate change.
+  Gateway is stopped, they can be left behind. In Gateway namespace mode they carry an owner reference
+  to the Gateway, as proxy resources do, so deleting the Gateway still garbage-collects them; dropping
+  `rateLimit` while Envoy Gateway is stopped does not. In the default deployment mode the same is true
+  today of per-Gateway proxy resources, and a startup sweep or Gateway finalizer should cover both
+  together in a separate change.
 * Hardening tenant namespaces or proxy workloads. Proxy `patch`, privileged containers, host
   networking and host path mounts can already let a tenant's proxy escape its namespace's network
   isolation, for every namespace-based NetworkPolicy and not only for the RLS. This proposal relies on
@@ -138,7 +140,9 @@ must be in the namespace of the Envoy Gateway rate limit deployment, which is wr
 (see [Redis credentials](#redis-credentials)). As part of this API change, these descriptions are made
 to cover both uses: in `EnvoyGateway.rateLimit` the Secret is in the controller namespace, and in
 `EnvoyProxy.spec.rateLimit` it is in the `EnvoyProxy`'s namespace. The same review applies to every
-other description in the reused types, including the TLS `certificateRef`.
+other description in the reused types, including the TLS `certificateRef`, whose description must
+state that in `EnvoyProxy.spec.rateLimit` it must be in the `EnvoyProxy`'s namespace, except for a
+granted controller-namespace Secret in the default mode (see [Redis credentials](#redis-credentials)).
 
 Deployment settings for the dedicated RLS (`rateLimitDeployment`, `rateLimitHpa`, `rateLimitPDB`) sit under
 `spec.provider.kubernetes`, next to the existing proxy deployment settings.
@@ -146,33 +150,33 @@ Deployment settings for the dedicated RLS (`rateLimitDeployment`, `rateLimitHpa`
 These use the same types as the proxy settings (`KubernetesDeploymentSpec` and friends). `patch` is applied
 only when the `EnvoyProxyPatch` runtime flag is enabled, the same as for the proxy Deployment.
 
-> **Security risk.** The dedicated RLS runs in the controller namespace (see
-> [Namespace](#namespace)), but its workload settings come from
-> `EnvoyProxy`, which is often authored by Gateway owners. Whoever can author that `EnvoyProxy` can use
-> `patch`, `volumes`, `securityContext` and similar fields to configure a pod in the controller namespace,
-> for example to mount a Secret there or run with elevated privileges. That includes the RLS CA Secret
-> (see [RLS identities and certificates](#rls-identities-and-certificates)): a pod that reads it can
-> impersonate any Gateway to any dedicated RLS. Proxy Deployment settings already
-> carry this risk outside Gateway namespace mode. Dedicated RLS introduces it even in Gateway namespace
-> mode, because the RLS still runs in the controller namespace.
+> **Security risk.** A dedicated RLS runs in the same namespace as its Gateway's proxies (see
+> [Namespace](#namespace)), and its workload settings come from `EnvoyProxy`, which is often authored
+> by Gateway owners. Whoever can author that `EnvoyProxy` can use `patch`, `volumes`, `securityContext`
+> and similar fields to configure the RLS pod, for example to mount a Secret in its namespace or run
+> with elevated privileges. This is the same authority that `EnvoyProxy` already grants over the proxy
+> pods in that namespace:
 >
-> **Workload overrides delegate administrator-level authority in the controller namespace.** Envoy Gateway does not validate workload
-> overrides or make them safe; that is why they sit behind a separate switch,
-> `enableDedicatedRateLimitWorkloadOverrides`, that is off by default. Admins who enable it accept
-> these risks and choose their own controls, such as restricting who can author the supplying `EnvoyProxy`
-> through RBAC, or with admission policy tools such as Kyverno, OPA Gatekeeper or Kubernetes
-> `ValidatingAdmissionPolicy`. Disabling `EnvoyProxyPatch` alone is not enough: ordinary
-> `KubernetesDeploymentSpec` fields can also select images and reference controller-namespace Secrets.
+> * In Gateway namespace mode, the RLS runs in the Gateway's namespace. Its workload settings reach
+>   only what the Gateway owner's proxies can already reach there.
+> * In the default deployment mode, the RLS runs in the controller namespace, as the proxies do. Proxy
+>   Deployment settings already let `EnvoyProxy` authors configure pods there, and dedicated RLS
+>   workload settings add one more pod with the same reach. That includes the RLS CA Secret (see
+>   [RLS identities and certificates](#rls-identities-and-certificates)): a pod that reads it can
+>   impersonate any Gateway to any dedicated RLS, just as a proxy pod that mounts the control plane
+>   Secrets there can already impersonate the control plane.
 >
-> Built-in workload settings remove the workload risks above, but not every risk. With only
-> `enableDedicatedRateLimit` enabled, Gateway owners still choose addresses that a pod in the controller
-> namespace connects to: the Redis URL and the OTLP endpoint in `telemetry.tracing.provider.url`. This
-> can bypass NetworkPolicies that restrict tenant namespaces and reach internal services from the
-> controller namespace. Each Gateway owner can also add an RLS Deployment to the controller namespace,
-> consuming its resources; a ResourceQuota there could then prevent Envoy Gateway's own pods from
-> scheduling. Admins should restrict egress from dedicated RLS pods with NetworkPolicy and plan capacity
-> and quota for the controller namespace before enabling dedicated RLS for tenants. Operators accept
-> these risks when enabling the feature; the guidance below describes possible mitigations.
+> **Workload overrides are not validated.** Envoy Gateway does not make them safe; that is why they
+> sit behind a separate switch, `enableDedicatedRateLimitWorkloadOverrides`, that is off by default.
+> Admins who enable it accept these risks and choose their own controls, such as restricting who can
+> author the supplying `EnvoyProxy` through RBAC, or with admission policy tools such as Kyverno, OPA
+> Gatekeeper or Kubernetes `ValidatingAdmissionPolicy`, as they would for proxy workload settings.
+>
+> With only `enableDedicatedRateLimit` enabled, Gateway owners still choose addresses that the RLS
+> connects to: the Redis URL and the OTLP endpoint in `telemetry.tracing.provider.url`. In Gateway
+> namespace mode these connections leave from the Gateway's namespace and are subject to its
+> NetworkPolicies and quota, like the proxies' backend connections. In the default mode they leave from
+> the controller namespace, as proxy backend connections already do in that mode.
 
 ### Operator responsibility for tenant isolation
 
@@ -181,148 +185,26 @@ administrator decision to delegate the corresponding capabilities and accept the
 does not validate workload overrides for safety, enforce tenant hardening, or verify operator security
 policies. This proposal adds no admission hook or tenant-hardening checks.
 
-Operators decide which controls fit their environment. Possible mitigations include:
+A dedicated RLS follows the proxies' namespace, so the controls operators already apply to a Gateway's
+proxies also cover its RLS. In Gateway namespace mode, the namespace's ResourceQuota, LimitRange and
+NetworkPolicies apply to the RLS pods, and the RLS pods carry the labels listed in
+[Service identity](#service-identity) for policies that need to select them. Nothing new is placed in
+the controller namespace.
 
-* Restricting RLS ingress and egress with NetworkPolicy, including access to Redis, telemetry, DNS
-  and the configuration server. Policies are additive and require a CNI that enforces them.
-* Limiting per-tenant RLS allocation and workload resources while reserving controller capacity.
-  A shared namespace ResourceQuota alone does not reserve recovery headroom for the controller.
-* Protecting the RLS CA Secret in the controller namespace: limiting who can read Secrets there, and
-  keeping workload overrides, which can mount Secrets, away from tenant authors. Caller isolation
-  between dedicated RLS relies on that key, not on tenant namespaces or network policy.
-* Restricting who can author or select override-bearing `EnvoyProxy` resources, using existing RBAC
-  or admission tools if desired. Preventing edits alone does not prevent a tenant from referencing
-  an administrator's privileged configuration.
+The default mode offers no namespace boundary between tenants, for proxies or for RLS. Operators who
+run multiple tenants in that mode should, as they already must for proxies:
+
+* Limit who can read Secrets in the controller namespace, including the RLS CA Secret, and keep
+  workload overrides, which can mount Secrets, away from tenant authors. Caller isolation between
+  dedicated RLS relies on that key, not on namespaces or network policy.
+* Plan capacity and quota for the controller namespace: each Gateway with a dedicated RLS adds a
+  Deployment there, and a shared ResourceQuota alone does not reserve headroom for the controller.
+* Restrict egress from proxy and RLS pods with NetworkPolicy if tenants must not reach internal
+  services, using the RLS labels above.
 
 These are operator-owned mitigations, not feature enablement requirements or implementation acceptance
-checks. The installation guide documents the risks and example controls. Neither enabling the feature
+checks. The installation guide documents the risks per deployment mode. Neither enabling the feature
 nor `RateLimitReady=True` guarantees tenant isolation.
-
-### Example: restricting dedicated RLS network access
-
-The following NetworkPolicies, applied by an admin in the controller namespace, restrict dedicated RLS
-pods (selected by the labels defined in [Service identity](#service-identity)). Envoy Gateway does not
-create them. NetworkPolicy rules are additive: a pod may make any connection allowed by at least one
-policy that selects it, so a narrower policy cannot take away access that a broader one grants. The
-rules that must differ per Gateway therefore live only in per-Gateway policies.
-
-A common policy selects every dedicated RLS. It denies all traffic except DNS, the Envoy Gateway
-configuration server, an approved OTLP collector, and Prometheus scraping from the monitoring namespace:
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: dedicated-ratelimit
-  namespace: envoy-gateway-system          # the controller namespace
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/component: ratelimit
-      gateway.envoyproxy.io/ratelimit-scope: gateway
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:                                  # Prometheus, if RLS metrics are enabled (the default)
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: monitoring
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/name: prometheus
-    ports:
-    - port: 19001                          # RLS metrics
-  egress:
-  - to:                                    # cluster DNS
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          k8s-app: kube-dns
-    ports:
-    - port: 53
-      protocol: UDP
-    - port: 53
-      protocol: TCP
-  - to:                                    # rate limit configuration server
-    - podSelector:
-        matchLabels:
-          control-plane: envoy-gateway
-    ports:
-    - port: 18001
-  - to:                                    # approved OTLP collector, if tracing is used
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: observability
-      podSelector:
-        matchLabels:
-          app: otel-collector
-    ports:
-    - port: 4317
-```
-
-One policy per Gateway then allows connections to that tenant's Redis only. Its ingress rule allows
-calls from proxies in the Gateway's namespace. Restricting callers by namespace is optional defense in
-depth because the dedicated RLS authenticates its Gateway's client certificate (see
-[Isolation between Gateways](#isolation-between-gateways)). However, the common policy above denies
-gRPC ingress, so an explicit allowance for proxy traffic on port 8081 is required while that policy is
-installed. Operators who omit namespace filtering must replace this rule with an allowance covering
-the intended proxies. This example is for Gateway namespace mode, where proxies run in the Gateway's
-namespace:
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: dedicated-ratelimit-team-a-gw-a
-  namespace: envoy-gateway-system          # the controller namespace
-spec:
-  podSelector:
-    matchLabels:
-      gateway.envoyproxy.io/ratelimit-scope: gateway
-      gateway.envoyproxy.io/owning-gateway-namespace: team-a
-      gateway.envoyproxy.io/owning-gateway-name: gw-a
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:                                  # proxies in the Gateway's namespace
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: team-a
-      podSelector:
-        matchLabels:
-          app.kubernetes.io/component: proxy
-    ports:
-    - port: 8081                           # RLS gRPC
-  egress:
-  - to:                                    # team-a's Redis
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: team-a-redis
-    ports:
-    - port: 6379
-```
-
-Notes for adapting them:
-
-* The optional per-Gateway ingress rule identifies callers by namespace, using the
-  `kubernetes.io/metadata.name` label that Kubernetes sets and users cannot change, so it narrows
-  access to a namespace, not to a single Gateway. Proxy pod labels are not a reliable identity, because
-  `EnvoyProxy` pod labels can set any label on a proxy pod. In the default deployment mode, all proxies
-  run in the controller namespace and the rule adds nothing. Caller isolation between Gateways comes
-  from the per-Gateway client certificates in every mode.
-* The selector labels of dedicated RLS pods are generated by Envoy Gateway (see
-  [Service identity](#service-identity)), so with built-in workload settings the per-Gateway
-  `podSelector` selects only that Gateway's RLS.
-* NetworkPolicy matches pods, namespaces and IP ranges, not hostnames. A Redis outside the cluster
-  needs an `ipBlock`, or a CNI-specific policy that supports FQDN rules.
-* The DNS, controller, proxy and Prometheus labels and the ports shown match a default Helm
-  installation; check them against the cluster. The metrics rule can be dropped when RLS Prometheus
-  metrics are disabled in `telemetry`. NetworkPolicy has no effect unless the CNI enforces it.
-* The shared RLS is not selected, because it does not carry the `ratelimit-scope: gateway` label.
 
 ### Enabling dedicated RLS
 
@@ -532,8 +414,13 @@ These are admin-authored and apply to every dedicated RLS whether or not workloa
 enabled. No other shared RLS setting is inherited. `EnvoyGateway.rateLimit` does not need to be set for
 these defaults to apply, so dedicated-only installations can use them too. When workload overrides
 are enabled, a Gateway's `EnvoyProxy` can still override them, subject to the
-[security note](#api). The pull secrets are referenced from the controller namespace, where the RLS
-runs, as they are for the shared RLS today.
+[security note](#api).
+
+Pull secrets are referenced by name from the namespace where the RLS runs (see
+[Namespace](#namespace)). In the default mode that is the controller namespace, as for the shared RLS
+today. In Gateway namespace mode it is the Gateway's namespace: Envoy Gateway does not copy pull
+secrets, so admins who set them must make them available in every Gateway namespace that uses a
+dedicated RLS, as they already must for proxies that pull from a private registry.
 
 ## How it works
 
@@ -556,15 +443,21 @@ runs, as they are for the shared RLS today.
 flowchart LR
   EG["Envoy Gateway<br/>resolves RLS · deploys · pushes rules"]
 
-  subgraph gw["Gateway namespaces"]
+  subgraph nsa["Namespace team-a"]
     A["Gateway A proxies<br/>(own RLS)"]
+    RA["RLS-A<br/>prefix team-a/gw-a:"]
+  end
+
+  subgraph nsb["Namespace team-b"]
     B["Gateway B proxies<br/>(own RLS)"]
+    RB["RLS-B<br/>prefix team-b/gw-b:"]
+  end
+
+  subgraph nsc["Namespace team-c"]
     CD["Gateways C, D proxies<br/>(no rateLimit)"]
   end
 
   subgraph cp["Controller namespace"]
-    RA["RLS-A<br/>prefix team-a/gw-a:"]
-    RB["RLS-B<br/>prefix team-b/gw-b:"]
     RS["shared RLS<br/>no prefix"]
   end
 
@@ -582,6 +475,8 @@ flowchart LR
 
 Solid arrows are rate limit checks; dotted arrows are rules pushed by Envoy Gateway. RLS-B and the
 shared RLS use the same Redis database but keep separate counters through their cache key prefixes.
+The diagram shows Gateway namespace mode, where each dedicated RLS runs next to its Gateway's proxies.
+In the default mode, proxies and all RLS run in the controller namespace.
 
 ### Service identity
 
@@ -636,8 +531,8 @@ other dedicated RLS.
 The owning-gateway labels are the same ones Envoy Gateway already sets on proxy resources. The shared
 RLS does not carry them or the `ratelimit-scope` label. A future GatewayClass scope would use a different
 `ratelimit-scope` value. The labels are part of the supported interface, so admins can select dedicated
-RLS pods in NetworkPolicies and admission policies; see
-[Example: restricting dedicated RLS network access](#example-restricting-dedicated-rls-network-access).
+RLS pods in NetworkPolicies and admission policies (see
+[Operator responsibility for tenant isolation](#operator-responsibility-for-tenant-isolation)).
 
 #### Trust boundary
 
@@ -656,9 +551,53 @@ risk (see the [security note](#api)).
 
 ### Namespace
 
-In the first iteration, dedicated RLS deployments run in the controller namespace, like the shared one.
-Proxies in Gateway namespaces reach them as they reach the shared RLS today. Running the RLS in the
-Gateway namespace (in Gateway namespace mode) is a possible follow-up.
+A dedicated RLS is part of its Gateway's data path, so it runs in the same namespace as that
+Gateway's proxies:
+
+| Deployment mode                 | Proxies run in           | Dedicated RLS runs in    |
+| ------------------------------- | ------------------------ | ------------------------ |
+| Default (`ControllerNamespace`) | The controller namespace | The controller namespace |
+| `GatewayNamespace`              | The Gateway's namespace  | The Gateway's namespace  |
+
+The shared RLS stays in the controller namespace in both modes. All resources of a dedicated RLS
+(Deployment, Service, HPA, PDB, ServiceAccount, statsd ConfigMap and Secrets) live in its namespace.
+In Gateway namespace mode they carry an owner reference to the Gateway, as proxy resources do, and
+count against that namespace's quota rather than the controller's.
+
+Following the proxies means a dedicated RLS adds no new kind of exposure in either mode. In the default
+mode, Gateway owners can already configure pods in the controller namespace through proxy settings. In
+Gateway namespace mode, the RLS stays inside the namespace whose proxies the Gateway owner already
+controls, and the RLS CA Secret never shares a namespace with a pod that tenants configure.
+
+**Secret write access for the controller.** Today the controller writes no Secrets in any namespace;
+the certgen job creates the control plane and shared RLS certificates. Gateway namespace mode in
+particular was built so the controller never writes Secrets in Gateway namespaces: proxies receive the
+xDS CA through a ConfigMap and authenticate to xDS with a projected ServiceAccount token. A dedicated
+RLS cannot follow that pattern:
+
+* It serves mTLS to its proxies, so it needs its certificate and private key in its own namespace.
+* The `envoyproxy/ratelimit` configuration client authenticates only with a client certificate or
+  static headers; it cannot reload a short-lived projected ServiceAccount token. It therefore keeps
+  using its RLS certificate as the configuration client certificate, as described in
+  [RLS identities and certificates](#rls-identities-and-certificates).
+
+The controller therefore needs permission to create, update and delete Secrets in the namespace where
+each dedicated RLS runs:
+
+* **Default mode:** in the controller namespace, for RLS certificate Secrets and Redis credential
+  copies. The Helm chart adds it to the infra-manager Role in that namespace.
+* **Gateway namespace mode:** in Gateway namespaces, for RLS certificate Secrets. The Helm chart adds
+  it to the cluster infra-manager role.
+
+In both modes the chart grants it only when `enableDedicatedRateLimit` is true. Installations that
+manage RBAC themselves must grant it before enabling dedicated RLS. Envoy Gateway writes only the
+Secrets it owns for a dedicated RLS, selected by the labels in [Service identity](#service-identity),
+and never modifies Secrets it did not create.
+
+In Gateway namespace mode, the configuration server also receives connections from Gateway namespaces,
+not only from the controller namespace. Every request is authenticated and limited to the caller's own
+snapshot (see [RLS identities and certificates](#rls-identities-and-certificates)), so this exposes no
+configuration beyond what the Gateway owner already has.
 
 ### RLS identities and certificates
 
@@ -684,8 +623,9 @@ installation adds the RLS CA without touching the existing certificates. Install
 own certificates must also provide this Secret before enabling dedicated RLS.
 
 **Gateway identity.** Each dedicated RLS uses its Service FQDN as its Gateway's certificate identity:
-`<rls-service>.<controller-namespace>.svc.<dns-domain>`. The Service name is derived from the Gateway's
-namespace/name, and `<dns-domain>` uses the existing configured `DNSDomain`, as control-plane
+`<rls-service>.<rls-namespace>.svc.<dns-domain>`, where `<rls-namespace>` is the namespace the RLS
+runs in (see [Namespace](#namespace)). The Service name is derived from the Gateway's namespace/name,
+so the FQDN is unique in both deployment modes, and `<dns-domain>` uses the existing configured `DNSDomain`, as control-plane
 certificate generation does today. Resource names, Redis key prefixes and certificate identities remain
 stable when a Gateway is recreated with the same namespace and name in the same installation. The
 configuration server maps this identity to the corresponding scope's snapshot. The RLS checks this DNS
@@ -712,9 +652,9 @@ with the RLS CA:
   SAN, not a specific certificate. A controller restart issues new ones, which proxies receive over SDS
   without restarting.
 * An **RLS certificate** with the RLS Service DNS names, including its identity FQDN, as SANs, and both
-  the `serverAuth` and `clientAuth` usages. It is stored in the RLS's own certificate Secret, together
-  with the RLS CA certificate and the control plane CA certificate, and is written by the controller
-  that provisions infrastructure. It reuses an existing valid certificate matching the current CA,
+  the `serverAuth` and `clientAuth` usages. It is stored in the RLS's own certificate Secret in the
+  RLS's namespace, together with the RLS CA certificate and the control plane CA certificate, and is
+  written by the controller that provisions infrastructure. It reuses an existing valid certificate matching the current CA,
   Gateway identity and Service names; it does not periodically renew certificates. Restarts and infrastructure-leader changes
   do not themselves reissue it or change the certificate version annotation.
 
@@ -786,47 +726,79 @@ with a different SAN, and the shared client certificate is signed by a different
 rejected during the TLS handshake. This holds in every deployment mode, including the default mode where
 all proxies share the controller namespace, and for Gateways that share a namespace. Pointing a proxy at
 another Gateway's RLS, for example through `EnvoyPatchPolicy`, does not help, because a proxy only ever
-receives its own Gateway's client certificate. NetworkPolicy ingress rules are optional defense in depth
-(see [Example: restricting dedicated RLS network access](#example-restricting-dedicated-rls-network-access)).
+receives its own Gateway's client certificate. NetworkPolicy ingress rules are optional defense in
+depth.
 
 This isolation relies on the RLS CA private key and on the certificates delivered to proxies staying
 confidential:
 
-* Anyone who can read the RLS CA Secret can impersonate any Gateway. Reading Secrets in the controller
-  namespace, and workload overrides that mount them, must be limited to administrators (see
+* Anyone who can read the RLS CA Secret can impersonate any Gateway. The Secret stays in the controller
+  namespace in both modes and no RLS pod mounts it. Reading Secrets in the controller namespace, and,
+  in the default mode, workload overrides that mount them, must be limited to administrators (see
   [Operator responsibility for tenant isolation](#operator-responsibility-for-tenant-isolation)).
 * A Gateway owner can read their own proxies' client certificate, but that only lets them call their
   own Gateway's RLS.
+* In Gateway namespace mode, a Gateway owner who can read Secrets in their namespace can also read
+  their RLS certificate and key. That lets them serve as their own RLS to their own proxies, or fetch
+  their own Gateway's rules from the configuration server. Both are already theirs; the certificate
+  carries no other Gateway's identity.
 * Every xDS client requests only its own Gateway's configuration. This is a precondition Envoy
   Gateway already relies on for listener and backend certificates (see [Assumptions](#assumptions));
   without it, a custom proxy image or extra container can obtain another Gateway's client certificate.
 
 The shared RLS keeps today's behavior: it accepts every proxy and is not a security boundary between
 Gateways. Egress from a dedicated RLS, for example to an internal address set as its Redis URL, is not
-covered by certificates and still needs NetworkPolicy (see the [security note](#api)).
+covered by certificates; it is subject to the network controls of the namespace the RLS runs in (see
+the [security note](#api)).
 
 ### Redis credentials
 
 Redis references are resolved against the Gateway's `EnvoyProxy` that supplied the `rateLimit` block.
-`urlRef.secretKeyRef` must be in that `EnvoyProxy`'s namespace. A TLS `certificateRef`
-defaults to the same namespace; a cross-namespace reference requires a `ReferenceGrant` that allows that
-`EnvoyProxy` to reference the Secret.
+In both deployment modes, `urlRef.secretKeyRef` and the TLS `certificateRef` must be in that
+`EnvoyProxy`'s namespace, and a `ReferenceGrant` does not lift this limit. One rule for both modes
+means a configuration stays valid when an admin switches deployment mode, and it can be relaxed later
+without breaking anyone. Platform teams that keep one Redis client certificate for several Gateways
+replicate it into each Gateway namespace, for example with an external secrets tool.
 
-Because the RLS runs in the controller namespace, Envoy Gateway copies only the referenced keys into a
-Secret it owns for that RLS. It keeps the copy in sync with the source Secret and deletes it when the RLS
-is removed. A credential version is set as an annotation on the RLS pod template, so a
-credential rotation triggers a normal rolling update and new pods pick up the new credentials.
+**Exception: controller-namespace TLS Secrets in the default mode.** In the default mode, the TLS
+`certificateRef` may also name a Secret in the controller namespace, where the dedicated RLS runs. This
+lets admins keep Redis client certificates out of tenant namespaces. It requires a `ReferenceGrant` in
+the controller namespace that allows the `EnvoyProxy`'s namespace to reference that Secret. Without the
+grant, any Gateway owner could use any Redis client certificate an admin keeps there, including the
+shared RLS's, to authenticate to that Redis. The grant is the admin's consent, and its absence or
+revocation is reported like any other failed reference. Secrets that Envoy Gateway itself owns or
+requires in the controller namespace, such as the RLS CA, the control plane certificates and the
+Secrets of any RLS, are never accepted, even with a grant. The exception does not apply to `urlRef`,
+and it does not apply in Gateway namespace mode, where a Secret in the controller namespace could only
+reach the RLS by copying it to where the Gateway owner can read it.
 
-The RLS reads credentials once, at startup, so the copied Secret must be current before any new pod
-starts. Envoy Gateway therefore changes the copied Secret first and changes the pod template only after
+How the RLS reads them depends on where the Secret is relative to the RLS (see [Namespace](#namespace)):
+
+* **Same namespace as the RLS.** The RLS reads the source Secret directly, selecting only the
+  referenced keys. Nothing is copied. This covers every reference in Gateway namespace mode, and the
+  controller-namespace TLS exception in the default mode.
+* **`EnvoyProxy`'s namespace in the default mode.** The RLS runs in the controller namespace, so Envoy
+  Gateway copies only the referenced keys into a Secret it owns for that RLS. It keeps the copy in sync
+  with the source Secret and deletes it when the RLS is removed. The Gateway owner cannot read the copy,
+  but it holds only credentials the Gateway owner supplied.
+
+A reference outside these rules is reported as `RateLimitReady=False` with reason `InvalidCredentials`
+(see [Validation and status](#validation-and-status)).
+
+In both modes a credential version is set as an annotation on the RLS pod template, so a credential
+rotation triggers a normal rolling update and new pods pick up the new credentials.
+
+The RLS reads credentials once, at startup. When it reads the source Secret directly, the Secret is
+already current when the annotation changes. When credentials are copied, the copied Secret must be
+current before any new pod starts. Envoy Gateway therefore changes the copied Secret first and changes the pod template only after
 that write has succeeded: on rotation, it updates the copy and then the annotation; on deletion or
-revocation, it deletes the copy and then updates the annotation. If the Secret write fails, the pod
+revocation, it deletes the copy and then updates the template as described below. If the Secret write fails, the pod
 template is left unchanged and the change is retried. A pod started for the new template thus never
-reads the previous credentials.
+reads a stale controller-owned copy. Direct mounts have the revocation limitation described below.
 
 The annotation is never derived from the credential values themselves. A plain hash of a Redis URL
-containing a human-chosen password would let anyone who can read Deployments in the controller
-namespace, but not Secrets, test password guesses offline. Instead, it is a hash of non-secret version
+containing a human-chosen password would let anyone who can read Deployments in the RLS's namespace,
+but not Secrets, test password guesses offline. Instead, it is a hash of non-secret version
 data: a canonical, unambiguous encoding of each reference's purpose, resolved namespace and name,
 selected key names, source Secret UID and `resourceVersion`, and authorization state. Reference and key
 selection are included even when two references resolve to the same Secret version. Changing a URL key
@@ -836,15 +808,27 @@ it does not use, which is acceptable for configuration that rarely changes (see
 [Assumptions](#assumptions)).
 
 **Missing or revoked credentials.** If a referenced Secret is deleted or its `ReferenceGrant` is revoked,
-Envoy Gateway deletes its copy, then updates the annotation, and the Gateway reports a condition naming the problem.
-The new pods cannot start without the Secret, so with the built-in `RollingUpdate` strategy the
-rollout stalls and the old pods keep serving with the credentials they already loaded. An old pod that
-stops for any other reason (eviction, node drain, crash) is not replaced until the references are valid
-again; once they are, the rollout completes. A different strategy set through workload overrides, such
-as `Recreate`, can stop the old pods first (see [Trust boundary](#trust-boundary)).
+Envoy Gateway deletes its copy, if any, then updates the annotation. The Gateway reports
+`RateLimitReady=False` with reason `InvalidCredentials` and a message naming the failed reference.
+Envoy Gateway never modifies or deletes the administrator-owned source Secret.
 
-Deleting the source Secret is therefore **not** a reliable way to cut off Redis access, nor one to keep
-the RLS running: the outcome depends on pod churn. Envoy Gateway does not
+If the source Secret or required copy is absent, new pods cannot start. With the built-in
+`RollingUpdate` strategy, the rollout stalls and old pods keep serving with credentials they already
+loaded. Once the references are valid again, reconciliation restores any required copy and the rollout
+completes. A different strategy set through workload overrides, such as `Recreate`, can stop the old
+pods first (see [Trust boundary](#trust-boundary)).
+
+Revoking a grant for an existing direct mount only reports the authorization failure; it does not
+block the workload from using that mount. The source Secret remains present, and Kubernetes does not
+check ReferenceGrants when mounting Secrets, so existing and replacement pods may continue using it.
+There is no stalled-rollout guarantee for this case. Reconciliation retains the existing workload's
+direct reference, including after controller restart, but never adds a new denied reference to a pod
+template. An initially denied reference reports `InvalidCredentials` and leaves the RLS without the
+required credential; it does not gain access to the Secret. Restoring the grant clears the reference
+failure through normal reconciliation.
+
+Deleting the source Secret or revoking its ReferenceGrant is therefore **not** a reliable way to cut
+off Redis access. Deletion also does not reliably keep the RLS running: the outcome depends on pod churn. Envoy Gateway does not
 provide an RLS stop switch in the first iteration. Removing the `rateLimit` block isn't one either: the
 Gateway moves to the shared RLS, if configured, and the dedicated RLS is removed only after that change
 converges. To stop a dedicated RLS from using credentials that must no longer be used, revoke them at Redis
@@ -855,9 +839,10 @@ Credential resolution failures do not change RLS selection or remove its desired
 rules. Envoy Gateway continues translating the Gateway's listeners and routes, including its RLS cluster
 and rate limit filter, and never falls back to another RLS because credentials are unavailable.
 This also applies on first creation with a missing Secret: the Service and Deployment are provisioned,
-but pods requiring the missing credential copy cannot start. Checks that cannot be served follow
+but pods requiring the missing credential cannot start. Checks that cannot be served follow
 `failClosed`. After deletion or revocation, existing pods may continue serving, as described above.
-These rules are derived from current resources on restart and do not depend on retaining an old snapshot.
+On restart, reference validation uses current Secrets and grants; existing direct mounts are read from
+the persisted workload. No in-memory snapshot is required.
 
 ### Validation and status
 
@@ -868,7 +853,8 @@ RLS. Settings not allowed by a disabled `extensionApis` switch are not invalid p
 ignored with an `EnvoyProxy` warning and never set the Gateway `Accepted=False` (see
 [Enabling dedicated RLS](#enabling-dedicated-rls)).
 
-Missing Secrets, missing or invalid credential keys, and denied or revoked Secret references are
+Missing Secrets, missing or invalid credential keys, denied or revoked Secret references, and
+references outside the namespace rules in [Redis credentials](#redis-credentials) are
 operational credential failures, not fatal `EnvoyProxy` validation errors. They do not set Gateway
 `Accepted=False` or enter the existing path that skips Gateway translation. Instead, the Gateway reports
 a separate `RateLimitReady=False` condition with reason `InvalidCredentials` and a message identifying
@@ -881,7 +867,7 @@ that RLS infrastructure is ready.
 The condition message identifies the selected scope and Service without exposing credentials. For a
 dedicated RLS, `RateLimitReady=True` requires all of the following for the current desired configuration:
 
-* All credential references resolve successfully and the owned credential copies are up to date.
+* All credential references resolve successfully and any owned credential copies are up to date.
 * The RLS certificate Secret holds a current certificate issued by the RLS CA, and a proxy client
   certificate for the Gateway is currently valid under that CA.
 * Infrastructure reconciliation has succeeded. The Deployment has observed its latest generation,
@@ -977,8 +963,9 @@ to transfer or synchronize counters.
 
 Without `EnvoyProxy.spec.rateLimit` on a Gateway's `EnvoyProxy`, nothing changes: same shared RLS, same
 resource names, same behaviour. Dedicated RLS is disabled by default, so upgrading does not let anyone
-create RLS workloads in the controller namespace until an admin sets
-`extensionApis.enableDedicatedRateLimit`. The certgen job of an upgraded installation creates the RLS CA
+create RLS workloads until an admin sets `extensionApis.enableDedicatedRateLimit`, and the Helm chart
+grants the controller Secret write access, in the controller namespace or in Gateway namespaces
+depending on the deployment mode, only once that switch is enabled. The certgen job of an upgraded installation creates the RLS CA
 Secret and leaves existing certificates unchanged; installations with custom certificates must create
 it before enabling dedicated RLS. `rateLimit` on a GatewayClass's `EnvoyProxy` is ignored in this
 iteration, so adding GatewayClass support later only changes behaviour for configurations that are
@@ -992,9 +979,16 @@ support lands.
   deployments, but requires deciding how class and Gateway blocks interact under each `mergeType`,
   tracking which level supplied the merged block, and handling the class RLS lifecycle as Gateways join
   and leave. Deferred; see [TODO](#gatewayclass-scope).
+* **Dedicated RLS in the controller namespace in every mode.** The controller would never write Secrets
+  in Gateway namespaces and the RLS would reach Redis Secrets only through copies. But in Gateway
+  namespace mode it would place tenant-configured pods next to the RLS CA Secret and the control plane,
+  charge their resources to the controller namespace's quota, send tenant-chosen Redis and telemetry
+  traffic from the controller namespace past the tenant's NetworkPolicies, and require admins to write
+  per-Gateway NetworkPolicies there. Running the RLS next to its proxies keeps all of that inside the
+  Gateway's namespace, at the cost of Secret write access in Gateway namespaces.
 * **No switch; rely on RBAC and admission policy only.** Less configuration, but every upgraded control
-  plane would immediately let anyone who can author an `EnvoyProxy` create pods in the controller
-  namespace, protected only by guidance in the docs.
+  plane would immediately let anyone who can author an `EnvoyProxy` create RLS pods, protected only by
+  guidance in the docs.
 * **A runtime flag instead of an `extensionApis` field.** Runtime flags guard breaking changes and
   experimental behaviour, are often enabled by default and are removed once the change settles; they
   are not meant as permanent security switches. `EnvoyProxyPatch` is enabled by default for this
@@ -1002,7 +996,7 @@ support lands.
 * **The switch under `EnvoyGateway.rateLimit`.** That block configures the shared RLS, and one goal is
   to allow dedicated RLS without a shared RLS, so users would have to set it only to reach the switch.
 * **A single switch for dedicated RLS and workload customization.** Simpler API, but enabling per-Gateway
-  Redis configuration would also allow controller-namespace workload customization. Separate switches
+  Redis configuration would also allow RLS workload customization. Separate switches
   let admins offer built-in workloads without requiring workload admission policies.
 * **Named rate limit profiles in the `EnvoyGateway` config**, referenced by name from `EnvoyProxy`. This
   keeps Redis credentials admin-only, but `EnvoyGateway` changes need a control plane restart, and it adds
@@ -1041,8 +1035,8 @@ support lands.
 
 These are the author's recommendations and are open for review.
 
-* Support Gateway scope on the built-in Kubernetes infrastructure, with dedicated RLS in the controller
-  namespace. GatewayClass scope and merged Gateways remain on the shared RLS.
+* Support Gateway scope on the built-in Kubernetes infrastructure, with each dedicated RLS in the same
+  namespace as its Gateway's proxies. GatewayClass scope and merged Gateways remain on the shared RLS.
 * Reuse `EnvoyProxy` for configuration, with separate default-off switches for dedicated RLS and
   workload overrides. Disabled settings are ignored with warnings, as defined in the
   [behavior table](#enabling-dedicated-rls).
@@ -1055,8 +1049,11 @@ These are the author's recommendations and are open for review.
 * Authenticate each dedicated RLS scope using a separate RLS CA and its Service FQDN as identity.
   Namespace/name reuse preserves identity. Use five-year certificates capped by CA expiry, with
   operator-managed expiry and no automatic renewal or revocation in v1.
-* Copy and synchronize authorized Redis credentials into the controller namespace, rolling workloads
-  on credential changes. Credential revocation is enforced at Redis.
+* Require Redis credential references to be in the `EnvoyProxy`'s namespace in both modes, even with
+  a `ReferenceGrant`. In the default mode only, also allow a TLS `certificateRef` to a granted Secret
+  in the controller namespace, never one Envoy Gateway owns. Read Secrets in the RLS's namespace
+  directly and copy the rest into the controller namespace in the default mode. Roll workloads on
+  credential changes. Credential revocation is enforced at Redis.
 * Report infrastructure and credential readiness through `RateLimitReady`. Operational failures
   preserve RLS selection and rate limit filters; configuration ACK tracking is deferred.
 * Use ordinary reconciliation for scope changes and require planned maintenance when continuous
@@ -1099,14 +1096,26 @@ Implementation must cover the following cases with meaningful automated tests:
   expired CA reports `CertificateUnavailable`. No periodic certificate renewal or rollout occurs;
   expiry clears readiness, and readiness waits for the current certificate version
   to complete its rollout.
-* **Network policy:** with the example NetworkPolicies installed and enforced by the CNI, verify that
-  the common policy does not grant access to another tenant's Redis.
+* **Namespace placement:** in the default mode every dedicated RLS resource is created in the controller
+  namespace; in Gateway namespace mode every dedicated RLS resource, including its certificate Secret,
+  is created in the Gateway's namespace with an owner reference to the Gateway, and nothing for it in
+  the controller namespace. The Helm chart grants Secret write access only with `enableDedicatedRateLimit`,
+  in the controller namespace in the default mode and in Gateway namespaces in Gateway namespace mode,
+  and the controller never modifies Secrets it did not create.
 * **Counter reuse:** switching back to a previously used shared or dedicated keyspace preserves matching
   unexpired counters rather than promising a reset.
 * **Credentials:** initial missing references, rotation, deletion and ReferenceGrant revocation update
   copies, rollouts and status as specified, without fallback or removal of rate limit filters; the
   copied Secret is written before the pod template changes, and a failed Secret write leaves the
-  template unchanged; deletion keeps old pods serving under the built-in strategy.
+  template unchanged; deletion keeps old pods serving under the built-in strategy. Secrets in the RLS's
+  namespace are read without a copy, and their rotation still rolls the RLS. In both modes a reference
+  to another tenant namespace reports `InvalidCredentials` even with a `ReferenceGrant`. In the default
+  mode, a TLS `certificateRef` to a controller-namespace Secret works only with a grant, revoking the
+  grant reports `InvalidCredentials` and leaves the administrator-owned Secret and existing direct
+  mount intact; replacement pods may still use that mount. Verify this behavior after controller
+  restart, that an initially denied reference never gains a mount, and that restoring the grant clears
+  the reference failure. Envoy Gateway's own Secrets are refused even with a grant;
+  in Gateway namespace mode the same reference is refused.
 * **Reconciliation:** controller restart reconstructs scope selection and readiness; Gateway deletion
   removes only its resources; updates preserve scope-specific selectors and HPA targets; the shared RLS
   Service and PDB never select dedicated pods; in dedicated-only mode, and when one of several dedicated
@@ -1123,12 +1132,13 @@ Implementation must cover the following cases with meaningful automated tests:
   convergence and the documented unknown-domain enforcement gap even with `failClosed: true`.
 * **Credential selection:** switching keys within an unchanged Secret, changing TLS references, and
   changing reference purpose update the credential version and roll pods without hashing secret data.
-* **Tenant safeguards documentation:** explain operator-owned allocation, capacity, network and
-  workload security controls, including the risks of proxy namespace changes, pod-network escape and
-  selecting privileged override configurations. Implementing or testing an operator's admission
-  policies is outside this proposal. Document that caller isolation depends on keeping the RLS CA
-  Secret and workload overrides away from tenants, and how to supply the RLS CA with custom
-  certificates.
+* **Tenant safeguards documentation:** explain, per deployment mode, where dedicated RLS run and which
+  operator-owned capacity, network and workload security controls apply, including the default-mode
+  risks of controller-namespace capacity and selecting privileged override configurations.
+  Implementing or testing an operator's admission policies is outside this proposal. Document that
+  caller isolation depends on keeping the RLS CA Secret away from tenants, how to supply the RLS CA
+  with custom certificates, and that pull secrets must exist in each Gateway namespace in Gateway
+  namespace mode.
 
 Use schema/CEL tests for API validation, Gateway translation fixtures for selection and conditions,
 infrastructure tests for rendered resources, and xDS/configuration tests for
