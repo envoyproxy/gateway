@@ -90,3 +90,19 @@ func TestEnsureSystemTrustStoreSecret_NotEmitted(t *testing.T) {
 	require.NoError(t, tr.ensureSystemTrustStoreSecret(tCtx))
 	require.Nil(t, tCtx.XdsResources)
 }
+
+func TestWasmHTTPServiceFQDN(t *testing.T) {
+	tests := []struct {
+		name      string
+		dnsDomain string
+		want      string
+	}{
+		{name: "default domain", dnsDomain: "", want: "envoy-gateway.envoy-gateway-system.svc.cluster.local"},
+		{name: "custom domain", dnsDomain: "example.internal", want: "envoy-gateway.envoy-gateway-system.svc.example.internal"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, wasmHTTPServiceFQDN("envoy-gateway-system", tc.dnsDomain))
+		})
+	}
+}
