@@ -2804,6 +2804,37 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "format-strings-default",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FormatStrings: &egv1a1.FormatStringValidationConfig{},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "format-strings-strict",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FormatStrings: &egv1a1.FormatStringValidationConfig{
+						ValidationType: new(egv1a1.FormatStringValidationStrict),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "format-strings-invalid-type",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					FormatStrings: &egv1a1.FormatStringValidationConfig{
+						ValidationType: new(egv1a1.FormatStringValidation("Reject")),
+					},
+				}
+			},
+			wantErrors: []string{`spec.formatStrings.validationType: Unsupported value: "Reject": supported values: "Warn", "Strict", "Disabled"`},
+		},
+		{
 			desc: "lua-empty-path-rejected",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
