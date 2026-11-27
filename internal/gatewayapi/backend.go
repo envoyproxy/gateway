@@ -267,6 +267,12 @@ func validateIP(epIP *egv1a1.IPEndpoint, runningOnHost bool) status.Error {
 			fmt.Errorf("IP address %s in the loopback range is only supported when using the Host infrastructure", epIP.Address),
 			status.RouteReasonInvalidAddress,
 		)
+	} else if ip.Unmap().IsUnspecified() && !runningOnHost {
+		// Connecting to 0.0.0.0 or :: reaches the local host, so it is treated like loopback.
+		return status.NewRouteStatusError(
+			fmt.Errorf("IP address %s is unspecified and connects to the loopback interface, which is only supported when using the Host infrastructure", epIP.Address),
+			status.RouteReasonInvalidAddress,
+		)
 	}
 	return nil
 }

@@ -1,0 +1,1 @@
+Fixed Backend IP endpoints accepting the unspecified addresses `0.0.0.0` and `::`, which connect to the Envoy proxy's own loopback interface and bypassed the existing loopback restriction outside the Host infrastructure.
