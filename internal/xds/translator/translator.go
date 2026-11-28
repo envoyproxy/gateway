@@ -291,6 +291,8 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	if err := t.processTCPListenerXdsTranslation(tCtx, xdsIR.TCP, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
 	}
+	// Protect QUIC fallback after HTTP and TLS termination chains are built.
+	errs = errors.Join(errs, patchQUICWildcardClientValidation(tCtx, xdsIR.HTTP, xdsIR.TCP))
 
 	if err := t.processUDPListenerXdsTranslation(tCtx, xdsIR.UDP, xdsIR.AccessLog, xdsIR.Metrics, xdsIR.HealthCheckLog); err != nil {
 		errs = errors.Join(errs, err)
@@ -568,6 +570,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		)
 
 		_, http3Enabled = http3EnabledListeners[listenerKey{Address: httpListener.Address, Port: httpListener.Port}]
+		// A shared QUIC socket must not override this listener's TLS client-validation restriction.
+		http3EnabledForListener := http3Enabled
+		if tls := httpListener.TLS; tls != nil {
+			if tls.ClientValidationEnabled || tls.CACertificate != nil || tls.RequireClientCertificate {
+				http3EnabledForListener = false
+			}
+		}
 
 		// Search for an existing TCP listener on the same address + port combination.
 		// Right now, the address is always 0.0.0.0/::, and we need to revisit the logic in the method if we want to support
@@ -645,7 +654,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
-			if http3Enabled {
+			if http3EnabledForListener {
 				if err = t.addHCMToXDSListener(quicXDSListener, httpListener, accessLog, tracing, true, httpListener.Connection, certResolutions); err != nil {
 					errs = errors.Join(errs, err)
 					continue
@@ -659,7 +668,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				errs = errors.Join(errs, err)
 				continue
 			}
-			if http3Enabled {
+			if http3EnabledForListener {
 				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
 					errs = errors.Join(errs, err)
 					continue
@@ -731,7 +740,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 
 		// Generate xDS virtual hosts and routes for the given HTTPListener,
 		// and add them to the xDS route config.
-		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, healthCheckLog, http3Enabled); err != nil {
+		if err = t.addRouteToRouteConfig(tCtx, xdsRouteCfg, httpListener, metrics, healthCheckLog, http3EnabledForListener); err != nil {
 			errs = errors.Join(errs, err)
 		}
 

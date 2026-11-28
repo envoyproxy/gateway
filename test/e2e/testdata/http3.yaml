@@ -60,6 +60,27 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
+    # Retain a TLS port in infraIR before HTTPS enables its shared UDP port.
+    - name: tls-passthrough
+      protocol: TLS
+      port: 443
+      hostname: passthrough.example.net
+      tls:
+        mode: Passthrough
+    - name: tls-secure
+      protocol: TLS
+      port: 443
+      hostname: secure.awesome.org
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: awesome-org-tls
+      allowedRoutes:
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: TCPRoute
     - name: https-foo
       protocol: HTTPS
       port: 443
@@ -84,6 +105,16 @@ spec:
       protocol: HTTPS
       port: 443
       hostname: "*.awesome.org"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: awesome-org-tls
+    - name: https-secure-awesome
+      protocol: HTTPS
+      port: 443
+      hostname: "*.secure.awesome.org"
       tls:
         mode: Terminate
         certificateRefs:
@@ -179,3 +210,33 @@ spec:
         - path:
             type: PathPrefix
             value: /
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: http3-tls-client-validation
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: http3-gtw
+      sectionName: tls-secure
+  tls:
+    clientValidation:
+      caCertificateRefs:
+        - name: www-awesome-org-tls
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: TCPRoute
+metadata:
+  name: http3-route-tls-secure
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: http3-gtw
+      sectionName: tls-secure
+  rules:
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080

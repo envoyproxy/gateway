@@ -442,8 +442,8 @@ func (t *Translator) addHCMToXDSListener(
 
 	// Set forward_proto_config to infer the x-forwarded-proto header from the PROXY protocol
 	// destination port. Requires the PROXY protocol listener filter to be enabled, which is added
-	// from the same irListener.ProxyProtocol field.
-	if irListener.ProxyProtocol != nil && irListener.ProxyProtocol.ForwardProto != nil {
+	// from the same irListener.ProxyProtocol field on TCP listeners only.
+	if !http3Listener && irListener.ProxyProtocol != nil && irListener.ProxyProtocol.ForwardProto != nil {
 		fpc := irListener.ProxyProtocol.ForwardProto
 		mgr.ForwardProtoConfig = &hcmv3.ForwardProtoConfig{
 			HttpsDestinationPorts: fpc.HTTPSDestinationPorts,
@@ -676,8 +676,8 @@ func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listener
 		xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP
 
 	// Envoy’s QUIC stack parses SNI itself, so filter_chain_match.server_names works without TLS Inspector.
-	// TLS Inspector is only needed for TCP/TLS listeners.
-	if len(fingerprints) > 0 || (hasSNIs && !isQUICListener) {
+	// TLS Inspector supports SNI inspection and fingerprinting only on TCP/TLS listeners.
+	if !isQUICListener && (len(fingerprints) > 0 || hasSNIs) {
 		if err := addXdsTLSInspectorFilter(xdsListener, fingerprints); err != nil {
 			return err
 		}

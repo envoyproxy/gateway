@@ -712,10 +712,11 @@ func shouldDisableHTTP3ForClientValidation(policy *egv1a1.ClientTrafficPolicy, h
 	if policy.Spec.HTTP3 == nil {
 		return false
 	}
-	if policy.Spec.TLS == nil || policy.Spec.TLS.ClientValidation == nil {
-		return false
+	// Client validation may already be configured by Gateway.spec.tls.frontend.
+	if httpIR.TLS.ClientValidationEnabled || httpIR.TLS.CACertificate != nil || httpIR.TLS.RequireClientCertificate {
+		return true
 	}
-	return true
+	return policy.Spec.TLS != nil && policy.Spec.TLS.ClientValidation != nil
 }
 
 func disabledHTTP3WarningMessage(listenerNames []string) string {
@@ -846,10 +847,18 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 				http3.AdvertisedPort = new(uint32(*policy.Spec.HTTP3.AdvertisedPort))
 			}
 			httpIR.HTTP3 = http3
+			// infraIR deduplicates ProxyListeners by port, so the surviving entry may be
+			// keyed under a different listener's name.
 			var proxyListenerIR *ir.ProxyListener
 			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
-				if proxyListener.Name == irListenerName {
-					proxyListenerIR = proxyListener
+				// Search by port so whichever entry was kept receives the HTTP3 marker.
+				for _, p := range proxyListener.Ports {
+					if uint32(p.ServicePort) == httpIR.ExternalPort {
+						proxyListenerIR = proxyListener
+						break
+					}
+				}
+				if proxyListenerIR != nil {
 					break
 				}
 			}

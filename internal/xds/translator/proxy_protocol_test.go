@@ -6,9 +6,13 @@
 package translator
 
 import (
+	"slices"
 	"testing"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/proxy_protocol/v3"
+	tlsinspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/stretchr/testify/assert"
@@ -16,6 +20,73 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
+
+func TestHTTP3ProxyProtocolFingerprints(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		fingerprints []ir.TLSFingerprintType
+	}{
+		{name: "JA3", fingerprints: []ir.TLSFingerprintType{ir.TLSFingerprintTypeJA3}},
+		{name: "JA4", fingerprints: []ir.TLSFingerprintType{ir.TLSFingerprintTypeJA4}},
+		{name: "JA3-and-JA4", fingerprints: []ir.TLSFingerprintType{ir.TLSFingerprintTypeJA3, ir.TLSFingerprintTypeJA4}},
+	} {
+		for _, hostname := range []string{"foo.example.com", "*"} {
+			t.Run(tc.name+"/"+hostname, func(t *testing.T) {
+				x := requireXdsIRFromInputTestData(t, "testdata/in/xds-ir/http3.yaml")
+				listener := x.HTTP[1]
+				listener.Hostnames = []string{hostname}
+				listener.Routes[0].Hostname = hostname
+				listener.ProxyProtocol = &ir.ProxyProtocolSettings{}
+				listener.TLS.Fingerprints = tc.fingerprints
+				x.HTTP = []*ir.HTTPListener{listener}
+				ctx, err := (&Translator{ControllerNamespace: "envoy-gateway-system"}).Translate(t.Context(), x)
+				require.NoError(t, err)
+				tcp := findXdsListenerByHostPort(ctx, listener.Address, listener.Port, corev3.SocketAddress_TCP)
+				quic := findXdsListenerByHostPort(ctx, listener.Address, listener.Port, corev3.SocketAddress_UDP)
+				require.NotNil(t, tcp)
+				require.NotNil(t, quic)
+				// Both TCP listener filters remain configured with their requested settings.
+				require.Len(t, tcp.ListenerFilters, 2)
+				for _, filter := range tcp.ListenerFilters {
+					switch filter.Name {
+					case wellknown.ProxyProtocol:
+						config := &proxyprotocolv3.ProxyProtocol{}
+						require.NoError(t, filter.GetTypedConfig().UnmarshalTo(config))
+						require.False(t, config.AllowRequestsWithoutProxyProtocol)
+					case wellknown.TlsInspector:
+						config := &tlsinspectorv3.TlsInspector{}
+						require.NoError(t, filter.GetTypedConfig().UnmarshalTo(config))
+						require.Equal(t, slices.Contains(tc.fingerprints, ir.TLSFingerprintTypeJA3), config.GetEnableJa3Fingerprinting().GetValue())
+						require.Equal(t, slices.Contains(tc.fingerprints, ir.TLSFingerprintTypeJA4), config.GetEnableJa4Fingerprinting().GetValue())
+					default:
+						t.Fatalf("unexpected TCP listener filter: %s", filter.Name)
+					}
+				}
+				// QUIC keeps its SNI match and HTTP/3 HCM without TCP listener filters.
+				require.Empty(t, quic.ListenerFilters)
+				require.Len(t, quic.FilterChains, 1)
+				if hostname == "*" {
+					require.Empty(t, quic.FilterChains[0].GetFilterChainMatch().GetServerNames())
+				} else {
+					require.Equal(t, listener.Hostnames, quic.FilterChains[0].GetFilterChainMatch().GetServerNames())
+				}
+				mgr := extractHCM(t, quic)
+				require.Equal(t, hcmv3.HttpConnectionManager_HTTP3, mgr.CodecType)
+				routes := findXdsRouteConfig(ctx, mgr.GetRds().GetRouteConfigName())
+				require.NotNil(t, routes)
+				require.NotEmpty(t, routes.VirtualHosts)
+				for _, vhost := range routes.VirtualHosts {
+					require.NotEmpty(t, vhost.Routes)
+					for _, route := range vhost.Routes {
+						require.True(t, slices.ContainsFunc(route.ResponseHeadersToAdd, func(header *corev3.HeaderValueOption) bool {
+							return header.GetHeader().GetKey() == "alt-svc"
+						}))
+					}
+				}
+			})
+		}
+	}
+}
 
 func TestPatchProxyProtocolFilter(t *testing.T) {
 	type testCase struct {
@@ -27,6 +98,16 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 	}
 
 	testCases := []testCase{
+		{
+			name: "UDP listener ignores required proxy protocol",
+			listener: &listenerv3.Listener{
+				Address: &corev3.Address{Address: &corev3.Address_SocketAddress{
+					SocketAddress: &corev3.SocketAddress{Protocol: corev3.SocketAddress_UDP},
+				}},
+			},
+			proxyProtocolSettings: &ir.ProxyProtocolSettings{Optional: false},
+			expectedFilterCount:   0,
+		},
 		{
 			name:                  "proxyProtocolSettings=nil (disabled)",
 			listener:              &listenerv3.Listener{},
@@ -62,6 +143,9 @@ func TestPatchProxyProtocolFilter(t *testing.T) {
 
 			if tc.expectedFilterCount > 0 {
 				assert.Equal(t, tc.expectedFilterName, tc.listener.ListenerFilters[0].Name)
+				config := &proxyprotocolv3.ProxyProtocol{}
+				require.NoError(t, tc.listener.ListenerFilters[0].GetTypedConfig().UnmarshalTo(config))
+				assert.Equal(t, tc.proxyProtocolSettings.Optional, config.AllowRequestsWithoutProxyProtocol)
 			}
 		})
 	}
@@ -101,12 +185,24 @@ func TestHCMForwardProtoConfig(t *testing.T) {
 	type testCase struct {
 		name           string
 		proxyProtocol  *ir.ProxyProtocolSettings
+		http3Listener  bool
 		wantConfigNil  bool
 		wantHTTPSPorts []uint32
 		wantHTTPPorts  []uint32
 	}
 
 	testCases := []testCase{
+		{
+			name: "HTTP/3 ignores forwardProtoConfig",
+			proxyProtocol: &ir.ProxyProtocolSettings{
+				ForwardProto: &ir.ForwardProtoConfig{
+					HTTPSDestinationPorts: []uint32{443},
+					HTTPDestinationPorts:  []uint32{80},
+				},
+			},
+			http3Listener: true,
+			wantConfigNil: true,
+		},
 		{
 			name: "forwardProtoConfig with both port lists",
 			proxyProtocol: &ir.ProxyProtocolSettings{
@@ -148,7 +244,7 @@ func TestHCMForwardProtoConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tr := &Translator{}
 			xdsListener := &listenerv3.Listener{Name: "test"}
-			require.NoError(t, tr.addHCMToXDSListener(xdsListener, httpListener(tc.proxyProtocol), nil, nil, false, nil, nil))
+			require.NoError(t, tr.addHCMToXDSListener(xdsListener, httpListener(tc.proxyProtocol), nil, nil, tc.http3Listener, nil, nil))
 
 			hcm := extractHCM(t, xdsListener)
 			if tc.wantConfigNil {
