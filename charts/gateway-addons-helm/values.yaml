@@ -198,7 +198,8 @@ prometheus:
                     info:
                       path: [ status, supportedFeatures ]
                       labelsFromPath:
-                        features: [ ]
+                        features:
+                          - name
             - groupVersionKind:
                 group: gateway.networking.k8s.io
                 kind: "HTTPRoute"
