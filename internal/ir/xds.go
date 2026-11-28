@@ -12,8 +12,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/netip"
+	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -2333,6 +2336,9 @@ func (r *RouteDestination) ClusterPerSettingReasons() []string {
 	if r.HasMixedAutoSNISettings() {
 		reasons = append(reasons, "only some backends use autoSNI from the endpoint hostname")
 	}
+	if r.HasSharedEndpointsWithDifferentTLS() {
+		reasons = append(reasons, "backends share an endpoint but use different TLS settings")
+	}
 	return reasons
 }
 
@@ -2428,6 +2434,36 @@ func (r *RouteDestination) HasMixedAutoSNISettings() bool {
 	}
 
 	return hasAutoSNIFromHost > 0 && hasAutoSNIFromHost != totalSettings
+}
+
+// HasSharedEndpointsWithDifferentTLS returns true if two settings share a static (IP or UDS) endpoint
+// but have different TLS settings or endpoint hostnames. EDS merges hosts with the same address, so Envoy would keep only
+// the first one and its transport socket match; each setting needs its own cluster instead.
+func (r *RouteDestination) HasSharedEndpointsWithDifferentTLS() bool {
+	type endpointConfig struct {
+		tls      *TLSUpstreamConfig
+		hostname *string
+	}
+	configByEndpoint := map[string]endpointConfig{}
+	for _, s := range r.Settings {
+		// FQDN endpoints use a STRICT_DNS cluster, which doesn't merge hosts.
+		if s == nil || (s.AddressType != nil && *s.AddressType == FQDN) {
+			continue
+		}
+		for _, ep := range s.Endpoints {
+			key := net.JoinHostPort(ep.Host, strconv.FormatUint(uint64(ep.Port), 10))
+			if ep.Path != nil {
+				key = *ep.Path
+			}
+			// The hostname is dropped with the duplicate host, but Envoy uses it for auto SNI and auto host rewrite.
+			cfg := endpointConfig{tls: s.TLS, hostname: ep.Hostname}
+			if prev, ok := configByEndpoint[key]; ok && !reflect.DeepEqual(prev, cfg) {
+				return true
+			}
+			configByEndpoint[key] = cfg
+		}
+	}
+	return false
 }
 
 // AllSettingsHaveTLS returns true if every destination setting is configured with TLS.
