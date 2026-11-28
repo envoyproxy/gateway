@@ -1,0 +1,53 @@
+# A zero-weight backend keeps its own cluster and a zero-weight weighted_clusters entry,
+# both for route-owned settings and for merged backend clusters.
+backendClusters:
+- name: "canary/stable"
+  setting:
+    name: "canary/stable"
+    endpoints:
+    - host: "3.3.3.3"
+      port: 50003
+- name: "canary/preview"
+  setting:
+    name: "canary/preview"
+    endpoints:
+    - host: "4.4.4.4"
+      port: 50004
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    pathMatch:
+      prefix: "/first"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.1.1.1"
+          port: 50001
+        weight: 100
+        name: "first-route-dest/backend/0"
+      - endpoints:
+        - host: "2.2.2.2"
+          port: 50002
+        weight: 0
+        name: "first-route-dest/backend/1"
+  - name: "merged-route"
+    hostname: "*"
+    pathMatch:
+      prefix: "/merged"
+    destination:
+      name: "merged-route-dest"
+      backendClusterRefs:
+      - name: "canary/stable"
+        weight: 100
+      - name: "canary/preview"
+        weight: 0

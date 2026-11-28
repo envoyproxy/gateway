@@ -367,14 +367,15 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				}
 			}
 
-			// skip backendRefs with weight 0 as they do not affect the traffic distribution
-			if backendDest.ds.Weight != nil && *backendDest.ds.Weight == 0 {
+			// A zero-weight backendRef gets no traffic but is kept, so its cluster already exists when a
+			// canary rollout raises its weight. A dynamic resolver has no cluster to warm, and keeping it
+			// would reject the rule for mixing a dynamic resolver with other backendRefs.
+			if backendDest.ds.IsDynamicResolver && backendDest.ds.Weight != nil && *backendDest.ds.Weight == 0 {
 				continue
 			}
 
-			// only add the custom backend resource after the weight check, so a weight-0 custom
-			// backend never reaches the extension hooks: it has no cluster of its own, and its
-			// resource would otherwise be passed to the cluster of every other backendRef in the rule.
+			// only add the custom backend resource after the skip above, so a skipped (dynamic resolver)
+			// backendRef's custom resource is not passed to the cluster of every other backendRef in the rule.
 			if unstructuredRef != nil {
 				backendCustomRefs = append(backendCustomRefs, unstructuredRef)
 			}
@@ -808,10 +809,6 @@ func (t *Translator) processBackendRef(
 
 	// An invalid backendRef never contributes traffic.
 	if err != nil {
-		return routeBackendRefDestination{ds: ds}, unstructuredRef, err
-	}
-	// An explicitly zero-weight backendRef never contributes traffic either.
-	if ds.Weight != nil && *ds.Weight == 0 {
 		return routeBackendRefDestination{ds: ds}, unstructuredRef, err
 	}
 	// Without a resolved gateway IR there's nowhere to eventually register a shared BackendCluster.
@@ -1597,8 +1594,10 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				}
 			}
 
-			// skip backendRefs with weight 0 as they do not affect the traffic distribution
-			if backendDest.ds.Weight != nil && *backendDest.ds.Weight == 0 {
+			// A zero-weight backendRef gets no traffic but is kept, so its cluster already exists when a
+			// canary rollout raises its weight. A dynamic resolver has no cluster to warm, and keeping it
+			// would reject the rule for mixing a dynamic resolver with other backendRefs.
+			if backendDest.ds.IsDynamicResolver && backendDest.ds.Weight != nil && *backendDest.ds.Weight == 0 {
 				continue
 			}
 
@@ -3106,11 +3105,6 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		if err = t.validateBackendNamespace(backendRef, route, resources, routeType); err != nil {
 			return emptyDS, nil, err
 		}
-	}
-
-	// Skip processing backends with 0 weight
-	if weight == 0 {
-		return emptyDS, nil, nil
 	}
 
 	var envoyProxy *egv1a1.EnvoyProxy
