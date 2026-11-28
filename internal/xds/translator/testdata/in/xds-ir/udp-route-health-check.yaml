@@ -1,0 +1,55 @@
+# Both clusters get the UDP health checker: the UDP route's probes the override port, and the
+# TCP route's probes the port the backend serves on.
+udp:
+- name: "udp-route"
+  address: "::"
+  port: 10080
+  route:
+    name: "udp-route"
+    healthCheck:
+      panicThreshold: 30
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        udp:
+          send:
+            text: "ping"
+          receive:
+            binary: "cG9uZw=="
+        overrides:
+          port: 9053
+    destination:
+      name: "udp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "udp-route-dest/backend/0"
+        protocol: UDP
+tcp:
+- name: "tcp-listener"
+  address: "::"
+  port: 10081
+  routes:
+  - name: "tcp-route"
+    healthCheck:
+      active:
+        timeout: "1s"
+        interval: "5s"
+        unhealthyThreshold: 3
+        healthyThreshold: 1
+        udp:
+          send:
+            text: "ping"
+          receive:
+            text: "pong"
+    destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50001
+        name: "tcp-route-dest/backend/0"
+        protocol: TCP

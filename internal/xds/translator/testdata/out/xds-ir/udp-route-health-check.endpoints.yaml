@@ -1,0 +1,26 @@
+- clusterName: tcp-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50001
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tcp-route-dest/backend/0
+- clusterName: udp-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+        healthCheckConfig:
+          portValue: 9053
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: udp-route-dest/backend/0

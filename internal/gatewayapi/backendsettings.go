@@ -626,6 +626,13 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 			Service:   grpc.Service,
 			Authority: ptr.Deref(grpc.Hostname, ""),
 		}
+	case egv1a1.ActiveHealthCheckerTypeUDP:
+		if hc.UDP != nil {
+			irHC.UDP = &ir.UDPHealthChecker{
+				Send:    translateActiveHealthCheckPayload(&hc.UDP.Send),
+				Receive: translateActiveHealthCheckPayload(&hc.UDP.Receive),
+			}
+		}
 	}
 
 	if hc.Overrides != nil {

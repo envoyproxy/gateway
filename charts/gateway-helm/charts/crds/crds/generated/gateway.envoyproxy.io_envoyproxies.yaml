@@ -12254,6 +12254,7 @@ spec:
                                                       new connection for each health check, which is useful for backends (such as
                                                       haproxy-style agent checks) that do not expect a reused connection.
                                                       Defaults to false, which reuses the connection across probes.
+                                                      It cannot be set for the UDP health checker, which always uses a new socket per probe.
                                                     type: boolean
                                                   grpc:
                                                     description: |-
@@ -12662,13 +12663,102 @@ spec:
                                                       - HTTP
                                                       - TCP
                                                       - GRPC
+                                                      - UDP
                                                     - enum:
                                                       - HTTP
                                                       - TCP
                                                       - GRPC
+                                                      - UDP
                                                     description: Type defines the
                                                       type of health checker.
                                                     type: string
+                                                  udp:
+                                                    description: |-
+                                                      UDP defines the configuration of the UDP health checker.
+                                                      It's required while the health checker type is UDP.
+                                                    properties:
+                                                      receive:
+                                                        description: |-
+                                                          Receive defines the reply that marks the probe as successful.
+                                                          The reply must match this payload exactly.
+                                                        properties:
+                                                          binary:
+                                                            description: Binary payload
+                                                              base64 encoded.
+                                                            format: byte
+                                                            type: string
+                                                          text:
+                                                            description: Text payload
+                                                              in plain text.
+                                                            type: string
+                                                          type:
+                                                            allOf:
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            description: Type defines
+                                                              the type of the payload.
+                                                            type: string
+                                                        required:
+                                                        - type
+                                                        type: object
+                                                        x-kubernetes-validations:
+                                                        - message: If payload type
+                                                            is Text, text field needs
+                                                            to be set.
+                                                          rule: 'self.type == ''Text''
+                                                            ? has(self.text) : !has(self.text)'
+                                                        - message: If payload type
+                                                            is Binary, binary field
+                                                            needs to be set.
+                                                          rule: 'self.type == ''Binary''
+                                                            ? has(self.binary) : !has(self.binary)'
+                                                      send:
+                                                        description: Send defines
+                                                          the payload sent as one
+                                                          datagram on each probe.
+                                                        properties:
+                                                          binary:
+                                                            description: Binary payload
+                                                              base64 encoded.
+                                                            format: byte
+                                                            type: string
+                                                          text:
+                                                            description: Text payload
+                                                              in plain text.
+                                                            type: string
+                                                          type:
+                                                            allOf:
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            description: Type defines
+                                                              the type of the payload.
+                                                            type: string
+                                                        required:
+                                                        - type
+                                                        type: object
+                                                        x-kubernetes-validations:
+                                                        - message: If payload type
+                                                            is Text, text field needs
+                                                            to be set.
+                                                          rule: 'self.type == ''Text''
+                                                            ? has(self.text) : !has(self.text)'
+                                                        - message: If payload type
+                                                            is Binary, binary field
+                                                            needs to be set.
+                                                          rule: 'self.type == ''Binary''
+                                                            ? has(self.binary) : !has(self.binary)'
+                                                    required:
+                                                    - receive
+                                                    - send
+                                                    type: object
                                                   unhealthyThreshold:
                                                     default: 3
                                                     description: |-
@@ -12698,6 +12788,16 @@ spec:
                                                     is GRPC.
                                                   rule: 'has(self.grpc) ? self.type
                                                     == ''GRPC'' : true'
+                                                - message: If Health Checker type
+                                                    is UDP, udp field needs to be
+                                                    set.
+                                                  rule: 'self.type == ''UDP'' ? has(self.udp)
+                                                    : !has(self.udp)'
+                                                - message: disableConnectionReuse
+                                                    cannot be set if the Health Checker
+                                                    type is UDP.
+                                                  rule: 'self.type == ''UDP'' ? !has(self.disableConnectionReuse)
+                                                    : true'
                                               panicThreshold:
                                                 description: |-
                                                   When number of unhealthy endpoints for a backend reaches this threshold
@@ -14070,6 +14170,7 @@ spec:
                                                       new connection for each health check, which is useful for backends (such as
                                                       haproxy-style agent checks) that do not expect a reused connection.
                                                       Defaults to false, which reuses the connection across probes.
+                                                      It cannot be set for the UDP health checker, which always uses a new socket per probe.
                                                     type: boolean
                                                   grpc:
                                                     description: |-
@@ -14478,13 +14579,102 @@ spec:
                                                       - HTTP
                                                       - TCP
                                                       - GRPC
+                                                      - UDP
                                                     - enum:
                                                       - HTTP
                                                       - TCP
                                                       - GRPC
+                                                      - UDP
                                                     description: Type defines the
                                                       type of health checker.
                                                     type: string
+                                                  udp:
+                                                    description: |-
+                                                      UDP defines the configuration of the UDP health checker.
+                                                      It's required while the health checker type is UDP.
+                                                    properties:
+                                                      receive:
+                                                        description: |-
+                                                          Receive defines the reply that marks the probe as successful.
+                                                          The reply must match this payload exactly.
+                                                        properties:
+                                                          binary:
+                                                            description: Binary payload
+                                                              base64 encoded.
+                                                            format: byte
+                                                            type: string
+                                                          text:
+                                                            description: Text payload
+                                                              in plain text.
+                                                            type: string
+                                                          type:
+                                                            allOf:
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            description: Type defines
+                                                              the type of the payload.
+                                                            type: string
+                                                        required:
+                                                        - type
+                                                        type: object
+                                                        x-kubernetes-validations:
+                                                        - message: If payload type
+                                                            is Text, text field needs
+                                                            to be set.
+                                                          rule: 'self.type == ''Text''
+                                                            ? has(self.text) : !has(self.text)'
+                                                        - message: If payload type
+                                                            is Binary, binary field
+                                                            needs to be set.
+                                                          rule: 'self.type == ''Binary''
+                                                            ? has(self.binary) : !has(self.binary)'
+                                                      send:
+                                                        description: Send defines
+                                                          the payload sent as one
+                                                          datagram on each probe.
+                                                        properties:
+                                                          binary:
+                                                            description: Binary payload
+                                                              base64 encoded.
+                                                            format: byte
+                                                            type: string
+                                                          text:
+                                                            description: Text payload
+                                                              in plain text.
+                                                            type: string
+                                                          type:
+                                                            allOf:
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            - enum:
+                                                              - Text
+                                                              - Binary
+                                                            description: Type defines
+                                                              the type of the payload.
+                                                            type: string
+                                                        required:
+                                                        - type
+                                                        type: object
+                                                        x-kubernetes-validations:
+                                                        - message: If payload type
+                                                            is Text, text field needs
+                                                            to be set.
+                                                          rule: 'self.type == ''Text''
+                                                            ? has(self.text) : !has(self.text)'
+                                                        - message: If payload type
+                                                            is Binary, binary field
+                                                            needs to be set.
+                                                          rule: 'self.type == ''Binary''
+                                                            ? has(self.binary) : !has(self.binary)'
+                                                    required:
+                                                    - receive
+                                                    - send
+                                                    type: object
                                                   unhealthyThreshold:
                                                     default: 3
                                                     description: |-
@@ -14514,6 +14704,16 @@ spec:
                                                     is GRPC.
                                                   rule: 'has(self.grpc) ? self.type
                                                     == ''GRPC'' : true'
+                                                - message: If Health Checker type
+                                                    is UDP, udp field needs to be
+                                                    set.
+                                                  rule: 'self.type == ''UDP'' ? has(self.udp)
+                                                    : !has(self.udp)'
+                                                - message: disableConnectionReuse
+                                                    cannot be set if the Health Checker
+                                                    type is UDP.
+                                                  rule: 'self.type == ''UDP'' ? !has(self.disableConnectionReuse)
+                                                    : true'
                                               panicThreshold:
                                                 description: |-
                                                   When number of unhealthy endpoints for a backend reaches this threshold
@@ -16308,6 +16508,7 @@ spec:
                                                 new connection for each health check, which is useful for backends (such as
                                                 haproxy-style agent checks) that do not expect a reused connection.
                                                 Defaults to false, which reuses the connection across probes.
+                                                It cannot be set for the UDP health checker, which always uses a new socket per probe.
                                               type: boolean
                                             grpc:
                                               description: |-
@@ -16701,13 +16902,97 @@ spec:
                                                 - HTTP
                                                 - TCP
                                                 - GRPC
+                                                - UDP
                                               - enum:
                                                 - HTTP
                                                 - TCP
                                                 - GRPC
+                                                - UDP
                                               description: Type defines the type of
                                                 health checker.
                                               type: string
+                                            udp:
+                                              description: |-
+                                                UDP defines the configuration of the UDP health checker.
+                                                It's required while the health checker type is UDP.
+                                              properties:
+                                                receive:
+                                                  description: |-
+                                                    Receive defines the reply that marks the probe as successful.
+                                                    The reply must match this payload exactly.
+                                                  properties:
+                                                    binary:
+                                                      description: Binary payload
+                                                        base64 encoded.
+                                                      format: byte
+                                                      type: string
+                                                    text:
+                                                      description: Text payload in
+                                                        plain text.
+                                                      type: string
+                                                    type:
+                                                      allOf:
+                                                      - enum:
+                                                        - Text
+                                                        - Binary
+                                                      - enum:
+                                                        - Text
+                                                        - Binary
+                                                      description: Type defines the
+                                                        type of the payload.
+                                                      type: string
+                                                  required:
+                                                  - type
+                                                  type: object
+                                                  x-kubernetes-validations:
+                                                  - message: If payload type is Text,
+                                                      text field needs to be set.
+                                                    rule: 'self.type == ''Text'' ?
+                                                      has(self.text) : !has(self.text)'
+                                                  - message: If payload type is Binary,
+                                                      binary field needs to be set.
+                                                    rule: 'self.type == ''Binary''
+                                                      ? has(self.binary) : !has(self.binary)'
+                                                send:
+                                                  description: Send defines the payload
+                                                    sent as one datagram on each probe.
+                                                  properties:
+                                                    binary:
+                                                      description: Binary payload
+                                                        base64 encoded.
+                                                      format: byte
+                                                      type: string
+                                                    text:
+                                                      description: Text payload in
+                                                        plain text.
+                                                      type: string
+                                                    type:
+                                                      allOf:
+                                                      - enum:
+                                                        - Text
+                                                        - Binary
+                                                      - enum:
+                                                        - Text
+                                                        - Binary
+                                                      description: Type defines the
+                                                        type of the payload.
+                                                      type: string
+                                                  required:
+                                                  - type
+                                                  type: object
+                                                  x-kubernetes-validations:
+                                                  - message: If payload type is Text,
+                                                      text field needs to be set.
+                                                    rule: 'self.type == ''Text'' ?
+                                                      has(self.text) : !has(self.text)'
+                                                  - message: If payload type is Binary,
+                                                      binary field needs to be set.
+                                                    rule: 'self.type == ''Binary''
+                                                      ? has(self.binary) : !has(self.binary)'
+                                              required:
+                                              - receive
+                                              - send
+                                              type: object
                                             unhealthyThreshold:
                                               default: 3
                                               description: |-
@@ -16733,6 +17018,15 @@ spec:
                                           - message: The grpc field can only be set
                                               if the Health Checker type is GRPC.
                                             rule: 'has(self.grpc) ? self.type == ''GRPC''
+                                              : true'
+                                          - message: If Health Checker type is UDP,
+                                              udp field needs to be set.
+                                            rule: 'self.type == ''UDP'' ? has(self.udp)
+                                              : !has(self.udp)'
+                                          - message: disableConnectionReuse cannot
+                                              be set if the Health Checker type is
+                                              UDP.
+                                            rule: 'self.type == ''UDP'' ? !has(self.disableConnectionReuse)
                                               : true'
                                         panicThreshold:
                                           description: |-
@@ -18244,6 +18538,7 @@ spec:
                                           new connection for each health check, which is useful for backends (such as
                                           haproxy-style agent checks) that do not expect a reused connection.
                                           Defaults to false, which reuses the connection across probes.
+                                          It cannot be set for the UDP health checker, which always uses a new socket per probe.
                                         type: boolean
                                       grpc:
                                         description: |-
@@ -18630,13 +18925,97 @@ spec:
                                           - HTTP
                                           - TCP
                                           - GRPC
+                                          - UDP
                                         - enum:
                                           - HTTP
                                           - TCP
                                           - GRPC
+                                          - UDP
                                         description: Type defines the type of health
                                           checker.
                                         type: string
+                                      udp:
+                                        description: |-
+                                          UDP defines the configuration of the UDP health checker.
+                                          It's required while the health checker type is UDP.
+                                        properties:
+                                          receive:
+                                            description: |-
+                                              Receive defines the reply that marks the probe as successful.
+                                              The reply must match this payload exactly.
+                                            properties:
+                                              binary:
+                                                description: Binary payload base64
+                                                  encoded.
+                                                format: byte
+                                                type: string
+                                              text:
+                                                description: Text payload in plain
+                                                  text.
+                                                type: string
+                                              type:
+                                                allOf:
+                                                - enum:
+                                                  - Text
+                                                  - Binary
+                                                - enum:
+                                                  - Text
+                                                  - Binary
+                                                description: Type defines the type
+                                                  of the payload.
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                            x-kubernetes-validations:
+                                            - message: If payload type is Text, text
+                                                field needs to be set.
+                                              rule: 'self.type == ''Text'' ? has(self.text)
+                                                : !has(self.text)'
+                                            - message: If payload type is Binary,
+                                                binary field needs to be set.
+                                              rule: 'self.type == ''Binary'' ? has(self.binary)
+                                                : !has(self.binary)'
+                                          send:
+                                            description: Send defines the payload
+                                              sent as one datagram on each probe.
+                                            properties:
+                                              binary:
+                                                description: Binary payload base64
+                                                  encoded.
+                                                format: byte
+                                                type: string
+                                              text:
+                                                description: Text payload in plain
+                                                  text.
+                                                type: string
+                                              type:
+                                                allOf:
+                                                - enum:
+                                                  - Text
+                                                  - Binary
+                                                - enum:
+                                                  - Text
+                                                  - Binary
+                                                description: Type defines the type
+                                                  of the payload.
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                            x-kubernetes-validations:
+                                            - message: If payload type is Text, text
+                                                field needs to be set.
+                                              rule: 'self.type == ''Text'' ? has(self.text)
+                                                : !has(self.text)'
+                                            - message: If payload type is Binary,
+                                                binary field needs to be set.
+                                              rule: 'self.type == ''Binary'' ? has(self.binary)
+                                                : !has(self.binary)'
+                                        required:
+                                        - receive
+                                        - send
+                                        type: object
                                       unhealthyThreshold:
                                         default: 3
                                         description: |-
@@ -18662,6 +19041,14 @@ spec:
                                     - message: The grpc field can only be set if the
                                         Health Checker type is GRPC.
                                       rule: 'has(self.grpc) ? self.type == ''GRPC''
+                                        : true'
+                                    - message: If Health Checker type is UDP, udp
+                                        field needs to be set.
+                                      rule: 'self.type == ''UDP'' ? has(self.udp)
+                                        : !has(self.udp)'
+                                    - message: disableConnectionReuse cannot be set
+                                        if the Health Checker type is UDP.
+                                      rule: 'self.type == ''UDP'' ? !has(self.disableConnectionReuse)
                                         : true'
                                   panicThreshold:
                                     description: |-
