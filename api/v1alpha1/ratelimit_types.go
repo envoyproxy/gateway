@@ -67,7 +67,7 @@ type LocalRateLimit struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || (!has(r.cost.response) && (!has(r.cost.refundOnResponse) || !r.cost.refundOnResponse)))", message="response cost and refundOnResponse are not supported for Local Rate Limits"
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.limit.fromMetadata))", message="limit fromMetadata is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
@@ -145,6 +145,7 @@ type RateLimitRule struct {
 	XRateLimitHeaders *XRateLimitHeadersOption `json:"xRateLimitHeaders,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="!has(self.refundOnResponse) || !self.refundOnResponse || (has(self.request) && self.request.from == 'Number' && has(self.request.number) && !has(self.response))",message="refundOnResponse requires a Number request cost and cannot be used with a response cost"
 type RateLimitCost struct {
 	// Request specifies the number to reduce the rate limit counters
 	// on the request path. If this is not specified, the default behavior
@@ -166,10 +167,16 @@ type RateLimitCost struct {
 	// This is optional and if not specified, the rate limit counters are not reduced
 	// on the response path.
 	//
-	// Currently, this is only supported for HTTP Global Rate Limits.
-	//
 	// +optional
 	Response *RateLimitCostSpecifier `json:"response,omitempty"`
+	// RefundOnResponse gives the request cost back to the counters when the stream is closed
+	// instead of consuming another cost. This tracks the number of requests in flight for
+	// each descriptor, which can be used to limit concurrency.
+	//
+	// This is only supported for a Number request cost and HTTP Global Rate Limits.
+	//
+	// +optional
+	RefundOnResponse *bool `json:"refundOnResponse,omitempty"`
 }
 
 // RateLimitCostSpecifier specifies where the Envoy retrieves the number to reduce the rate limit counters.

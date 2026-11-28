@@ -1,0 +1,1 @@
+Added `refundOnResponse` to the `BackendTrafficPolicy` global rate limit cost, so the request cost is added back to the counters when the stream is closed. The counter then tracks requests in flight per descriptor, which can be used to limit concurrency per client. Requires a rate limit service that supports negative hits.
