@@ -87,7 +87,10 @@ func isNamespaceSelectorBypassInfrastructureResource(obj any) bool {
 	}
 }
 
-func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesListener(ctx context.Context) bool {
+// hasNamespaceSelectorListener reports whether any Gateway or ListenerSet admits
+// Routes, or any Gateway admits ListenerSets, by a namespace label selector, so
+// that a namespace label change can change what is attached.
+func (r *gatewayAPIReconciler) hasNamespaceSelectorListener(ctx context.Context) bool {
 	gtwList := &gwapiv1.GatewayList{}
 	if err := r.client.List(ctx, gtwList, &client.ListOptions{}); err != nil {
 		// If we can't list Gateways, we can't determine if
@@ -97,6 +100,9 @@ func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesListener(ctx context.Cont
 
 	for i := range gtwList.Items {
 		gtw := &gtwList.Items[i]
+		if hasListenerNamespacesFromSelector(gtw.Spec.AllowedListeners) {
+			return true
+		}
 		for _, l := range gtw.Spec.Listeners {
 			if hasNamespacesFromSelector(l.AllowedRoutes) {
 				return true
@@ -124,6 +130,15 @@ func (r *gatewayAPIReconciler) hasSelectorAllowedRoutesListener(ctx context.Cont
 	}
 
 	return false
+}
+
+// hasListenerNamespacesFromSelector reports whether a Gateway admits ListenerSets
+// from namespaces chosen by a label selector (allowedListeners.namespaces.from: Selector).
+func hasListenerNamespacesFromSelector(al *gwapiv1.AllowedListeners) bool {
+	if al == nil || al.Namespaces == nil || al.Namespaces.From == nil {
+		return false
+	}
+	return *al.Namespaces.From == gwapiv1.NamespacesFromSelector
 }
 
 func hasNamespacesFromSelector(ar *gwapiv1.AllowedRoutes) bool {

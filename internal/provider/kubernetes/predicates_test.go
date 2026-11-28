@@ -2721,3 +2721,76 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 		})
 	}
 }
+
+// TestHasNamespaceSelectorListener tests that a namespace label change is
+// enqueued for every way a namespace selector decides attachment, including a
+// Gateway's allowedListeners selector for ListenerSets (#10709).
+func TestHasNamespaceSelectorListener(t *testing.T) {
+	selector := gwapiv1.NamespacesFromSelector
+	same := gwapiv1.NamespacesFromSame
+	gateway := func(spec gwapiv1.GatewaySpec) *gwapiv1.Gateway {
+		return &gwapiv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "default"},
+			Spec:       spec,
+		}
+	}
+	listener := func(from *gwapiv1.FromNamespaces) gwapiv1.Listener {
+		l := gwapiv1.Listener{Name: "http", Port: 80, Protocol: gwapiv1.HTTPProtocolType}
+		if from != nil {
+			l.AllowedRoutes = &gwapiv1.AllowedRoutes{Namespaces: &gwapiv1.RouteNamespaces{From: from}}
+		}
+		return l
+	}
+
+	testCases := []struct {
+		name   string
+		config client.Object
+		expect bool
+	}{
+		{
+			name:   "no namespace selector",
+			config: gateway(gwapiv1.GatewaySpec{Listeners: []gwapiv1.Listener{listener(nil)}}),
+			expect: false,
+		},
+		{
+			name:   "allowedRoutes selector on a Gateway listener",
+			config: gateway(gwapiv1.GatewaySpec{Listeners: []gwapiv1.Listener{listener(&selector)}}),
+			expect: true,
+		},
+		{
+			name: "allowedListeners selector on a Gateway",
+			config: gateway(gwapiv1.GatewaySpec{
+				Listeners: []gwapiv1.Listener{listener(nil)},
+				AllowedListeners: &gwapiv1.AllowedListeners{
+					Namespaces: &gwapiv1.ListenerNamespaces{
+						From:     &selector,
+						Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"gateway-access": "true"}},
+					},
+				},
+			}),
+			expect: true,
+		},
+		{
+			name: "allowedListeners from the same namespace",
+			config: gateway(gwapiv1.GatewaySpec{
+				Listeners:        []gwapiv1.Listener{listener(nil)},
+				AllowedListeners: &gwapiv1.AllowedListeners{Namespaces: &gwapiv1.ListenerNamespaces{From: &same}},
+			}),
+			expect: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := gatewayAPIReconciler{
+				classController: egv1a1.GatewayControllerName,
+				log:             logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				client: fakeclient.NewClientBuilder().
+					WithScheme(envoygateway.GetScheme()).
+					WithObjects(tc.config).
+					Build(),
+			}
+			require.Equal(t, tc.expect, r.hasNamespaceSelectorListener(context.Background()))
+		})
+	}
+}
