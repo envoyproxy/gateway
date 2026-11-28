@@ -199,6 +199,13 @@ func buildJWTProvider(irProvider *ir.JWTProvider) (*jwtauthnv3.JwtProvider, erro
 			SpaceDelimitedClaims: []string{"scope", "scp"},
 		},
 	}
+	// Only set the field when the user asked for it: leaving it unset keeps
+	// Envoy's own default of 60 seconds.
+	if irProvider.ClockSkew != nil {
+		// The CRD only admits whole seconds between 1s and 24h, so this
+		// conversion neither truncates nor overflows.
+		jwtProvider.ClockSkewSeconds = uint32(irProvider.ClockSkew.Seconds())
+	}
 	if irProvider.LocalJWKS != nil {
 		local := &jwtauthnv3.JwtProvider_LocalJwks{
 			LocalJwks: &corev3.DataSource{
