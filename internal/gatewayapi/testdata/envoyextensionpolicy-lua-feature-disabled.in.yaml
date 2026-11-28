@@ -59,8 +59,8 @@ envoyextensionpolicies:
     namespace: default
     name: policy-for-http-route-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     lua:
@@ -75,8 +75,8 @@ envoyextensionpolicies:
     namespace: envoy-gateway
     name: policy-for-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     lua:
@@ -91,8 +91,8 @@ envoyextensionpolicies:
     namespace: default
     name: policy-for-http-route-2
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-2
     lua:

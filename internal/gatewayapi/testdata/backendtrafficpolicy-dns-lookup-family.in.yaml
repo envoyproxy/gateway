@@ -147,10 +147,10 @@ backendTrafficPolicies:
       namespace: default
       name: backend-traffic-policy
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: GRPCRoute
-        name: grpcroute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: GRPCRoute
+          name: grpcroute-1
       dns:
         lookupFamily: IPv6
         dnsRefreshRate: "5s"
@@ -161,10 +161,10 @@ backendTrafficPolicies:
       namespace: default
       name: backend-traffic-policy
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       dns:
         lookupFamily: IPv4Only
         dnsRefreshRate: "5s"
@@ -176,10 +176,10 @@ envoyExtensionPolicies:
       namespace: default
       name: policy-for-httproute
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       extProc:
         - backendRefs:
             - name: backend-fqdn2
@@ -196,10 +196,10 @@ securityPolicies:
       namespace: envoy-gateway
       name: policy-for-gateway-1
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       extAuth:
         http:
           backendRefs:

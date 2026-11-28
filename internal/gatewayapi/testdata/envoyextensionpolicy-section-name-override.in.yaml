@@ -183,8 +183,8 @@ envoyExtensionPolicies:
     namespace: envoy-gateway
     name: policy-for-gateway-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     extProc:
@@ -197,8 +197,8 @@ envoyExtensionPolicies:
     namespace: envoy-gateway
     name: policy-for-gateway-1-listener-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: listener-1
@@ -212,8 +212,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-for-route-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     extProc:
@@ -226,8 +226,8 @@ envoyExtensionPolicies:
     namespace: default
     name: policy-for-route-1-rule-1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
       sectionName: rule-1

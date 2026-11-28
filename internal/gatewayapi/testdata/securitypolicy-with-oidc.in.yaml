@@ -109,8 +109,8 @@ securityPolicies:
     name: policy-for-gateway  # This policy should attach httproute-2
     uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     oidc:
@@ -134,8 +134,8 @@ securityPolicies:
     name: policy-for-http-route   # This policy should attach httproute-1
     uid: 08335a80-83ba-4592-888f-6ac0bba44ce4
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     oidc:
@@ -168,8 +168,8 @@ securityPolicies:
     namespace: default
     name: policy-for-http-route-3
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-3
     oidc:

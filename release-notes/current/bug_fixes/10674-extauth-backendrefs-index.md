@@ -1,0 +1,1 @@
+Fixed endpoint changes of Services referenced only by the second or later backendRefs of a SecurityPolicy's ExtAuth service not being reconciled, which left Envoy sending authorization requests to a stale endpoint IP.

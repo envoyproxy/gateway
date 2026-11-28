@@ -191,3 +191,29 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "fifth-route-dest/backend/0"
+  - name: "in-flight-cost"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - name: "x-tenant-id"
+              distinct: true
+            limit:
+              requests: 8
+              unit: Hour
+            requestCost:
+              number: 1
+            responseCost:
+              number: 1
+              negative: true
+    pathMatch:
+      exact: "foo/bar/in-flight"
+    destination:
+      name: "sixth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "sixth-route-dest/backend/0"

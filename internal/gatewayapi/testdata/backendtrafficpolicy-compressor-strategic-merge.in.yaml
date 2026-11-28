@@ -79,10 +79,10 @@ backendTrafficPolicies:
       namespace: envoy-gateway
       name: gateway-compressor-policy
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-1
       compressor:
         - type: Gzip
           gzip: {}
@@ -93,10 +93,10 @@ backendTrafficPolicies:
       namespace: default
       name: route-compressor-policy-strategic-merge
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-1
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-1
       compressor:
         - type: Brotli
           brotli: {}
@@ -108,10 +108,10 @@ backendTrafficPolicies:
       namespace: default
       name: route-compressor-policy-no-merge
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-2
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-2
       compressor:
         - type: Brotli
           brotli: {}
@@ -122,8 +122,8 @@ backendTrafficPolicies:
       namespace: default
       name: route-compressor-policy-inherit
     spec:
-      targetRef:
-        group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-3
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: httproute-3
       mergeType: StrategicMerge

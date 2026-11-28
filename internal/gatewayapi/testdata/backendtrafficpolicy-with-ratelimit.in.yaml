@@ -113,8 +113,8 @@ backendTrafficPolicies:
     namespace: envoy-gateway
     name: policy-for-gateway
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     rateLimit:
@@ -142,8 +142,8 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     rateLimit:
@@ -172,14 +172,26 @@ backendTrafficPolicies:
               metadata:
                 namespace: something.com
                 key: some_cost_set_by_foo
+        - clientSelectors:
+          - headers:
+            - name: x-tenant-id
+              type: Distinct
+          limit:
+            requests: 8
+            unit: Hour
+          cost:
+            request:
+              from: Number
+              number: 1
+            refundOnResponse: true
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
     namespace: default
     name: policy-for-grpc-route
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GRPCRoute
       name: grpcroute-2
     rateLimit:

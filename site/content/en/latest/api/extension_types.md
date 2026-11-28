@@ -5880,7 +5880,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `request` | _[RateLimitCostSpecifier](#ratelimitcostspecifier)_ |  false  |  | Request specifies the number to reduce the rate limit counters<br />on the request path. If this is not specified, the default behavior<br />is to reduce the rate limit counters by 1.<br />When Envoy receives a request that matches the rule, it tries to reduce the<br />rate limit counters by the specified number. If the counter doesn't have<br />enough capacity, the request is rate limited. |
-| `response` | _[RateLimitCostSpecifier](#ratelimitcostspecifier)_ |  false  |  | Response specifies the number to reduce the rate limit counters<br />after the response is sent back to the client or the request stream is closed.<br />The cost is used to reduce the rate limit counters for the matching requests.<br />Since the reduction happens after the request stream is complete, the rate limit<br />won't be enforced for the current request, but for the subsequent matching requests.<br />This is optional and if not specified, the rate limit counters are not reduced<br />on the response path.<br />Currently, this is only supported for HTTP Global Rate Limits. |
+| `response` | _[RateLimitCostSpecifier](#ratelimitcostspecifier)_ |  false  |  | Response specifies the number to reduce the rate limit counters<br />after the response is sent back to the client or the request stream is closed.<br />The cost is used to reduce the rate limit counters for the matching requests.<br />Since the reduction happens after the request stream is complete, the rate limit<br />won't be enforced for the current request, but for the subsequent matching requests.<br />This is optional and if not specified, the rate limit counters are not reduced<br />on the response path. |
+| `refundOnResponse` | _boolean_ |  false  |  | RefundOnResponse gives the request cost back to the counters when the stream is closed<br />instead of consuming another cost. This tracks the number of requests in flight for<br />each descriptor, which can be used to limit concurrency.<br />This is only supported for a Number request cost and HTTP Global Rate Limits. |
 
 
 #### RateLimitCostFrom
@@ -7639,6 +7640,21 @@ _Appears in:_
 | `DraftVersion03` | XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03<br />for this rate limit rule, regardless of the global ClientTrafficPolicy setting.<br /> | 
 
 
+#### ZipkinTraceContextMode
+
+_Underlying type:_ _string_
+
+ZipkinTraceContextMode defines the trace context headers used by the Zipkin tracer.
+
+_Appears in:_
+- [ZipkinTracingProvider](#zipkintracingprovider)
+
+| Value | Description |
+| ----- | ----------- |
+| `UseB3` | ZipkinTraceContextModeUseB3 uses B3 headers only, for both extraction and injection.<br /> | 
+| `UseB3WithW3CPropagation` | ZipkinTraceContextModeUseB3WithW3CPropagation uses both B3 and W3C trace context headers.<br />Extraction: prefers B3 headers, falling back to the W3C traceparent header if B3 headers are absent.<br />Injection: emits both B3 and W3C traceparent headers.<br /> | 
+
+
 #### ZipkinTracingProvider
 
 
@@ -7652,6 +7668,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enable128BitTraceId` | _boolean_ |  false  |  | Enable128BitTraceID determines whether a 128bit trace id will be used<br />when creating a new trace instance. If set to false, a 64bit trace<br />id will be used. |
 | `disableSharedSpanContext` | _boolean_ |  false  |  | DisableSharedSpanContext determines whether the default Envoy behaviour of<br />client and server spans sharing the same span context should be disabled. |
+| `traceContextMode` | _[ZipkinTraceContextMode](#zipkintracecontextmode)_ |  false  |  | TraceContextMode determines which trace context headers are used to extract<br />the trace context from downstream requests and to inject it into upstream requests.<br />Defaults to UseB3. |
 
 
 #### ZoneAware

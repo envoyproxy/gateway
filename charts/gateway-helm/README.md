@@ -160,6 +160,7 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.ports[3].targetPort | int | `19001` |  |
 | deployment.priorityClassName | string | `nil` |  |
 | deployment.replicas | int | `1` |  |
+| extensionManagersMap | object | `{}` | Extension managers keyed by name, rendered into `config.envoyGateway.extensionManagers`. Each entry takes the ExtensionManager fields (https://gateway.envoyproxy.io/docs/api/extension_types/#extensionmanager) except `name`, which comes from the key, plus `order` (non-negative integer sort key, default 0; ties sort by name) and `enabled` (default true; a bool, or a template string such as "{{ .Values.global.myExtension.enabled }}" that renders to true or false). Can't be combined with `config.envoyGateway.extensionManagers` or `config.envoyGateway.extensionManager`. |
 | global.imagePullSecrets | list | `[]` | Global override for image pull secrets |
 | global.imageRegistry | string | `""` | Global override for image registry |
 | global.images.envoyGateway.image | string | `nil` | Full image for the Envoy Gateway control plane Deployment installed by this chart. |
@@ -179,6 +180,8 @@ helm uninstall eg -n envoy-gateway-system
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | namespaceOverride | string | `""` | Override the namespace for resources deployed by the chart. Defaults to the release namespace. |
 | podDisruptionBudget.minAvailable | int | `0` |  |
+| rbac | object | `{"create":true}` | RBAC configuration. If disabled (`rbac.create=false`), no Roles, RoleBindings, ClusterRoles, or ClusterRoleBindings will be created by the chart. Warning: If disabled, you must manage and apply the required RBAC permissions externally, otherwise Envoy Gateway will lack permissions to watch resources and will not work as expected. |
+| rbac.create | bool | `true` | Specifies whether RBAC resources should be created |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
 | service.type | string | `"ClusterIP"` | Service type. Can be set to LoadBalancer with specific IP, e.g.: type: LoadBalancer loadBalancerIP: 10.236.90.20 |
