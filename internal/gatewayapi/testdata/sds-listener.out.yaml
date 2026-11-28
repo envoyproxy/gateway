@@ -120,6 +120,13 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: HTTP/2 is disabled by default because one or more HTTPS listeners
+          on this port use an SDS-backed certificate whose DNS names cannot be inspected.
+          Configure ALPN explicitly with ClientTrafficPolicy to override this default.
+        reason: SDSCertificateOpaque
+        status: "True"
+        type: OverlappingTLSConfig
       name: inline-same-port
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -340,6 +347,7 @@ xdsIR:
         - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJnVENDQVNlZ0F3SUJBZ0lVRm1sOExCRzBvL1FLNFErWjdrODI0c0MyaUZ3d0NnWUlLb1pJemowRUF3SXcKRmpFVU1CSUdBMVVFQXd3TFptOXZMbUpoY2k1amIyMHdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVdNUlF3RWdZRFZRUUREQXRtYjI4dVltRnlMbU52YlRCWk1CTUdCeXFHU000OUFnRUdDQ3FHClNNNDlBd0VIQTBJQUJMYVl2cUt1VlZveERvNTJlV3p2WUI1anc3RU1GODZybXlvaTVadWF5emRNdnBnNHpCcjgKUktCak5zK1QxakI4T0t1Y1MvN1JVRHgwcHorOTc2ek0zaU9qVXpCUk1CMEdBMVVkRGdRV0JCVE82K2NnMFIwZAp3dHJ6SlFQRzZnNzZoQkJVelRBZkJnTlZIU01FR0RBV2dCVE82K2NnMFIwZHd0cnpKUVBHNmc3NmhCQlV6VEFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUFvR0NDcUdTTTQ5QkFNQ0EwZ0FNRVVDSVFDMlhwUFFnUXpXYWUzYjVwWnQKR2N1TWZESjBjME9QS2NuZWdrWFoyQzRCM2dJZ1Uvc1Jrd0lwTFFOUlYrRWFZdzRQNVQ1Z1BFNlkrVnBtQzk4aApvVmpaL3pRPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
           name: envoy-gateway-system/envoy-valid
           privateKey: '[redacted]'
+      tlsOverlaps: true
     - address: 0.0.0.0
       externalPort: 8443
       hostnames:
