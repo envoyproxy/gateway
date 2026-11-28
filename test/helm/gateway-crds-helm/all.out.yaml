@@ -1415,6 +1415,7 @@ spec:
     storage: false
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -1932,6 +1933,7 @@ spec:
     storage: false
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -5274,6 +5276,7 @@ spec:
     storage: false
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -7551,6 +7554,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -16085,6 +16089,7 @@ spec:
     storage: false
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -16864,6 +16869,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -17220,6 +17226,7 @@ spec:
     served: true
     storage: true
     subresources: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -18689,6 +18696,7 @@ spec:
     storage: false
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -21073,6 +21081,7 @@ spec:
     storage: false
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -22542,6 +22551,7 @@ spec:
     storage: false
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -23215,6 +23225,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -23813,6 +23824,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -24060,6 +24072,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/generated/gateway.envoyproxy.io_backends.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -24656,6 +24669,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/generated/gateway.envoyproxy.io_backendtrafficpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -25505,6 +25519,25 @@ spec:
                       If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                       Defaults to true.
                     type: boolean
+                  type:
+                    description: |-
+                      Type determines how Envoy uses the addresses it resolves for a backend that is
+                      specified as a fully qualified domain name (FQDN).
+
+                      Strict treats every resolved address as a separate endpoint, with its own
+                      connection pool, and load balances across them.
+
+                      Logical uses only the first resolved address and keeps existing connections when
+                      the DNS answer changes. This suits large web services and SaaS endpoints that
+                      return a rotating set of addresses and balance load behind them. It only applies
+                      to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                      keeps using Strict.
+
+                      Defaults to Strict.
+                    enum:
+                    - Strict
+                    - Logical
+                    type: string
                 type: object
               faultInjection:
                 description: |-
@@ -29176,6 +29209,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/generated/gateway.envoyproxy.io_clienttrafficpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -31782,6 +31816,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/generated/gateway.envoyproxy.io_envoyextensionpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -32123,6 +32158,25 @@ spec:
                                 If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                 Defaults to true.
                               type: boolean
+                            type:
+                              description: |-
+                                Type determines how Envoy uses the addresses it resolves for a backend that is
+                                specified as a fully qualified domain name (FQDN).
+
+                                Strict treats every resolved address as a separate endpoint, with its own
+                                connection pool, and load balances across them.
+
+                                Logical uses only the first resolved address and keeps existing connections when
+                                the DNS answer changes. This suits large web services and SaaS endpoints that
+                                return a rotating set of addresses and balance load behind them. It only applies
+                                to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                keeps using Strict.
+
+                                Defaults to Strict.
+                              enum:
+                              - Strict
+                              - Logical
+                              type: string
                           type: object
                         healthCheck:
                           description: HealthCheck allows gateway to perform active
@@ -33742,6 +33796,25 @@ spec:
                                 If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                 Defaults to true.
                               type: boolean
+                            type:
+                              description: |-
+                                Type determines how Envoy uses the addresses it resolves for a backend that is
+                                specified as a fully qualified domain name (FQDN).
+
+                                Strict treats every resolved address as a separate endpoint, with its own
+                                connection pool, and load balances across them.
+
+                                Logical uses only the first resolved address and keeps existing connections when
+                                the DNS answer changes. This suits large web services and SaaS endpoints that
+                                return a rotating set of addresses and balance load behind them. It only applies
+                                to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                keeps using Strict.
+
+                                Defaults to Strict.
+                              enum:
+                              - Strict
+                              - Logical
+                              type: string
                           type: object
                         healthCheck:
                           description: HealthCheck allows gateway to perform active
@@ -36190,6 +36263,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/generated/gateway.envoyproxy.io_envoypatchpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -36701,6 +36775,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/generated/gateway.envoyproxy.io_envoyproxies.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -48942,6 +49017,25 @@ spec:
                                                   If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                                   Defaults to true.
                                                 type: boolean
+                                              type:
+                                                description: |-
+                                                  Type determines how Envoy uses the addresses it resolves for a backend that is
+                                                  specified as a fully qualified domain name (FQDN).
+
+                                                  Strict treats every resolved address as a separate endpoint, with its own
+                                                  connection pool, and load balances across them.
+
+                                                  Logical uses only the first resolved address and keeps existing connections when
+                                                  the DNS answer changes. This suits large web services and SaaS endpoints that
+                                                  return a rotating set of addresses and balance load behind them. It only applies
+                                                  to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                                  keeps using Strict.
+
+                                                  Defaults to Strict.
+                                                enum:
+                                                - Strict
+                                                - Logical
+                                                type: string
                                             type: object
                                           healthCheck:
                                             description: HealthCheck allows gateway
@@ -50758,6 +50852,25 @@ spec:
                                                   If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                                   Defaults to true.
                                                 type: boolean
+                                              type:
+                                                description: |-
+                                                  Type determines how Envoy uses the addresses it resolves for a backend that is
+                                                  specified as a fully qualified domain name (FQDN).
+
+                                                  Strict treats every resolved address as a separate endpoint, with its own
+                                                  connection pool, and load balances across them.
+
+                                                  Logical uses only the first resolved address and keeps existing connections when
+                                                  the DNS answer changes. This suits large web services and SaaS endpoints that
+                                                  return a rotating set of addresses and balance load behind them. It only applies
+                                                  to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                                  keeps using Strict.
+
+                                                  Defaults to Strict.
+                                                enum:
+                                                - Strict
+                                                - Logical
+                                                type: string
                                             type: object
                                           healthCheck:
                                             description: HealthCheck allows gateway
@@ -52997,6 +53110,25 @@ spec:
                                             If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                             Defaults to true.
                                           type: boolean
+                                        type:
+                                          description: |-
+                                            Type determines how Envoy uses the addresses it resolves for a backend that is
+                                            specified as a fully qualified domain name (FQDN).
+
+                                            Strict treats every resolved address as a separate endpoint, with its own
+                                            connection pool, and load balances across them.
+
+                                            Logical uses only the first resolved address and keeps existing connections when
+                                            the DNS answer changes. This suits large web services and SaaS endpoints that
+                                            return a rotating set of addresses and balance load behind them. It only applies
+                                            to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                            keeps using Strict.
+
+                                            Defaults to Strict.
+                                          enum:
+                                          - Strict
+                                          - Logical
+                                          type: string
                                       type: object
                                     healthCheck:
                                       description: HealthCheck allows gateway to perform
@@ -54933,6 +55065,25 @@ spec:
                                       If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                       Defaults to true.
                                     type: boolean
+                                  type:
+                                    description: |-
+                                      Type determines how Envoy uses the addresses it resolves for a backend that is
+                                      specified as a fully qualified domain name (FQDN).
+
+                                      Strict treats every resolved address as a separate endpoint, with its own
+                                      connection pool, and load balances across them.
+
+                                      Logical uses only the first resolved address and keeps existing connections when
+                                      the DNS answer changes. This suits large web services and SaaS endpoints that
+                                      return a rotating set of addresses and balance load behind them. It only applies
+                                      to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                      keeps using Strict.
+
+                                      Defaults to Strict.
+                                    enum:
+                                    - Strict
+                                    - Logical
+                                    type: string
                                 type: object
                               healthCheck:
                                 description: HealthCheck allows gateway to perform
@@ -56751,6 +56902,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/generated/gateway.envoyproxy.io_httproutefilters.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -57450,6 +57602,7 @@ spec:
     served: true
     storage: true
     subresources: {}
+
 ---
 # Source: gateway-crds-helm/templates/generated/gateway.envoyproxy.io_securitypolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -58740,6 +58893,25 @@ spec:
                                   If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                   Defaults to true.
                                 type: boolean
+                              type:
+                                description: |-
+                                  Type determines how Envoy uses the addresses it resolves for a backend that is
+                                  specified as a fully qualified domain name (FQDN).
+
+                                  Strict treats every resolved address as a separate endpoint, with its own
+                                  connection pool, and load balances across them.
+
+                                  Logical uses only the first resolved address and keeps existing connections when
+                                  the DNS answer changes. This suits large web services and SaaS endpoints that
+                                  return a rotating set of addresses and balance load behind them. It only applies
+                                  to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                  keeps using Strict.
+
+                                  Defaults to Strict.
+                                enum:
+                                - Strict
+                                - Logical
+                                type: string
                             type: object
                           healthCheck:
                             description: HealthCheck allows gateway to perform active
@@ -60411,6 +60583,25 @@ spec:
                                   If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                   Defaults to true.
                                 type: boolean
+                              type:
+                                description: |-
+                                  Type determines how Envoy uses the addresses it resolves for a backend that is
+                                  specified as a fully qualified domain name (FQDN).
+
+                                  Strict treats every resolved address as a separate endpoint, with its own
+                                  connection pool, and load balances across them.
+
+                                  Logical uses only the first resolved address and keeps existing connections when
+                                  the DNS answer changes. This suits large web services and SaaS endpoints that
+                                  return a rotating set of addresses and balance load behind them. It only applies
+                                  to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                  keeps using Strict.
+
+                                  Defaults to Strict.
+                                enum:
+                                - Strict
+                                - Logical
+                                type: string
                             type: object
                           healthCheck:
                             description: HealthCheck allows gateway to perform active
@@ -62399,6 +62590,25 @@ spec:
                                         If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                         Defaults to true.
                                       type: boolean
+                                    type:
+                                      description: |-
+                                        Type determines how Envoy uses the addresses it resolves for a backend that is
+                                        specified as a fully qualified domain name (FQDN).
+
+                                        Strict treats every resolved address as a separate endpoint, with its own
+                                        connection pool, and load balances across them.
+
+                                        Logical uses only the first resolved address and keeps existing connections when
+                                        the DNS answer changes. This suits large web services and SaaS endpoints that
+                                        return a rotating set of addresses and balance load behind them. It only applies
+                                        to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                        keeps using Strict.
+
+                                        Defaults to Strict.
+                                      enum:
+                                      - Strict
+                                      - Logical
+                                      type: string
                                   type: object
                                 healthCheck:
                                   description: HealthCheck allows gateway to perform
@@ -64557,6 +64767,25 @@ spec:
                                   If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
                                   Defaults to true.
                                 type: boolean
+                              type:
+                                description: |-
+                                  Type determines how Envoy uses the addresses it resolves for a backend that is
+                                  specified as a fully qualified domain name (FQDN).
+
+                                  Strict treats every resolved address as a separate endpoint, with its own
+                                  connection pool, and load balances across them.
+
+                                  Logical uses only the first resolved address and keeps existing connections when
+                                  the DNS answer changes. This suits large web services and SaaS endpoints that
+                                  return a rotating set of addresses and balance load behind them. It only applies
+                                  to a backend cluster with a single FQDN endpoint; a cluster with more endpoints
+                                  keeps using Strict.
+
+                                  Defaults to Strict.
+                                enum:
+                                - Strict
+                                - Logical
+                                type: string
                             type: object
                           healthCheck:
                             description: HealthCheck allows gateway to perform active
@@ -66503,6 +66732,7 @@ spec:
     storage: true
     subresources:
       status: {}
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 # Copyright The Kubernetes Authors.
@@ -66522,6 +66752,7 @@ spec:
 #
 # Gateway API Experimental channel install
 #
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 #
@@ -66558,6 +66789,8 @@ spec:
          !matches(object.metadata.annotations['gateway.networking.k8s.io/bundle-version'], '^v1\\.[0-4](\\.|$)'))))
       message: "Installing CRDs with version other than v0.0.0-dev or v1.5+ is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install other versions."
       reason: Invalid
+
+
 ---
 # Source: gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml
 apiVersion: admissionregistration.k8s.io/v1
