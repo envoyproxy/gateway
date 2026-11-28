@@ -112,6 +112,7 @@ backendTrafficPolicies:
     dns:
       dnsRefreshRate: "5s"
       respectDnsTtl: false
+      type: Logical
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:

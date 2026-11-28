@@ -1,0 +1,42 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "logical-route"
+    hostname: "*"
+    pathMatch:
+      prefix: /logical
+    destination:
+      name: "logical-route-dest"
+      settings:
+      - endpoints:
+        - host: "bedrock-runtime.us-east-1.amazonaws.com"
+          port: 443
+        addressType: FQDN
+        name: "logical-route-dest/backend/0"
+    traffic:
+      dns:
+        type: Logical
+  - name: "logical-route-multiple-endpoints"
+    hostname: "*"
+    pathMatch:
+      prefix: /multiple
+    destination:
+      name: "logical-route-multiple-endpoints-dest"
+      settings:
+      - endpoints:
+        - host: "foo.bar"
+          port: 50000
+        - host: "bar.foo"
+          port: 50001
+        addressType: FQDN
+        name: "logical-route-multiple-endpoints-dest/backend/0"
+    traffic:
+      dns:
+        type: Logical

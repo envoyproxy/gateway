@@ -1,0 +1,1 @@
+Added `dns.type` to BackendTrafficPolicy and the other `backendSettings` that carry DNS settings. `Logical` makes Envoy use only the first resolved address of an FQDN backend and keep its connections when the DNS answer rotates, which suits SaaS and cloud endpoints. It applies to clusters with a single FQDN endpoint, and the default stays `Strict`.

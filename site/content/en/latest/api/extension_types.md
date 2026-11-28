@@ -1584,6 +1584,7 @@ _Appears in:_
 | `dnsRefreshRate` | _[Duration](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#duration)_ |  false  |  | DNSRefreshRate specifies the rate at which DNS records should be refreshed.<br />Defaults to 30 seconds. |
 | `respectDnsTtl` | _boolean_ |  false  |  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.<br />If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.<br />Defaults to true. |
 | `lookupFamily` | _[DNSLookupFamily](#dnslookupfamily)_ |  false  |  | LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).<br />If set, this configuration overrides other defaults. |
+| `type` | _[DNSType](#dnstype)_ |  false  |  | Type determines how Envoy uses the addresses it resolves for a backend that is<br />specified as a fully qualified domain name (FQDN).<br />Strict treats every resolved address as a separate endpoint, with its own<br />connection pool, and load balances across them.<br />Logical uses only the first resolved address and keeps existing connections when<br />the DNS answer changes. This suits large web services and SaaS endpoints that<br />return a rotating set of addresses and balance load behind them. It only applies<br />to a backend cluster with a single FQDN endpoint; a cluster with more endpoints<br />keeps using Strict.<br />Defaults to Strict. |
 
 
 #### DNSLookupFamily
@@ -1602,6 +1603,21 @@ _Appears in:_
 | `IPv4Preferred` | IPv4PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback<br />to a lookup for addresses in the IPv6 family.<br /> | 
 | `IPv6Preferred` | IPv6PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback<br />to a lookup for addresses in the IPv4 family.<br /> | 
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
+
+
+#### DNSType
+
+_Underlying type:_ _string_
+
+DNSType defines how Envoy uses the addresses resolved for an FQDN backend.
+
+_Appears in:_
+- [DNS](#dns)
+
+| Value | Description |
+| ----- | ----------- |
+| `Strict` | StrictDNSType makes every resolved address a separate endpoint.<br /> | 
+| `Logical` | LogicalDNSType uses only the first resolved address as the single endpoint.<br /> | 
 
 
 #### Debounce
