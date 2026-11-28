@@ -165,6 +165,18 @@
             tlsMinimumProtocolVersion: TLSv1_2
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
+  listenerFilters:
+  - name: envoy.filters.listener.set_filter_state
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.set_filter_state.v3.Config
+      onAccept:
+      - formatString:
+          textFormatSource:
+            inlineString: "443"
+        objectKey: envoy.filters.listener.original_dst.local_port
+  - name: envoy.filters.listener.original_dst
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-http3/https
   perConnectionBufferLimitBytes: 32768

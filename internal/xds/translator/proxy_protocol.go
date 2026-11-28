@@ -39,7 +39,14 @@ func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, proxyProtocolSet
 	// Build and patch the Proxy Protocol Filter.
 	filter := buildProxyProtocolFilter(proxyProtocolSettings)
 	if filter != nil {
-		xdsListener.ListenerFilters = slices.Insert(xdsListener.ListenerFilters, 0, filter)
+		// The Proxy Protocol Filter must run before the filters that read the connection, such as
+		// the TLS Inspector, but after the external port filters, so that the destination in a
+		// PROXY protocol header still takes precedence over the external port.
+		index := 0
+		for index < len(xdsListener.ListenerFilters) && isExternalPortListenerFilter(xdsListener.ListenerFilters[index]) {
+			index++
+		}
+		xdsListener.ListenerFilters = slices.Insert(xdsListener.ListenerFilters, index, filter)
 	}
 }
 
