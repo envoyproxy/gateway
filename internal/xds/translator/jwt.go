@@ -443,7 +443,7 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 					jwks.Destination, jwks.Traffic, tCtx); err != nil {
 					errs = errors.Join(errs, err)
 				}
-				if err := processClientCertificates(tCtx, jwks.Destination.Settings); err != nil {
+				if err := processClientCertificates(tCtx, jwks.Destination.Settings, nil); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			} else {

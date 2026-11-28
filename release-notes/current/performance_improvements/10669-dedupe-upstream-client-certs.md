@@ -1,0 +1,1 @@
+Reduced control-plane memory on gateways that use upstream mTLS, such as an EnvoyProxy backendTLS client certificate, by storing each client certificate once per gateway instead of carrying a copy on every route destination.

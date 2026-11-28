@@ -643,11 +643,18 @@ func loadBenchResources(name, yaml string) (*resource.Resources, error) {
 }
 
 // BenchmarkXdsIRDeepCopy measures the copy the watchable map performs on every store and
-// once per subscriber. Many destinations validating against one CA is the shape that
-// dominates the control-plane heap, so it compares the bundle carried per destination
-// against a single shared entry in Xds.CACertificates that destinations name.
+// once per subscriber. Many mTLS destinations validating against one CA and presenting the
+// EnvoyProxy client certificate is the shape that dominates the control-plane heap, so it
+// compares the bytes carried per destination against single shared entries in
+// Xds.CACertificates and Xds.ClientCertificates that destinations name.
 func BenchmarkXdsIRDeepCopy(b *testing.B) {
 	caBundle := []byte(caBundlePEM())
+	// A real client certificate is a few KB; the exact bytes don't matter to a deep copy.
+	clientCert := ir.TLSCertificate{
+		Name:        "envoy-gateway-system/client-auth",
+		Certificate: []byte(strings.Repeat("c", 2048)),
+		PrivateKey:  []byte(strings.Repeat("k", 1704)),
+	}
 
 	build := func(destinations int, central bool) *ir.Xds {
 		listener := &ir.HTTPListener{
@@ -657,8 +664,10 @@ func BenchmarkXdsIRDeepCopy(b *testing.B) {
 			// One policy per destination, all trusting the same CA: the shape a cluster of
 			// backends behind one corporate CA produces.
 			ca := &ir.TLSCACertificate{Name: fmt.Sprintf("policy-%d/default-ca", i)}
+			cert := clientCert
 			if central {
 				ca.Digest = "sha256-shared"
+				cert = ir.TLSCertificate{Name: clientCert.Name}
 			} else {
 				ca.Certificate = caBundle
 			}
@@ -668,7 +677,10 @@ func BenchmarkXdsIRDeepCopy(b *testing.B) {
 					Name: fmt.Sprintf("dest-%d", i),
 					Settings: []*ir.DestinationSetting{{
 						Name: fmt.Sprintf("setting-%d", i),
-						TLS:  &ir.TLSUpstreamConfig{CACertificate: ca},
+						TLS: &ir.TLSUpstreamConfig{
+							CACertificate: ca,
+							TLSConfig:     ir.TLSConfig{ClientCertificates: []ir.TLSCertificate{cert}},
+						},
 					}},
 				},
 			})
@@ -676,6 +688,7 @@ func BenchmarkXdsIRDeepCopy(b *testing.B) {
 		xdsIR := &ir.Xds{HTTP: []*ir.HTTPListener{listener}}
 		if central {
 			xdsIR.CACertificates = []*ir.CACertificateEntry{{Digest: "sha256-shared", Certificate: caBundle}}
+			xdsIR.ClientCertificates = []*ir.TLSCertificate{&clientCert}
 		}
 		return xdsIR
 	}

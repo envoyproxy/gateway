@@ -151,6 +151,10 @@ type Translator struct {
 	// xdsIR.CACertificates registry. Rebuilt at the start of every Translate() call.
 	caIndex caCertificateIndex
 
+	// clientCertIndex resolves name-only client certificates against the current Translate()
+	// call's xdsIR.ClientCertificates registry. Rebuilt at the start of every Translate() call.
+	clientCertIndex clientCertificateIndex
+
 	// listenerDrainType is the drain type of the TCP listeners. Rebuilt at the start of every
 	// Translate() call.
 	listenerDrainType listenerv3.Listener_DrainType
@@ -248,6 +252,7 @@ func (t *Translator) Translate(ctx context.Context, xdsIR *ir.Xds) (*types.Resou
 	t.backendIndex = newBackendClusterIndex(xdsIR)
 	t.extensionIndex = newExtensionResourceIndex(xdsIR)
 	t.caIndex = newCACertificateIndex(xdsIR)
+	t.clientCertIndex = newClientCertificateIndex(xdsIR)
 	t.listenerDrainType = buildListenerDrainType(xdsIR.DrainStrategy)
 	t.ExtensionStats = ExtensionHookStats{}
 
@@ -693,7 +698,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// add http route client certs
 		for _, route := range httpListener.Routes {
 			if route.Destination != nil {
-				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+				if err = processClientCertificates(tCtx, route.Destination.Settings, t.clientCertIndex); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -776,7 +781,7 @@ func (t *Translator) processMergedBackendClusters(tCtx *types.ResourceVersionTab
 		if err := processXdsCluster(tCtx, bc.Name, []*ir.DestinationSetting{bc.Setting}, &BackendClusterTranslator{}, ea, bc.Metadata, t.caIndex); err != nil {
 			errs = errors.Join(errs, err)
 		}
-		if err := processClientCertificates(tCtx, []*ir.DestinationSetting{bc.Setting}); err != nil {
+		if err := processClientCertificates(tCtx, []*ir.DestinationSetting{bc.Setting}, t.clientCertIndex); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -1182,7 +1187,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			} else if route.Destination != nil {
 				// TCPRoute with BackendTLSPolicy
 				// add tcp route client certs
-				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+				if err = processClientCertificates(tCtx, route.Destination.Settings, t.clientCertIndex); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
@@ -1765,12 +1770,15 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 	}, nil
 }
 
-func processClientCertificates(tCtx *types.ResourceVersionTable, settings []*ir.DestinationSetting) error {
+// processClientCertificates adds the xDS secret for each client certificate in settings. idx
+// resolves name-only references; it is nil on the policy backend paths (ext auth, JWKS, OIDC,
+// extension backends), whose certificates always carry their own bytes.
+func processClientCertificates(tCtx *types.ResourceVersionTable, settings []*ir.DestinationSetting, idx clientCertificateIndex) error {
 	var errs error
 	for _, st := range settings {
 		if st.TLS != nil {
-			for _, c := range st.TLS.ClientCertificates {
-				secret := buildXdsTLSCertSecret(&c)
+			for i := range st.TLS.ClientCertificates {
+				secret := buildXdsTLSCertSecret(resolveClientCertificate(&st.TLS.ClientCertificates[i], idx))
 				if secret != nil {
 					if err := addXdsSecret(tCtx, secret); err != nil {
 						errs = errors.Join(errs, err)

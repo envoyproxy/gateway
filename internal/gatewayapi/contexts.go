@@ -964,6 +964,13 @@ type CACertificateKey struct {
 	Digest       string
 }
 
+// ClientCertificateKey identifies a shared upstream client certificate within a gateway's IR
+// by its Secret's name.
+type ClientCertificateKey struct {
+	GatewayIRKey string
+	Name         string
+}
+
 // ResolvedCAKey identifies a resource whose CA was already resolved. It keys on the resource
 // rather than the CA's secret name, which a Backend and a BackendTLSPolicy of the same name
 // and namespace mint identically.
@@ -994,6 +1001,7 @@ type TranslatorContext struct {
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
 	CACertificateMap        map[CACertificateKey]*ir.CACertificateEntry
 	ResolvedCAMap           map[ResolvedCAKey]string
+	ClientCertificateMap    map[ClientCertificateKey]*ir.TLSCertificate
 	protoDescriptors        map[types.NamespacedName]*parsedProtoDescriptor
 	BTPRoutingTypeIndex     *BTPRoutingTypeIndex
 	BTPClusterSettingsIndex *BTPClusterSettingsIndex

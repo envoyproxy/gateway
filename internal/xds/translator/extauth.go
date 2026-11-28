@@ -270,7 +270,7 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 				&http.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if err := processClientCertificates(tCtx, http.Destination.Settings); err != nil {
+			if err := processClientCertificates(tCtx, http.Destination.Settings, nil); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
@@ -279,7 +279,7 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 				&grpc.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
-			if err := processClientCertificates(tCtx, grpc.Destination.Settings); err != nil {
+			if err := processClientCertificates(tCtx, grpc.Destination.Settings, nil); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
