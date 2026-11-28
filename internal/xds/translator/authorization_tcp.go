@@ -91,10 +91,16 @@ func buildTCPRBACConfig(statPrefix string, authorization *ir.Authorization) (*ne
 		matcher.MatcherType = nil
 	}
 
-	return &networkrbacv3.RBAC{
+	rbacConfig := &networkrbacv3.RBAC{
 		StatPrefix: statPrefix,
-		Matcher:    matcher,
-	}, nil
+	}
+	if authorization.IsShadow() {
+		rbacConfig.ShadowMatcher = matcher
+	} else {
+		rbacConfig.Matcher = matcher
+	}
+
+	return rbacConfig, nil
 }
 
 func buildTCPRBACActions() (*anypb.Any, *anypb.Any, error) {

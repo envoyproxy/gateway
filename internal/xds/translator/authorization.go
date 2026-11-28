@@ -332,22 +332,18 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		defaultAction = allowAction
 	}
 
-	rbac = &rbacv3.RBACPerRoute{
-		Rbac: &rbacv3.RBAC{
-			Matcher: &matcherv3.Matcher{
-				MatcherType: &matcherv3.Matcher_MatcherList_{
-					MatcherList: &matcherv3.Matcher_MatcherList{
-						Matchers: matcherList,
-					},
-				},
-				// If no matcher matches, the default action will be used.
-				OnNoMatch: &matcherv3.Matcher_OnMatch{
-					OnMatch: &matcherv3.Matcher_OnMatch_Action{
-						Action: &cncfv3.TypedExtensionConfig{
-							Name:        "default",
-							TypedConfig: defaultAction,
-						},
-					},
+	matcher := &matcherv3.Matcher{
+		MatcherType: &matcherv3.Matcher_MatcherList_{
+			MatcherList: &matcherv3.Matcher_MatcherList{
+				Matchers: matcherList,
+			},
+		},
+		// If no matcher matches, the default action will be used.
+		OnNoMatch: &matcherv3.Matcher_OnMatch{
+			OnMatch: &matcherv3.Matcher_OnMatch_Action{
+				Action: &cncfv3.TypedExtensionConfig{
+					Name:        "default",
+					TypedConfig: defaultAction,
 				},
 			},
 		},
@@ -357,7 +353,16 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 	// Setting the matcher type to nil since Proto validation will fail if the list
 	// is empty.
 	if len(matcherList) == 0 {
-		rbac.Rbac.Matcher.MatcherType = nil
+		matcher.MatcherType = nil
+	}
+
+	rbac = &rbacv3.RBACPerRoute{
+		Rbac: &rbacv3.RBAC{},
+	}
+	if authorization.IsShadow() {
+		rbac.Rbac.ShadowMatcher = matcher
+	} else {
+		rbac.Rbac.Matcher = matcher
 	}
 
 	return rbac, nil

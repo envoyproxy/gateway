@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -1292,6 +1293,43 @@ func TestBuildAuthorizationCEL(t *testing.T) {
 		require.ErrorContains(t, err, "invalid CEL expression: )++++")
 		require.Nil(t, authorization)
 	})
+
+	t.Run("authorization mode propagation", func(t *testing.T) {
+		tr := &Translator{}
+		policy := sp("test", "authz-mode")
+
+		// nil mode -> IsShadow() false
+		policy.Spec.Authorization = &egv1a1.Authorization{
+			Rules: []egv1a1.AuthorizationRule{
+				{
+					Action: egv1a1.AuthorizationActionAllow,
+					Principal: &egv1a1.Principal{
+						ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+					},
+				},
+			},
+		}
+		auth, err := tr.buildAuthorization(policy, &securityPolicyOwners{})
+		require.NoError(t, err)
+		require.NotNil(t, auth)
+		require.False(t, auth.IsShadow())
+
+		// explicit Enforce -> IsShadow() false
+		policy.Spec.Authorization.Mode = ptr.To(egv1a1.AuthorizationModeEnforce)
+		auth, err = tr.buildAuthorization(policy, &securityPolicyOwners{})
+		require.NoError(t, err)
+		require.NotNil(t, auth)
+		require.False(t, auth.IsShadow())
+		require.Equal(t, egv1a1.AuthorizationModeEnforce, *auth.Mode)
+
+		// Shadow -> IsShadow() true
+		policy.Spec.Authorization.Mode = ptr.To(egv1a1.AuthorizationModeShadow)
+		auth, err = tr.buildAuthorization(policy, &securityPolicyOwners{})
+		require.NoError(t, err)
+		require.NotNil(t, auth)
+		require.True(t, auth.IsShadow())
+		require.Equal(t, egv1a1.AuthorizationModeShadow, *auth.Mode)
+	})
 }
 
 func Test_validateHtpasswdFormat(t *testing.T) {
@@ -2402,6 +2440,22 @@ func Test_validateSecurityPolicyForL4_Table(t *testing.T) {
 
 		require.ErrorContains(t, validateSecurityPolicyForL4(p, "TCP"), "headers not supported for TCP")
 		require.ErrorContains(t, validateSecurityPolicyForL4(p, "UDP"), "headers not supported for UDP")
+	})
+
+	t.Run("shadow mode on L4 protocols", func(t *testing.T) {
+		p := &egv1a1.SecurityPolicy{Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Mode: ptr.To(egv1a1.AuthorizationModeShadow),
+				Rules: []egv1a1.AuthorizationRule{{
+					Action:    egv1a1.AuthorizationActionAllow,
+					Principal: &egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"}},
+				}},
+			},
+		}}
+
+		require.NoError(t, validateSecurityPolicyForL4(p, "TCP"))
+		require.NoError(t, validateSecurityPolicyForL4(p, "TLS"))
+		require.ErrorContains(t, validateSecurityPolicyForL4(p, "UDP"), "shadow mode is not supported for UDP")
 	})
 }
 
