@@ -1,0 +1,77 @@
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway-system
+  spec:
+    mergeGateways: true
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: gateway-1.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-alt
+      protocol: HTTP
+      port: 8080
+      hostname: gateway-1.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: gateway-2.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-alt
+      protocol: HTTP
+      port: 8080
+      hostname: gateway-2.example.com
+      allowedRoutes:
+        namespaces:
+          from: All
+extensionServerPolicies:
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test1
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: gateway-1
+    data: "attached to every listener of gateway-1 only, though gateway-2 has listeners of the same names"
+- apiVersion: foo.example.io/v1alpha1
+  kind: Bar
+  metadata:
+    name: test2
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      name: gateway-1
+      sectionName: http-alt
+    data: "attached to listener http-alt of gateway-1 only, not to http-alt of gateway-2"
