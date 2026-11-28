@@ -8,7 +8,9 @@ package runner
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -25,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -67,7 +70,14 @@ type Config struct {
 
 type Runner struct {
 	Config
+	// wasmCache is set by startWasmCache before it closes wasmCacheDone, and is
+	// only read by the translation, which waits for wasmCacheDone.
 	wasmCache wasm.Cache
+	// wasmCacheDone is closed when startWasmCache returns, whether or not the
+	// Wasm cache was started.
+	wasmCacheDone chan struct{}
+	// wasmListenAddr overrides the Wasm HTTP server address in tests.
+	wasmListenAddr string
 
 	// Key tracking for mark and sweep - avoids expensive LoadAll operations
 	keyCache *KeyCache
@@ -157,8 +167,9 @@ func mergeEnvoyProxyStatus(aggregated, incoming *egv1a1.EnvoyProxyStatus) *egv1a
 
 func New(cfg *Config) *Runner {
 	return &Runner{
-		Config:   *cfg,
-		keyCache: newKeyCache(),
+		Config:        *cfg,
+		keyCache:      newKeyCache(),
+		wasmCacheDone: make(chan struct{}),
 	}
 }
 
@@ -183,6 +194,15 @@ func (r *Runner) Start(ctx context.Context) error {
 	// Goroutine where Close() is called.
 	c := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
 	r.done.Go(func() {
+		// The Wasm cache is required to translate EnvoyExtensionPolicies with HTTP
+		// or Image Wasm sources, so hold off translation until it has started.
+		// Updates received meanwhile are coalesced by the subscription.
+		select {
+		case <-r.wasmCacheDone:
+		default:
+			r.Logger.Info("waiting for the wasm cache to start before translating resources")
+			<-r.wasmCacheDone
+		}
 		r.subscribeAndTranslate(c)
 	})
 	r.Logger.Info("started")
@@ -190,12 +210,42 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) startWasmCache(ctx context.Context) {
+	defer close(r.wasmCacheDone)
+
 	// Start the wasm cache server
 	// EG reuse the OIDC HMAC secret as a hash salt to generate an unguessable
 	// downloading path for the Wasm module.
-	tlsConfig, salt, err := r.loadTLSConfig(ctx)
+	// Loading the HMAC secret can fail transiently, e.g. when the API server is
+	// briefly unable to serve reads, so retry until it succeeds or ctx is done.
+	var (
+		tlsConfig *tls.Config
+		salt      []byte
+		attempt   int
+	)
+	backoff := wait.Backoff{
+		Duration: time.Second,
+		Factor:   2,
+		Jitter:   0.1,
+		Steps:    math.MaxInt32,
+		Cap:      5 * time.Second,
+	}
+	err := backoff.DelayFunc().Until(ctx, true, false, func(ctx context.Context) (bool, error) {
+		attempt++
+		var loadErr error
+		if tlsConfig, salt, loadErr = r.loadTLSConfig(ctx); loadErr != nil {
+			if errors.Is(loadErr, errNoWasmCacheTLSConfig) {
+				// Retrying will not help, so translate without the Wasm cache.
+				return false, loadErr
+			}
+			r.Logger.Error(loadErr, "failed to start wasm cache, retrying", "attempt", attempt)
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
-		r.Logger.Error(err, "failed to start wasm cache")
+		if ctx.Err() == nil {
+			r.Logger.Error(err, "failed to start wasm cache")
+		}
 		return
 	}
 	cacheOption := wasm.CacheOptions{}
@@ -210,14 +260,16 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		r.Logger.Error(err, "Failed to create Wasm cache directory")
 		return
 	}
-	r.wasmCache = wasm.NewHTTPServerWithFileCache(
+	wasmCache := wasm.NewHTTPServerWithFileCache(
 		// HTTP server options
 		wasm.ServerOptions{
-			Salt:      salt,
-			TLSConfig: tlsConfig,
+			Salt:       salt,
+			TLSConfig:  tlsConfig,
+			ListenAddr: r.wasmListenAddr,
 		},
 		cacheOption, r.ControllerNamespace, r.Logger)
-	r.wasmCache.Start(ctx)
+	wasmCache.Start(ctx)
+	r.wasmCache = wasmCache
 }
 
 func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *resource.ControllerResourcesContext]) {
@@ -692,6 +744,10 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 	r.Logger.Info("shutting down")
 }
 
+// errNoWasmCacheTLSConfig is returned by loadTLSConfig when the provider has no
+// TLS config for the Wasm cache.
+var errNoWasmCacheTLSConfig = errors.New("no valid tls certificates")
+
 func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error) {
 	switch {
 	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
@@ -738,7 +794,7 @@ func (r *Runner) loadTLSConfig(ctx context.Context) (*tls.Config, []byte, error)
 		return tlsConfig, salt, nil
 
 	default:
-		return nil, nil, fmt.Errorf("no valid tls certificates")
+		return nil, nil, errNoWasmCacheTLSConfig
 	}
 }
 
