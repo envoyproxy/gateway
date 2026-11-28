@@ -13,6 +13,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/anypb"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -542,6 +543,52 @@ func TestBuildXdsRequestMirrorPolicies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := buildXdsRequestMirrorPolicies(tc.mirrorPolicies)
 			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+// A GRPCRoute must not implicitly enable gRPC-Web translation on its HTTPRoute neighbor.
+func TestGRPCWebOnSharedListener(t *testing.T) {
+	httpRoute := &ir.HTTPRoute{Metadata: &ir.ResourceMetadata{Kind: "HTTPRoute"}}
+	grpcRoute := &ir.HTTPRoute{Metadata: &ir.ResourceMetadata{Kind: "GRPCRoute"}}
+
+	tests := []struct {
+		name           string
+		routes         []*ir.HTTPRoute
+		enableWeb      *bool
+		wantFilter     bool
+		wantHTTPBypass bool
+	}{
+		{name: "HTTP only", routes: []*ir.HTTPRoute{httpRoute}},
+		{name: "gRPC only", routes: []*ir.HTTPRoute{grpcRoute}, wantFilter: true},
+		{name: "shared listener defaults", routes: []*ir.HTTPRoute{httpRoute, grpcRoute}, wantFilter: true, wantHTTPBypass: true},
+		{name: "explicit opt-in", routes: []*ir.HTTPRoute{httpRoute, grpcRoute}, enableWeb: new(true), wantFilter: true},
+		{name: "explicit opt-out", routes: []*ir.HTTPRoute{httpRoute, grpcRoute}, enableWeb: new(false)},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			listener := &ir.HTTPListener{Routes: tc.routes, GRPC: &ir.GRPCSettings{EnableGRPCWeb: tc.enableWeb}}
+			require.Equal(t, tc.wantFilter, grpcWebEnabled(listener))
+
+			grpcWebOnlyForGRPCRoutes := defaultGRPCWebForGRPCRoutes(listener)
+			for _, irRoute := range tc.routes {
+				otherConfig := &anypb.Any{TypeUrl: "example.com/existing"}
+				route := &routev3.Route{TypedPerFilterConfig: map[string]*anypb.Any{"existing": otherConfig}}
+				if grpcWebOnlyForGRPCRoutes && !isGRPCRoute(irRoute) {
+					require.NoError(t, disableGRPCWebForRoute(route))
+				}
+				require.Same(t, otherConfig, route.TypedPerFilterConfig["existing"])
+
+				config := route.TypedPerFilterConfig["envoy.filters.http.grpc_web"]
+				if irRoute == httpRoute && tc.wantHTTPBypass {
+					require.NotNil(t, config)
+					var filterConfig routev3.FilterConfig
+					require.NoError(t, config.UnmarshalTo(&filterConfig))
+					require.True(t, filterConfig.GetDisabled())
+				} else {
+					require.Nil(t, config)
+				}
+			}
 		})
 	}
 }

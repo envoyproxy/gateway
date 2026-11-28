@@ -494,13 +494,11 @@ func (t *Translator) addHCMToXDSListener(
 	patchProxyProtocolFilter(xdsListener, irListener.ProxyProtocol)
 
 	// Add gRPC specific filters if needed
-	if irListener.GRPC != nil {
-		if ptr.Deref(irListener.GRPC.EnableGRPCWeb, false) {
-			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
-		}
-		if ptr.Deref(irListener.GRPC.EnableGRPCStats, false) {
-			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
-		}
+	if grpcWebEnabled(irListener) {
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
+	}
+	if irListener.GRPC != nil && ptr.Deref(irListener.GRPC.EnableGRPCStats, false) {
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
 	}
 
 	if http3Listener {

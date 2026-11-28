@@ -1,0 +1,1 @@
+On listeners shared by `GRPCRoute` and `HTTPRoute`, gRPC-Web translation now applies by default only to `GRPCRoute` traffic. If an `HTTPRoute` relied on the previous listener-wide default, set `spec.grpc.enableWeb: true` in the listener's `ClientTrafficPolicy` to retain that behavior.
