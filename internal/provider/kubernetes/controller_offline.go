@@ -228,6 +228,7 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind, ena
 		WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
 		WithIndex(&egv1a1.HTTPRouteFilter{}, configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc).
 		WithIndex(&egv1a1.HTTPRouteFilter{}, secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc).
+		WithIndex(&egv1a1.HTTPRouteFilter{}, backendHTTPRouteFilterIndex, backendRouteFilterIndexFunc).
 		WithIndex(&gwapiv1b1.ReferenceGrant{}, refGrantFromNamespaceToKindIndex, getReferenceGrantIndexerFunc).
 		Build()
 }

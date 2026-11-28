@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -114,14 +115,55 @@ func (r *gatewayAPIReconciler) addRouteFilterConfigMap(
 	}
 }
 
+// credentialInjectionSecretRef returns the Secret referenced by the CredentialInjection of a
+// HTTPRouteFilter: the credential value for a static credential, or the client secret for OAuth2.
+func credentialInjectionSecretRef(filter *egv1a1.HTTPRouteFilter) *gwapiv1.SecretObjectReference {
+	if filter.Spec.CredentialInjection == nil {
+		return nil
+	}
+	credential := filter.Spec.CredentialInjection.Credential
+	if credential.OAuth2 != nil {
+		return &credential.OAuth2.ClientSecret
+	}
+	return credential.ValueRef
+}
+
+// routeFilterBackendRefs returns the backends referenced by a HTTPRouteFilter: the token endpoint
+// backends of an OAuth2 credential injection.
+func routeFilterBackendRefs(filter *egv1a1.HTTPRouteFilter) []gwapiv1.BackendObjectReference {
+	if filter.Spec.CredentialInjection == nil || filter.Spec.CredentialInjection.Credential.OAuth2 == nil {
+		return nil
+	}
+	return getBackendRefs(filter.Spec.CredentialInjection.Credential.OAuth2.BackendCluster)
+}
+
+// processRouteFilterBackendRefs adds the backends referenced by a HTTPRouteFilter to the resourceMap
+// for later processBackendRefs.
+func (r *gatewayAPIReconciler) processRouteFilterBackendRefs(
+	ctx context.Context, filter *egv1a1.HTTPRouteFilter,
+	resourceMap *resourceMappings, resourceTree *resource.Resources,
+) {
+	for _, backendRef := range routeFilterBackendRefs(filter) {
+		// we don't return an error here, because we want to continue
+		// reconciling the rest of the HTTPRouteFilter despite that this
+		// reference is invalid.
+		if err := r.processBackendRef(ctx, resourceMap, resourceTree,
+			resource.KindHTTPRouteFilter, filter.Namespace, filter.Name, backendRef); err != nil {
+			r.log.Error(err,
+				"failed to process CredentialInjection BackendRef for HTTPRouteFilter",
+				"filter", filter, "backendRef", backendRef)
+		}
+	}
+}
+
 // processRouteFilterSecretRef adds the referenced Secret in a HTTPRouteFilter
 // to the resourceTree
 func (r *gatewayAPIReconciler) processRouteFilterSecretRef(
 	ctx context.Context, filter *egv1a1.HTTPRouteFilter,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
-	if filter.Spec.CredentialInjection != nil {
-		name := string(filter.Spec.CredentialInjection.Credential.ValueRef.Name)
+	if ref := credentialInjectionSecretRef(filter); ref != nil {
+		name := string(ref.Name)
 		secret := new(corev1.Secret)
 		err := r.client.Get(ctx, types.NamespacedName{Namespace: filter.Namespace, Name: name}, secret)
 		// we don't return an error here, because we want to continue
@@ -132,8 +174,8 @@ func (r *gatewayAPIReconciler) processRouteFilterSecretRef(
 		// found.
 		if err != nil {
 			r.log.Error(err,
-				"failed to process CredentialInjection ValueRef for HTTPRouteFilter",
-				"filter", filter, "ValueRef", filter.Spec.CredentialInjection.Credential.ValueRef.Name)
+				"failed to process CredentialInjection secret for HTTPRouteFilter",
+				"filter", filter, "secret", name)
 			return
 		}
 		resourceMap.allAssociatedNamespaces.Insert(filter.Namespace)

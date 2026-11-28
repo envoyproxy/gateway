@@ -293,9 +293,12 @@ type RequestMirrorHostnameModifier struct {
 // This is useful when the backend service requires credentials in the request, and the original
 // request does not contain them. The filter can inject credentials into the request before forwarding
 // it to the backend service.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.credential.oauth2) && has(self.header))",message="header cannot be set when credential.oauth2 is set, the OAuth2 access token is always injected into the Authorization header"
 type HTTPCredentialInjectionFilter struct {
 	// Header is the name of the header where the credentials are injected.
 	// If not specified, the credentials are injected into the Authorization header.
+	// It cannot be set when credential.oauth2 is set.
 	// +optional
 	Header *string `json:"header,omitempty"`
 
@@ -309,15 +312,67 @@ type HTTPCredentialInjectionFilter struct {
 }
 
 // InjectedCredential defines the credential to be injected.
+// Exactly one of valueRef or oauth2 must be set.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.valueRef) != has(self.oauth2)",message="exactly one of valueRef or oauth2 must be set"
 type InjectedCredential struct {
 	// ValueRef is a reference to the secret containing the credentials to be injected.
 	// This is an Opaque secret. The credential should be stored in the key
 	// "credential", and the value should be the credential to be injected.
 	// For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".
 	// for bearer token, the value should be "Bearer <token>".
-	ValueRef gwapiv1.SecretObjectReference `json:"valueRef"`
+	//
+	// +optional
+	ValueRef *gwapiv1.SecretObjectReference `json:"valueRef,omitempty"`
 
-	// EG may support more credential types in the future, for example, OAuth2 access token retrieved by Client Credentials Grant flow.
+	// OAuth2 configures Envoy to retrieve an OAuth2 access token from an authorization server
+	// with the Client Credentials Grant flow, and to inject it into the Authorization header as
+	// a bearer token. Envoy refreshes the token before it expires.
+	//
+	// The upstream Envoy API for this credential is marked as work in progress, so its
+	// behavior may change in future Envoy releases.
+	//
+	// +optional
+	OAuth2 *InjectedOAuth2Credential `json:"oauth2,omitempty"`
+}
+
+// InjectedOAuth2Credential defines an OAuth2 access token retrieved with the
+// [Client Credentials Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4) flow.
+//
+// BackendRefs is used to specify the address of the token endpoint.
+// If the BackendRefs is not specified, the TokenEndpoint field is used to determine the address of the token endpoint.
+//
+// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+//
+// Other settings for the connection to the token endpoint can be specified in the BackendSettings resource.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
+// +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
+type InjectedOAuth2Credential struct {
+	// +optional
+	BackendCluster `json:",inline"`
+
+	// TokenEndpoint is the URL of the authorization server's token endpoint.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^https?://[^/?#]+`
+	TokenEndpoint string `json:"tokenEndpoint"`
+
+	// ClientID is the client identifier issued to the client by the authorization server.
+	//
+	// +kubebuilder:validation:MinLength=1
+	ClientID string `json:"clientID"`
+
+	// ClientSecret is a reference to the secret containing the OAuth2 client secret.
+	// This is an Opaque secret. The client secret should be stored in the key
+	// "client-secret".
+	ClientSecret gwapiv1.SecretObjectReference `json:"clientSecret"`
+
+	// Scopes is a list of OAuth2 scopes to request from the authorization server.
+	//
+	// +optional
+	Scopes []string `json:"scopes,omitempty"`
 }
 
 // HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.

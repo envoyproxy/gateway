@@ -1495,7 +1495,7 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 				return nil, nil, err
 			}
 			filter.Disabled = false
-			secret := buildCredentialSecret(args.settings[0].Filters.CredentialInjection)
+			secret := buildCredentialInjectionSecret(args.settings[0].Filters.CredentialInjection)
 			filters = append(filters, filter)
 			secrets = append(secrets, secret)
 		}

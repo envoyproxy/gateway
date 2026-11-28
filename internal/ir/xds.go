@@ -94,6 +94,9 @@ var (
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
 	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
+	ErrCredentialInjectionTokenEndpointEmpty    = errors.New("field CredentialInjection.OAuth2.TokenEndpoint must be specified")
+	ErrCredentialInjectionClientIDEmpty         = errors.New("field CredentialInjection.OAuth2.ClientID must be specified")
+	ErrCredentialInjectionClientSecretEmpty     = errors.New("field CredentialInjection.OAuth2.ClientSecret must be specified")
 	ErrBackendClusterMergedDynamicResolver      = errors.New("a BackendCluster must not be a dynamic resolver")
 	ErrBackendClusterRefNotFound                = errors.New("field BackendClusterRefs references a BackendCluster name that does not exist")
 	ErrExtensionBackendRefNotFound              = errors.New("field Backends references an ExtensionBackend name that does not exist")
@@ -1024,10 +1027,49 @@ type CredentialInjection struct {
 	Overwrite *bool `json:"overwrite,omitempty"`
 
 	// Credential is the credential to be injected.
-	Credential PrivateBytes `json:"credential"`
+	// It is empty when OAuth2 is set.
+	Credential PrivateBytes `json:"credential,omitempty"`
+
+	// OAuth2 configures an OAuth2 access token retrieved with the Client Credentials Grant flow,
+	// which is injected into the Authorization header instead of Credential.
+	OAuth2 *CredentialInjectionOAuth2 `json:"oauth2,omitempty" yaml:"oauth2,omitempty"`
+}
+
+// CredentialInjectionOAuth2 defines an OAuth2 access token retrieved with the Client Credentials Grant flow.
+// +k8s:deepcopy-gen=true
+type CredentialInjectionOAuth2 struct {
+	// Destination defines the destination for the token endpoint.
+	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
+
+	// Traffic contains configuration for traffic features for the token endpoint.
+	Traffic *TrafficFeatures `json:"traffic,omitempty" yaml:"traffic,omitempty"`
+
+	// TokenEndpoint is the URL of the authorization server's token endpoint.
+	TokenEndpoint string `json:"tokenEndpoint" yaml:"tokenEndpoint"`
+
+	// ClientID is the OAuth2 client ID.
+	ClientID string `json:"clientID" yaml:"clientID"`
+
+	// ClientSecret is the OAuth2 client secret.
+	ClientSecret PrivateBytes `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
+
+	// Scopes is the list of OAuth2 scopes to request.
+	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
 }
 
 func (c *CredentialInjection) Validate() error {
+	if c.OAuth2 != nil {
+		if c.OAuth2.TokenEndpoint == "" {
+			return ErrCredentialInjectionTokenEndpointEmpty
+		}
+		if c.OAuth2.ClientID == "" {
+			return ErrCredentialInjectionClientIDEmpty
+		}
+		if len(c.OAuth2.ClientSecret) == 0 {
+			return ErrCredentialInjectionClientSecretEmpty
+		}
+		return nil
+	}
 	if len(c.Credential) == 0 {
 		return ErrCredentialInjectionCredentialEmpty
 	}

@@ -446,7 +446,7 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 }
 
 // loadHTTPRouteFilter fetches the EG HTTPRouteFilter referenced by an extensionRef
-// filter (from either an HTTPRoute or a GRPCRoute) along with any Secret/ConfigMap
+// filter (from either an HTTPRoute or a GRPCRoute) along with any Secret/ConfigMap/backend
 // it references, and adds them to the resourceTree. It is a no-op if the
 // HTTPRouteFilter CRD is not installed or the filter has already been processed.
 func (r *gatewayAPIReconciler) loadHTTPRouteFilter(
@@ -465,6 +465,7 @@ func (r *gatewayAPIReconciler) loadHTTPRouteFilter(
 	if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
 		r.processRouteFilterConfigMapRef(ctx, httpFilter, resourceMap, resourceTree)
 		r.processRouteFilterSecretRef(ctx, httpFilter, resourceMap, resourceTree)
+		r.processRouteFilterBackendRefs(ctx, httpFilter, resourceMap, resourceTree)
 		resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
 		resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
 	}

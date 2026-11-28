@@ -65,6 +65,7 @@ const (
 	configMapEepIndex                = "configMapEepIndex"
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
+	backendHTTPRouteFilterIndex      = "backendHTTPRouteFilterIndex"
 	// ClusterTrustBundle related indexers
 	clusterTrustBundleEepIndex     = "clusterTrustBundleEepIndex"
 	clusterTrustBundleBackendIndex = "clusterTrustBundleBackendIndex"
@@ -1229,7 +1230,7 @@ func configMapEepIndexFunc(rawObj client.Object) []string {
 	return configMapReferences
 }
 
-// addRouteFilterIndexers adds indexing on HTTPRouteFilter, for ConfigMap objects that are
+// addRouteFilterIndexers adds indexing on HTTPRouteFilter, for ConfigMap, Secret and backend objects that are
 // referenced in HTTPRouteFilter objects. This helps in querying for HTTPRouteFilters that are
 // affected by a particular ConfigMap CRUD.
 func addRouteFilterIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -1240,6 +1241,11 @@ func addRouteFilterIndexers(ctx context.Context, mgr manager.Manager) error {
 
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.HTTPRouteFilter{},
 		secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.HTTPRouteFilter{},
+		backendHTTPRouteFilterIndex, backendRouteFilterIndexFunc); err != nil {
 		return err
 	}
 
@@ -1278,16 +1284,31 @@ func configMapRouteFilterIndexFunc(rawObj client.Object) []string {
 func secretRouteFilterIndexFunc(rawObj client.Object) []string {
 	filter := rawObj.(*egv1a1.HTTPRouteFilter)
 	var secretReferences []string
-	if filter.Spec.CredentialInjection != nil {
+	if ref := credentialInjectionSecretRef(filter); ref != nil {
 		secretReferences = append(secretReferences,
 			types.NamespacedName{
 				Namespace: filter.Namespace,
-				Name:      string(filter.Spec.CredentialInjection.Credential.ValueRef.Name),
+				Name:      string(ref.Name),
 			}.String(),
 		)
 	}
 
 	return secretReferences
+}
+
+func backendRouteFilterIndexFunc(rawObj client.Object) []string {
+	filter := rawObj.(*egv1a1.HTTPRouteFilter)
+	backendRefs := routeFilterBackendRefs(filter)
+	values := make([]string, 0, len(backendRefs))
+	for _, reference := range backendRefs {
+		values = append(values,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(reference.Namespace, filter.Namespace),
+				Name:      string(reference.Name),
+			}.String(),
+		)
+	}
+	return values
 }
 
 // addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap and Secret objects that are
