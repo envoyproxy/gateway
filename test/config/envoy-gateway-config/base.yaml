@@ -14,6 +14,8 @@ config:
       enableLua: true
       enableExtensionBackends: true
       enableSDSSecretRef: true
+      envoyProxyPatch:
+        enabled: true
     rateLimit:
       backend:
         type: Redis

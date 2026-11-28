@@ -22,6 +22,9 @@ func WarnEnvoyGateway(eg *egv1a1.EnvoyGateway) []string {
 	if eg.ExtensionAPIs != nil && eg.ExtensionAPIs.DisableLua != nil {
 		warnings = append(warnings, "disableLua is deprecated, use enableLua instead")
 	}
+	if f := eg.RuntimeFlags; f != nil && (slices.Contains(f.Enabled, egv1a1.EnvoyProxyPatch) || slices.Contains(f.Disabled, egv1a1.EnvoyProxyPatch)) {
+		warnings = append(warnings, "the EnvoyProxyPatch runtime flag is deprecated, use extensionApis.envoyProxyPatch.enabled instead")
+	}
 	if eg.ExtensionManager != nil {
 		warnings = append(warnings, warnDeprecatedExtensionServiceFields("extensionManager.service", eg.ExtensionManager.Service)...)
 	}

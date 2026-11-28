@@ -449,44 +449,51 @@ func TestDebounceDefaultsToDisabled(t *testing.T) {
 	require.Equal(t, DefaultDebounceMax, maxHold)
 }
 
-func TestEnvoyProxyPatchRuntimeFlag(t *testing.T) {
+func TestEnvoyProxyPatchEnabled(t *testing.T) {
+	gate := func(enabled *bool) *ExtensionAPISettings {
+		return &ExtensionAPISettings{EnvoyProxyPatch: &EnvoyProxyPatchSettings{Enabled: enabled}}
+	}
+	disabledFlag := &RuntimeFlags{Disabled: []RuntimeFlag{EnvoyProxyPatch}}
 	tests := []struct {
 		name     string
-		eg       EnvoyGateway
+		spec     EnvoyGatewaySpec
 		expected bool
 	}{
+		{name: "enabled by default", expected: true},
+		{name: "empty settings", spec: EnvoyGatewaySpec{ExtensionAPIs: gate(nil)}, expected: true},
+		{name: "gate enabled", spec: EnvoyGatewaySpec{ExtensionAPIs: gate(new(true))}, expected: true},
+		{name: "gate disabled", spec: EnvoyGatewaySpec{ExtensionAPIs: gate(new(false))}, expected: false},
+		{name: "deprecated flag disabled", spec: EnvoyGatewaySpec{RuntimeFlags: disabledFlag}, expected: false},
 		{
-			name:     "enabled by default",
-			eg:       EnvoyGateway{},
-			expected: true,
-		},
-		{
-			name: "explicitly disabled",
-			eg: EnvoyGateway{
-				EnvoyGatewaySpec: EnvoyGatewaySpec{
-					RuntimeFlags: &RuntimeFlags{Disabled: []RuntimeFlag{EnvoyProxyPatch}},
-				},
+			name: "deprecated flag enabled, gate disabled",
+			spec: EnvoyGatewaySpec{
+				ExtensionAPIs: gate(new(false)),
+				RuntimeFlags:  &RuntimeFlags{Enabled: []RuntimeFlag{EnvoyProxyPatch}},
 			},
 			expected: false,
 		},
 		{
-			name: "disabled takes precedence",
-			eg: EnvoyGateway{
-				EnvoyGatewaySpec: EnvoyGatewaySpec{
-					RuntimeFlags: &RuntimeFlags{
-						Enabled:  []RuntimeFlag{EnvoyProxyPatch},
-						Disabled: []RuntimeFlag{EnvoyProxyPatch},
-					},
-				},
-			},
+			name:     "gate enabled, deprecated flag disabled",
+			spec:     EnvoyGatewaySpec{ExtensionAPIs: gate(new(true)), RuntimeFlags: disabledFlag},
+			expected: false,
+		},
+		{
+			name: "deprecated flag disabled takes precedence",
+			spec: EnvoyGatewaySpec{RuntimeFlags: &RuntimeFlags{
+				Enabled:  []RuntimeFlag{EnvoyProxyPatch},
+				Disabled: []RuntimeFlag{EnvoyProxyPatch},
+			}},
 			expected: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, tt.eg.RuntimeFlags.IsEnabled(EnvoyProxyPatch))
+			eg := &EnvoyGateway{EnvoyGatewaySpec: tt.spec}
+			assert.Equal(t, tt.expected, eg.EnvoyProxyPatchEnabled())
 		})
 	}
+	var nilEG *EnvoyGateway
+	assert.True(t, nilEG.EnvoyProxyPatchEnabled())
 }
 
 func TestOIDCTokenCookieChunkingRuntimeFlag(t *testing.T) {

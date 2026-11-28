@@ -288,13 +288,15 @@ When considering internal threat actors, we chose to follow the [security model]
 
  **Recommendation**: Restrict access to EnvoyProxy custom resources through strict RBAC policies. In multi-tenant environments, tenants should not have permissions to create or modify EnvoyProxy resources. If EnvoyProxy customization is required, implement one of the following mitigations:
 
- - Disable EnvoyGateway's `EnvoyProxyPatch` runtime flag to globally block the `patch` field across all EnvoyProxy-managed Kubernetes resources (`envoyDeployment`, `envoyDaemonSet`, `envoyService`, `envoyHpa`, `envoyPDB`), regardless of which namespace or GatewayClass/Gateway the EnvoyProxy resource is sourced from. Any patch present on an EnvoyProxy is dropped at render time and surfaced as a `Warning`/`PatchDisabled` status condition on that EnvoyProxy, while the Gateway keeps being reconciled and serving traffic. This flag is enabled by default to preserve pre-existing behavior, so multi-tenant clusters where tenants can author their own EnvoyProxy resources should opt out explicitly:
+ - Set EnvoyGateway's `extensionApis.envoyProxyPatch.enabled` to `false` to globally block the `patch` field across all EnvoyProxy-managed Kubernetes resources (`envoyDeployment`, `envoyDaemonSet`, `envoyService`, `envoyHpa`, `envoyPDB`), regardless of which namespace or GatewayClass/Gateway the EnvoyProxy resource is sourced from. Any patch present on an EnvoyProxy is dropped at render time and surfaced as a `Warning`/`PatchDisabled` status condition on that EnvoyProxy, while the Gateway keeps being reconciled and serving traffic. Patches are enabled by default to preserve pre-existing behavior, so multi-tenant clusters where tenants can author their own EnvoyProxy resources should opt out explicitly:
 
      ```yaml
-     runtimeFlags:
-         disabled:
-         - EnvoyProxyPatch
+     extensionApis:
+       envoyProxyPatch:
+         enabled: false
      ```
+
+     Disabling the deprecated `EnvoyProxyPatch` runtime flag still blocks patches as well.
 
  - Deploy admission webhooks (such as [OPA Gatekeeper](https://github.com/open-policy-agent/gatekeeper) or [Kyverno](https://kyverno.io/)) to validate EnvoyProxy resources and enforce an allowlist of permitted fields in the `envoyDeployment.patch`. Block dangerous configurations including `hostPath`, `hostNetwork`, `hostPID`, `privileged`, and container image overrides.
 

@@ -2484,6 +2484,21 @@ _Appears in:_
 | `envoyServiceAccount` | _[KubernetesServiceAccountSpec](#kubernetesserviceaccountspec)_ |  true  |  | EnvoyServiceAccount defines the desired state of the Envoy service account resource. |
 
 
+#### EnvoyProxyPatchSettings
+
+
+
+EnvoyProxyPatchSettings configures the Kubernetes resource `patch` fields of EnvoyProxy's
+Kubernetes provider settings, such as envoyDeployment.patch and envoyService.patch.
+
+_Appears in:_
+- [ExtensionAPISettings](#extensionapisettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enabled` | _boolean_ |  false  |  | Enabled enables applying the patches. Defaults to true to preserve pre-existing behavior.<br />Because EnvoyProxy is commonly namespace-scoped and tenant-authored, a patch may grant<br />arbitrary access to resources applied by Envoy Gateway's more privileged ServiceAccount.<br />Set it to false in multi-tenant clusters where tenants can author their own EnvoyProxy<br />resources. Patches are then dropped and reported on the EnvoyProxy status. |
+
+
 #### EnvoyProxyProvider
 
 
@@ -2694,6 +2709,7 @@ _Appears in:_
 | `disableLua` | _boolean_ |  false  |  | DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.<br />This field is mutually exclusive with EnableLua.<br />Deprecated: Use EnableLua instead. This field will be removed in a future release. |
 | `enableLua` | _boolean_ |  false  |  | EnableLua enables the Lua EnvoyExtensionPolicy feature.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be enabled.<br />By default, Lua policies are disabled.<br />This field is mutually exclusive with DisableLua. |
 | `enableSDSSecretRef` | _boolean_ |  true  |  | EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds). |
+| `envoyProxyPatch` | _[EnvoyProxyPatchSettings](#envoyproxypatchsettings)_ |  false  |  | EnvoyProxyPatch configures the Kubernetes resource `patch` fields of EnvoyProxy's<br />Kubernetes provider settings. |
 
 
 #### ExtensionBackend
@@ -4367,7 +4383,7 @@ this patch can therefore set arbitrary fields — including hostPath volumes, ho
 privileged containers, or an arbitrary image/command — on a resource that Envoy Gateway's own,
 more privileged, ServiceAccount applies. Because EnvoyProxy is commonly namespace-scoped and
 tenant-authored, treat this field as untrusted input in multi-tenant clusters: restrict who may
-set it via RBAC, or disable EnvoyGateway's `EnvoyProxyPatch` runtime flag.
+set it via RBAC, or set EnvoyGateway's `extensionApis.envoyProxyPatch.enabled` to false.
 
 _Appears in:_
 - [KubernetesDaemonSetSpec](#kubernetesdaemonsetspec)
@@ -6580,7 +6596,7 @@ _Appears in:_
 | `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
 | `EndpointSliceIndex` | EndpointSliceIndex indicates that field indexes are used to look up EndpointSlices by backend.<br />It is enabled by default to reduce CPU usage for EndpointSlice lookups in large clusters.<br />If the additional controller memory usage for the indexes becomes a concern,<br />consider disabling this flag.<br /> | 
 | `PerResourceSystemCASecret` | PerResourceSystemCASecret restores the pre-1.x behavior of emitting one SDS secret per<br />BackendTLSPolicy or Backend resource that uses WellKnownCACertificates: System, instead<br />of sharing a single system_ca_certificates secret across all of them.<br />Disabled by default (i.e. the shared secret is used). Enable this flag to opt out during<br />upgrades — Envoy must warm the new system_ca_certificates secret before clusters can use<br />it, which may cause a brief disruption to new connections on first enable.<br /> | 
-| `EnvoyProxyPatch` | EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on<br />EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve<br />pre-existing behavior. Because EnvoyProxy is commonly namespace-scoped and<br />tenant-authored, a patch may grant arbitrary access to resources applied by Envoy<br />Gateway's more privileged ServiceAccount; disable this flag in multi-tenant clusters<br />where tenants can author their own EnvoyProxy resources.<br /> | 
+| `EnvoyProxyPatch` | EnvoyProxyPatch enables applying the Kubernetes resource `patch` fields configured on<br />EnvoyProxy's Kubernetes provider settings. It is enabled by default to preserve<br />pre-existing behavior. Disabling it still blocks the patches.<br />Deprecated: Use extensionApis.envoyProxyPatch.enabled instead. This flag will be removed<br />in a future release.<br /> | 
 | `ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly` | ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly restricts the ClientTrafficPolicy http1 fields<br />(enableTrailers, preserveHeaderCase, http10) to client connections only.<br />When enabled, these fields no longer affect backend HTTP/1 protocol settings.<br />Use BackendTrafficPolicy.http1 to configure backend HTTP/1 protocol settings.<br />Disabled by default to preserve existing behavior. Users are encouraged to migrate<br />to BackendTrafficPolicy.http1 for backend settings and enable this flag to opt in<br />to the new behavior. This flag will be enabled by default in a future release.<br /> | 
 | `OIDCTokenCookieChunking` | OIDCTokenCookieChunking splits an OIDC access, ID or refresh token too large for one<br />browser cookie across several cookies, instead of the browser dropping it and the login<br />looping back to the OIDC provider. It is enabled by default. Envoy Proxy older than v1.40<br />can't read the split cookies, so a client that holds such a token in one cookie today, such<br />as a non-browser client, is sent back to the OIDC provider when it reaches an older proxy.<br />Disable this flag while proxies of an earlier Envoy Gateway release serve the same<br />hostnames, for example during an upgrade.<br /> | 
 

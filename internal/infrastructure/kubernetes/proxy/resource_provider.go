@@ -120,7 +120,7 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 		infra:                    infra.GetProxyInfra(),
 		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
 		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
-		EnvoyProxyPatchDisabled:  !kubeInfra.GetEnvoyGateway().RuntimeFlags.IsEnabled(egv1a1.EnvoyProxyPatch),
+		EnvoyProxyPatchDisabled:  !kubeInfra.GetEnvoyGateway().EnvoyProxyPatchEnabled(),
 		GatewayNamespaceMode:     kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
 		ownerReferenceUID:        ownerReference,
 	}, nil
