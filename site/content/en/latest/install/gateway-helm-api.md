@@ -119,6 +119,8 @@ The Helm chart for Envoy Gateway
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 | namespaceOverride | string | `""` | Override the namespace for resources deployed by the chart. Defaults to the release namespace. |
 | podDisruptionBudget.minAvailable | int | `0` |  |
+| rbac | object | `{"create":true}` | RBAC configuration. If disabled (`rbac.create=false`), no Roles, RoleBindings, ClusterRoles, or ClusterRoleBindings will be created by the chart. Warning: If disabled, you must manage and apply the required RBAC permissions externally, otherwise Envoy Gateway will lack permissions to watch resources and will not work as expected. |
+| rbac.create | bool | `true` | Specifies whether RBAC resources should be created |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
 | service.type | string | `"ClusterIP"` | Service type. Can be set to LoadBalancer with specific IP, e.g.: type: LoadBalancer loadBalancerIP: 10.236.90.20 |
