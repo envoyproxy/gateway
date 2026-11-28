@@ -1005,6 +1005,30 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			expect: true,
 		},
 		{
+			name: "references HTTPRouteFilter credential injection secret in another namespace",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),
+				&egv1a1.HTTPRouteFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "credential-injection",
+					},
+					Spec: egv1a1.HTTPRouteFilterSpec{
+						CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+							Credential: egv1a1.InjectedCredential{
+								ValueRef: gwapiv1.SecretObjectReference{
+									Namespace: gatewayapi.NamespacePtr("secrets"),
+									Name:      "secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: test.GetSecret(types.NamespacedName{Namespace: "secrets", Name: "secret"}),
+			expect: true,
+		},
+		{
 			name: "secret not referenced by any HTTPRouteFilter",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", egv1a1.GatewayControllerName, nil),

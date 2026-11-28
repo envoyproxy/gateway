@@ -18,8 +18,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
@@ -312,6 +316,98 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Len(t, result, tc.expectedCount)
+			}
+		})
+	}
+}
+
+func TestProcessRouteFilterSecretRef(t *testing.T) {
+	filter := func(secretNamespace *gwapiv1.Namespace) *egv1a1.HTTPRouteFilter {
+		return &egv1a1.HTTPRouteFilter{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "app", Name: "inject"},
+			Spec: egv1a1.HTTPRouteFilterSpec{
+				CredentialInjection: &egv1a1.HTTPCredentialInjectionFilter{
+					Credential: egv1a1.InjectedCredential{
+						ValueRef: gwapiv1.SecretObjectReference{Name: "credential", Namespace: secretNamespace},
+					},
+				},
+			},
+		}
+	}
+	secret := func(namespace string) *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "credential"},
+			Data:       map[string][]byte{egv1a1.InjectedCredentialKey: []byte("secret")},
+		}
+	}
+	grant := func(fromNamespace string) *gwapiv1b1.ReferenceGrant {
+		return &gwapiv1b1.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "secrets", Name: "allow-filter"},
+			Spec: gwapiv1b1.ReferenceGrantSpec{
+				From: []gwapiv1b1.ReferenceGrantFrom{{
+					Group:     gwapiv1.Group(egv1a1.GroupName),
+					Kind:      gwapiv1.Kind(resource.KindHTTPRouteFilter),
+					Namespace: gwapiv1.Namespace(fromNamespace),
+				}},
+				To: []gwapiv1b1.ReferenceGrantTo{{Kind: gwapiv1.Kind(resource.KindSecret)}},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name         string
+		filter       *egv1a1.HTTPRouteFilter
+		objs         []client.Object
+		wantLoaded   string
+		wantRefGrant bool
+	}{
+		{
+			name:       "secret in the filter namespace",
+			filter:     filter(nil),
+			objs:       []client.Object{secret("app")},
+			wantLoaded: "app/credential",
+		},
+		{
+			name:         "secret in another namespace with a ReferenceGrant",
+			filter:       filter(gatewayapi.NamespacePtr("secrets")),
+			objs:         []client.Object{secret("secrets"), grant("app")},
+			wantLoaded:   "secrets/credential",
+			wantRefGrant: true,
+		},
+		{
+			name:   "secret in another namespace without a ReferenceGrant",
+			filter: filter(gatewayapi.NamespacePtr("secrets")),
+			objs:   []client.Object{secret("secrets")},
+		},
+		{
+			name:   "secret in another namespace with a ReferenceGrant for another namespace",
+			filter: filter(gatewayapi.NamespacePtr("secrets")),
+			objs:   []client.Object{secret("secrets"), grant("other")},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := newRefGrantReconciler(t, append(tc.objs, tc.filter)...)
+			r.log = logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+			resourceTree := resource.NewResources()
+			resourceMap := newResourceMapping()
+
+			r.processRouteFilterSecretRef(context.Background(), tc.filter, resourceMap, resourceTree)
+
+			secrets := make([]string, 0, len(resourceTree.Secrets))
+			for _, s := range resourceTree.Secrets {
+				secrets = append(secrets, s.Namespace+"/"+s.Name)
+			}
+			if tc.wantLoaded == "" {
+				require.Empty(t, secrets)
+			} else {
+				require.Equal(t, []string{tc.wantLoaded}, secrets)
+			}
+			if tc.wantRefGrant {
+				require.Len(t, resourceTree.ReferenceGrants, 1)
+			} else {
+				require.Empty(t, resourceTree.ReferenceGrants)
 			}
 		})
 	}
