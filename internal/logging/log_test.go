@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 func TestZapLogLevel(t *testing.T) {
@@ -35,7 +36,7 @@ func TestZapLogLevel(t *testing.T) {
 }
 
 func TestLogger(t *testing.T) {
-	logger := NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
+	logger := NewLogger(os.Stdout, apihelpers.DefaultEnvoyGatewayLogging())
 	logger.Info("kv msg", "key", "value")
 	logger.Sugar().Infof("template %s %d", "string", 123)
 
@@ -62,7 +63,7 @@ func TestLoggerWithName(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	config := egv1a1.DefaultEnvoyGatewayLogging()
+	config := apihelpers.DefaultEnvoyGatewayLogging()
 	config.Level[egv1a1.LogComponentInfrastructureRunner] = egv1a1.LogLevelDebug
 
 	logger := NewLogger(os.Stdout, config).WithName(string(egv1a1.LogComponentInfrastructureRunner))
@@ -93,7 +94,7 @@ func TestLoggerSugarName(t *testing.T) {
 
 	const logName = "loggerName"
 
-	config := egv1a1.DefaultEnvoyGatewayLogging()
+	config := apihelpers.DefaultEnvoyGatewayLogging()
 	config.Level[logName] = egv1a1.LogLevelDebug
 
 	logger := NewLogger(os.Stdout, config).WithName(logName)
@@ -110,7 +111,7 @@ func TestLoggerSugarName(t *testing.T) {
 
 func TestLoggerWithTrace(t *testing.T) {
 	buffer := &bytes.Buffer{}
-	logger := NewLogger(buffer, egv1a1.DefaultEnvoyGatewayLogging())
+	logger := NewLogger(buffer, apihelpers.DefaultEnvoyGatewayLogging())
 
 	traceID := trace.TraceID{0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xb0, 0x0c, 0x12, 0x34, 0x56, 0x78}
 	spanID := trace.SpanID{0xba, 0xad, 0xf0, 0x0d, 0xfe, 0xed, 0xfa, 0xce}

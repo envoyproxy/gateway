@@ -11,10 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 )
 
 func TestWarnEnvoyGateway(t *testing.T) {
-	eg := egv1a1.DefaultEnvoyGateway()
+	eg := apihelpers.DefaultEnvoyGateway()
 
 	testCases := []struct {
 		name     string
@@ -35,8 +36,8 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			name: "disableLua is set",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
 						DisableLua: new(true),
 					},
@@ -48,8 +49,8 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			name: "enableLua is set",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
 						EnableLua: true,
 					},
@@ -61,8 +62,8 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			name: "extension service host is set",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Service: &egv1a1.ExtensionService{Host: "extension.default.svc", Port: 8080},
 					},
@@ -83,8 +84,8 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			name: "default envoyProxy uses deprecated fields",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					EnvoyProxy: &egv1a1.EnvoyProxySpec{
 						Telemetry: &egv1a1.ProxyTelemetry{
 							Tracing: &egv1a1.ProxyTracing{Provider: egv1a1.TracingProvider{
@@ -103,8 +104,8 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			name: "default envoyProxy keeps explicit legacy ports with backendRefs",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					EnvoyProxy: &egv1a1.EnvoyProxySpec{
 						Telemetry: &egv1a1.ProxyTelemetry{
 							Tracing: &egv1a1.ProxyTracing{Provider: egv1a1.TracingProvider{Port: 4317}},
@@ -125,8 +126,8 @@ func TestWarnEnvoyGateway(t *testing.T) {
 			name: "extension service port is set with a new endpoint",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
-					Gateway:  egv1a1.DefaultGateway(),
-					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Gateway:  apihelpers.DefaultGateway(),
+					Provider: apihelpers.DefaultEnvoyGatewayProvider(),
 					ExtensionManager: &egv1a1.ExtensionManager{
 						Service: &egv1a1.ExtensionService{
 							BackendEndpoint: egv1a1.BackendEndpoint{

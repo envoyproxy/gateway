@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/utils/test"
@@ -275,7 +276,7 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName:  "default",
 			rateLimit: rateLimit,
-			deploy:    cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+			deploy:    apihelpers.GetEnvoyGatewayKubeProvider(apihelpers.GetEnvoyGatewayProvider(cfg.EnvoyGateway)).RateLimitDeployment,
 		},
 		{
 			caseName: "disable-prometheus",
@@ -294,7 +295,7 @@ func TestDeployment(t *testing.T) {
 					},
 				},
 			},
-			deploy: cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+			deploy: apihelpers.GetEnvoyGatewayKubeProvider(apihelpers.GetEnvoyGatewayProvider(cfg.EnvoyGateway)).RateLimitDeployment,
 		},
 		{
 			caseName:  "patch-deployment",
@@ -344,7 +345,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -376,7 +377,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -418,7 +419,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -451,7 +452,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -501,7 +502,7 @@ func TestDeployment(t *testing.T) {
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -553,7 +554,7 @@ func TestDeployment(t *testing.T) {
 					},
 				},
 			},
-			deploy: cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+			deploy: apihelpers.GetEnvoyGatewayKubeProvider(apihelpers.GetEnvoyGatewayProvider(cfg.EnvoyGateway)).RateLimitDeployment,
 		},
 		{
 			caseName: "tolerations",
@@ -572,7 +573,7 @@ func TestDeployment(t *testing.T) {
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -634,7 +635,7 @@ func TestDeployment(t *testing.T) {
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -822,7 +823,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Replicas: new(int32(2)),
-				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Strategy: apihelpers.DefaultKubernetesDeploymentStrategy(),
 			},
 			hpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 				MinReplicas: new(int32(3)),

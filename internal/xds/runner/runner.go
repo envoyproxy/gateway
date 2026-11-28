@@ -35,6 +35,7 @@ import (
 	ktypes "k8s.io/apimachinery/pkg/types"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
@@ -211,7 +212,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(tlsConfig)))
 
 	// When GatewayNamespaceMode is enabled, we will use sTLS and Service Account JWT tokens to authenticate envoy proxy infra and xds server.
-	if r.EnvoyGateway.GatewayNamespaceMode() {
+	if apihelpers.GatewayNamespaceMode(r.EnvoyGateway) {
 		r.Logger.Info("gatewayNamespaceMode is enabled, setting up JWTAuthInterceptor and sTLS server")
 		clientset, err := kubejwt.GetKubernetesClient()
 		if err != nil {
@@ -328,7 +329,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				}
 			} else {
 				// Translate to xds resources
-				proxyInfraName, proxyInfraNamespace := proxyInfraNameAndNamespace(key, r.ControllerNamespace, r.EnvoyGateway.GatewayNamespaceMode())
+				proxyInfraName, proxyInfraNamespace := proxyInfraNameAndNamespace(key, r.ControllerNamespace, apihelpers.GatewayNamespaceMode(r.EnvoyGateway))
 				t := &translator.Translator{
 					ControllerNamespace: r.ControllerNamespace,
 					ProxyInfraName:      proxyInfraName,
@@ -447,11 +448,11 @@ func (r *Runner) loadTLSConfig() (*tls.Config, error) {
 	} else {
 		// Use default paths based on provider type
 		switch {
-		case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+		case apihelpers.IsRunningOnKubernetes(r.EnvoyGateway.Provider):
 			certPath = xdsTLSCertFilepath
 			keyPath = xdsTLSKeyFilepath
 			caPath = xdsTLSCaFilepath
-		case r.EnvoyGateway.Provider.IsRunningOnHost():
+		case apihelpers.IsRunningOnHost(r.EnvoyGateway.Provider):
 			// Get config
 			var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
 			if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&

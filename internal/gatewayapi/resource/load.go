@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -71,7 +72,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 	)
 	extGVKMap := map[string]extCategory{}
 	if envoyGateway != nil {
-		extensionManagers := envoyGateway.GetExtensionManagers()
+		extensionManagers := apihelpers.GetExtensionManagers(&envoyGateway.EnvoyGatewaySpec)
 		for i := range extensionManagers {
 			em := &extensionManagers[i]
 			for _, gvk := range em.Resources {

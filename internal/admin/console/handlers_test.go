@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/apihelpers"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -21,7 +22,7 @@ import (
 
 func TestNewHandler(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -36,7 +37,7 @@ func TestNewHandler(t *testing.T) {
 
 func TestHandleIndex(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -54,7 +55,7 @@ func TestHandleIndex(t *testing.T) {
 
 func TestHandleIndexMethodNotAllowed(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -115,7 +116,7 @@ func TestHandlePprof(t *testing.T) {
 
 func TestHandleServerInfo(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -133,7 +134,7 @@ func TestHandleServerInfo(t *testing.T) {
 
 func TestHandleConfigDump(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -151,7 +152,7 @@ func TestHandleConfigDump(t *testing.T) {
 
 func TestHandleStats(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
@@ -169,7 +170,7 @@ func TestHandleStats(t *testing.T) {
 
 func TestRegisterRoutes(t *testing.T) {
 	cfg := &config.Server{
-		EnvoyGateway: egv1a1.DefaultEnvoyGateway(),
+		EnvoyGateway: apihelpers.DefaultEnvoyGateway(),
 		Logger:       logging.DefaultLogger(nil, egv1a1.LogLevelInfo),
 	}
 
