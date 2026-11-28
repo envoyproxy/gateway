@@ -207,6 +207,11 @@ namespaceOverride: ""
 
 kubernetesClusterDomain: cluster.local
 
+# -- RBAC configuration. If disabled (`rbac.create=false`), no Roles, RoleBindings, ClusterRoles, or ClusterRoleBindings will be created by the chart. Warning: If disabled, you must manage and apply the required RBAC permissions externally, otherwise Envoy Gateway will lack permissions to watch resources and will not work as expected.
+rbac:
+  # -- Specifies whether RBAC resources should be created
+  create: true
+
 # -- Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected.
 certgen:
   job:

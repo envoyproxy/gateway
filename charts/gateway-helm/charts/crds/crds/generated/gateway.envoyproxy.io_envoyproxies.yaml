@@ -11630,7 +11630,7 @@ spec:
                             items:
                               format: cidr
                               type: string
-                            maxItems: 64
+                            maxItems: 512
                             type: array
                           name:
                             description: |-
