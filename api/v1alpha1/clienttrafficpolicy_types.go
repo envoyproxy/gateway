@@ -415,6 +415,7 @@ type HTTP3Settings struct {
 }
 
 // HTTP1Settings provides HTTP/1 configuration on the listener.
+// +kubebuilder:validation:XValidation:rule="!(has(self.headerKeyFormat) && has(self.preserveHeaderCase) && self.preserveHeaderCase == true)",message="preserveHeaderCase and headerKeyFormat are mutually exclusive"
 type HTTP1Settings struct {
 	// EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.
 	//
@@ -437,6 +438,14 @@ type HTTP1Settings struct {
 	//
 	// +optional
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
+	// HeaderKeyFormat defines how Envoy formats the HTTP/1 header names it sends to
+	// the client. When unset, PreserveHeaderCase decides the case, and by default
+	// Envoy lowercases header names.
+	// This field configures the client connection only.
+	// HeaderKeyFormat cannot be set when PreserveHeaderCase is true.
+	//
+	// +optional
+	HeaderKeyFormat *HTTP1HeaderKeyFormat `json:"headerKeyFormat,omitempty"`
 	// HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
 	//
 	// Note: this field currently forces explicit HTTP/1 for backend connections when other

@@ -62,7 +62,7 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	if opts == nil {
 		return nil
 	}
-	if !opts.EnableTrailers && !opts.PreserveHeaderCase && opts.HTTP10 == nil && len(opts.IgnoredUpgradeTypes) == 0 {
+	if !opts.EnableTrailers && !opts.PreserveHeaderCase && opts.HeaderKeyFormat == "" && opts.HTTP10 == nil && len(opts.IgnoredUpgradeTypes) == 0 {
 		return nil
 	}
 	// If PreserveHeaderCase is true and EnableTrailers is false then setting the EnableTrailers field to false
@@ -78,6 +78,13 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 					Name:        "preserve_case",
 					TypedConfig: preservecaseAny,
 				},
+			},
+		}
+	}
+	if opts.HeaderKeyFormat == egv1a1.HTTP1HeaderKeyFormatTypeProperCaseWords {
+		r.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
+			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_ProperCaseWords_{
+				ProperCaseWords: &corev3.Http1ProtocolOptions_HeaderKeyFormat_ProperCaseWords{},
 			},
 		}
 	}

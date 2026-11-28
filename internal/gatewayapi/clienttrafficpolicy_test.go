@@ -603,3 +603,56 @@ func TestTranslateHeaderModifierMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslateHTTP1HeaderKeyFormat(t *testing.T) {
+	properCase := &egv1a1.HTTP1HeaderKeyFormat{Type: egv1a1.HTTP1HeaderKeyFormatTypeProperCaseWords}
+	preserve := true
+
+	t.Run("proper case words", func(t *testing.T) {
+		httpIR := &ir.HTTPListener{}
+		err := translateHTTP1Settings(&egv1a1.HTTP1Settings{
+			HeaderKeyFormat: properCase,
+		}, nil, httpIR)
+		require.NoError(t, err)
+		require.Equal(t, egv1a1.HTTP1HeaderKeyFormatTypeProperCaseWords, httpIR.HTTP1.HeaderKeyFormat)
+		require.False(t, httpIR.HTTP1.PreserveHeaderCase)
+	})
+
+	t.Run("preserve header case still translates", func(t *testing.T) {
+		httpIR := &ir.HTTPListener{}
+		err := translateHTTP1Settings(&egv1a1.HTTP1Settings{
+			PreserveHeaderCase: &preserve,
+		}, nil, httpIR)
+		require.NoError(t, err)
+		require.True(t, httpIR.HTTP1.PreserveHeaderCase)
+		require.Empty(t, httpIR.HTTP1.HeaderKeyFormat)
+	})
+
+	t.Run("proper case words and preserve header case are rejected", func(t *testing.T) {
+		httpIR := &ir.HTTPListener{}
+		err := translateHTTP1Settings(&egv1a1.HTTP1Settings{
+			PreserveHeaderCase: &preserve,
+			HeaderKeyFormat:    properCase,
+		}, nil, httpIR)
+		require.EqualError(t, err, "preserveHeaderCase and headerKeyFormat are mutually exclusive")
+		require.Nil(t, httpIR.HTTP1)
+	})
+
+	t.Run("unknown type is rejected", func(t *testing.T) {
+		httpIR := &ir.HTTPListener{}
+		err := translateHTTP1Settings(&egv1a1.HTTP1Settings{
+			HeaderKeyFormat: &egv1a1.HTTP1HeaderKeyFormat{Type: "PreserveCase"},
+		}, nil, httpIR)
+		require.EqualError(t, err, `unsupported headerKeyFormat type "PreserveCase"`)
+		require.Nil(t, httpIR.HTTP1)
+	})
+
+	t.Run("empty type is rejected", func(t *testing.T) {
+		httpIR := &ir.HTTPListener{}
+		err := translateHTTP1Settings(&egv1a1.HTTP1Settings{
+			HeaderKeyFormat: &egv1a1.HTTP1HeaderKeyFormat{},
+		}, nil, httpIR)
+		require.EqualError(t, err, `unsupported headerKeyFormat type ""`)
+		require.Nil(t, httpIR.HTTP1)
+	})
+}

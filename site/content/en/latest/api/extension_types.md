@@ -3287,6 +3287,35 @@ _Appears in:_
 | `useDefaultHost` | _boolean_ |  false  |  | UseDefaultHost specifies whether a default Host header should be injected<br />into HTTP/1.0 requests that do not include one.<br />When set to true, Envoy Gateway injects the hostname associated with the<br />listener or route into the request, in the following order:<br />  1. If the targeted listener has a non-wildcard hostname, use that hostname.<br />  2. If there is exactly one HTTPRoute with a non-wildcard hostname under<br />     the targeted listener, use that hostname.<br /> Note: Setting this field to true without a non-wildcard hostname makes the<br />ClientTrafficPolicy invalid. |
 
 
+#### HTTP1HeaderKeyFormat
+
+
+
+HTTP1HeaderKeyFormat defines how Envoy formats HTTP/1 header names when it writes
+them to the wire.
+
+_Appears in:_
+- [HTTP1Settings](#http1settings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[HTTP1HeaderKeyFormatType](#http1headerkeyformattype)_ |  true  |  | Type is the formatter for HTTP/1 header names. |
+
+
+#### HTTP1HeaderKeyFormatType
+
+_Underlying type:_ _string_
+
+HTTP1HeaderKeyFormatType defines the formatter Envoy uses for HTTP/1 header names.
+
+_Appears in:_
+- [HTTP1HeaderKeyFormat](#http1headerkeyformat)
+
+| Value | Description |
+| ----- | ----------- |
+| `ProperCaseWords` | HTTP1HeaderKeyFormatTypeProperCaseWords capitalizes the first letter and any<br />letter after a special character, also in headers that Envoy creates in<br />lowercase. For example, "content-type" is sent as "Content-Type".<br /> | 
+
+
 #### HTTP1Settings
 
 
@@ -3300,6 +3329,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enableTrailers` | _boolean_ |  false  |  | EnableTrailers defines if HTTP/1 trailers should be proxied by Envoy.<br />Note: this field currently configures both the client connection and the backend HTTP/1<br />protocol settings. In a future release it will be restricted to the client connection only.<br />Use BackendTrafficPolicy.http1.enableTrailers for backend settings.<br />Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly<br />to opt in to the new behavior now. |
 | `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers.<br />Note: this field currently configures both the client connection and the backend HTTP/1<br />protocol settings. In a future release it will be restricted to the client connection only.<br />Use BackendTrafficPolicy.http1.preserveHeaderCase for backend settings.<br />Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly<br />to opt in to the new behavior now. |
+| `headerKeyFormat` | _[HTTP1HeaderKeyFormat](#http1headerkeyformat)_ |  false  |  | HeaderKeyFormat defines how Envoy formats the HTTP/1 header names it sends to<br />the client. When unset, PreserveHeaderCase decides the case, and by default<br />Envoy lowercases header names.<br />This field configures the client connection only.<br />HeaderKeyFormat cannot be set when PreserveHeaderCase is true. |
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.<br />Note: this field currently forces explicit HTTP/1 for backend connections when other<br />backend-relevant HTTP/1 fields like EnableTrailers and PreserveHeaderCase are absent.<br />In a future release it will no longer force explicit HTTP/1 on backend connections.<br />Use BackendTrafficPolicy.http1: \{\} to force HTTP/1 on a backend cluster explicitly. |
 | `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
 | `ignoredUpgradeTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoredUpgradeTypes specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/". |

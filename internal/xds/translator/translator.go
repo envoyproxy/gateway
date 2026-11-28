@@ -172,7 +172,7 @@ func (t *Translator) xdsNameSchemeV2() bool {
 // When ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly is enabled, returns nil —
 // CTP http1 fields apply to the client connection only and must not configure backend
 // HTTP/1 protocol settings. Remove this method when that runtime flag is removed.
-// Listener-only fields (HTTP10, IgnoredUpgradeTypes, DisableSafeMaxConnectionDuration)
+// Listener-only fields (HTTP10, IgnoredUpgradeTypes, DisableSafeMaxConnectionDuration, HeaderKeyFormat)
 // are stripped unconditionally. A non-nil return value acts as a sentinel that forces
 // explicit HTTP/1 protocol selection on the cluster.
 // nil is returned when s is nil, when the runtime flag applies HTTP/1 settings to

@@ -1135,6 +1135,22 @@ spec:
                       Enable the EnvoyGateway runtimeFlag ApplyClientTrafficPolicyHTTP1SettingsToClientsOnly
                       to opt in to the new behavior now.
                     type: boolean
+                  headerKeyFormat:
+                    description: |-
+                      HeaderKeyFormat defines how Envoy formats the HTTP/1 header names it sends to
+                      the client. When unset, PreserveHeaderCase decides the case, and by default
+                      Envoy lowercases header names.
+                      This field configures the client connection only.
+                      HeaderKeyFormat cannot be set when PreserveHeaderCase is true.
+                    properties:
+                      type:
+                        description: Type is the formatter for HTTP/1 header names.
+                        enum:
+                        - ProperCaseWords
+                        type: string
+                    required:
+                    - type
+                    type: object
                   http10:
                     description: |-
                       HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests.
@@ -1207,6 +1223,10 @@ spec:
                       to opt in to the new behavior now.
                     type: boolean
                 type: object
+                x-kubernetes-validations:
+                - message: preserveHeaderCase and headerKeyFormat are mutually exclusive
+                  rule: '!(has(self.headerKeyFormat) && has(self.preserveHeaderCase)
+                    && self.preserveHeaderCase == true)'
               http2:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:

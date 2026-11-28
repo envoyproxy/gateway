@@ -1164,9 +1164,25 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	return errs
 }
 
+func validateHTTP1HeaderKeyFormat(h *egv1a1.HTTP1Settings) error {
+	if h.HeaderKeyFormat == nil {
+		return nil
+	}
+	if h.HeaderKeyFormat.Type != egv1a1.HTTP1HeaderKeyFormatTypeProperCaseWords {
+		return fmt.Errorf("unsupported headerKeyFormat type %q", h.HeaderKeyFormat.Type)
+	}
+	if ptr.Deref(h.PreserveHeaderCase, false) {
+		return fmt.Errorf("preserveHeaderCase and headerKeyFormat are mutually exclusive")
+	}
+	return nil
+}
+
 func translateHTTP1Settings(h *egv1a1.HTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
 	if h == nil {
 		return nil
+	}
+	if err := validateHTTP1HeaderKeyFormat(h); err != nil {
+		return err
 	}
 	ignoreUpgrade := make([]*ir.StringMatch, 0, len(h.IgnoredUpgradeTypes))
 	for _, match := range h.IgnoredUpgradeTypes {
@@ -1176,6 +1192,9 @@ func translateHTTP1Settings(h *egv1a1.HTTP1Settings, connection *ir.ClientConnec
 		IgnoredUpgradeTypes: ignoreUpgrade,
 		EnableTrailers:      ptr.Deref(h.EnableTrailers, false),
 		PreserveHeaderCase:  ptr.Deref(h.PreserveHeaderCase, false),
+	}
+	if h.HeaderKeyFormat != nil {
+		httpIR.HTTP1.HeaderKeyFormat = h.HeaderKeyFormat.Type
 	}
 	if connection != nil {
 		if connection.ConnectionLimit != nil {

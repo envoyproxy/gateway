@@ -752,6 +752,28 @@ type BackendHTTP1Settings struct {
 	PreserveHeaderCase *bool `json:"preserveHeaderCase,omitempty"`
 }
 
+// HTTP1HeaderKeyFormatType defines the formatter Envoy uses for HTTP/1 header names.
+//
+// +kubebuilder:validation:Enum=ProperCaseWords
+type HTTP1HeaderKeyFormatType string
+
+const (
+	// HTTP1HeaderKeyFormatTypeProperCaseWords capitalizes the first letter and any
+	// letter after a special character, also in headers that Envoy creates in
+	// lowercase. For example, "content-type" is sent as "Content-Type".
+	HTTP1HeaderKeyFormatTypeProperCaseWords HTTP1HeaderKeyFormatType = "ProperCaseWords"
+)
+
+// HTTP1HeaderKeyFormat defines how Envoy formats HTTP/1 header names when it writes
+// them to the wire.
+// +union
+type HTTP1HeaderKeyFormat struct {
+	// Type is the formatter for HTTP/1 header names.
+	//
+	// +unionDiscriminator
+	Type HTTP1HeaderKeyFormatType `json:"type"`
+}
+
 // BackendSettings provides the various knobs that can be set to control how traffic to a given
 // backend will be configured. It embeds ClusterSettings (CDS-only fields) and adds
 // route-level fields like Retry.

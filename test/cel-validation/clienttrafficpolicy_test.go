@@ -1242,6 +1242,127 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 				"spec.headers.earlyRequestHeaders.mutations[0].write.action",
 			},
 		},
+		{
+			desc: "http1 proper case words",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					HTTP1: &egv1a1.HTTP1Settings{
+						HeaderKeyFormat: &egv1a1.HTTP1HeaderKeyFormat{Type: egv1a1.HTTP1HeaderKeyFormatTypeProperCaseWords},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "http1 proper case words with preserveHeaderCase false",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				preserve := false
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					HTTP1: &egv1a1.HTTP1Settings{
+						PreserveHeaderCase: &preserve,
+						HeaderKeyFormat:    &egv1a1.HTTP1HeaderKeyFormat{Type: egv1a1.HTTP1HeaderKeyFormatTypeProperCaseWords},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "http1 proper case words conflicts with preserveHeaderCase",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				preserve := true
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					HTTP1: &egv1a1.HTTP1Settings{
+						PreserveHeaderCase: &preserve,
+						HeaderKeyFormat:    &egv1a1.HTTP1HeaderKeyFormat{Type: egv1a1.HTTP1HeaderKeyFormatTypeProperCaseWords},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.http1: Invalid value:",
+				"preserveHeaderCase and headerKeyFormat are mutually exclusive",
+			},
+		},
+		{
+			desc: "http1 headerKeyFormat with unknown type",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					HTTP1: &egv1a1.HTTP1Settings{
+						HeaderKeyFormat: &egv1a1.HTTP1HeaderKeyFormat{Type: "PreserveCase"},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.http1.headerKeyFormat.type: Unsupported value: "PreserveCase": supported values: "ProperCaseWords"`,
+			},
+		},
+		{
+			desc: "http1 headerKeyFormat without type",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("eg"),
+								},
+							},
+						},
+					},
+					HTTP1: &egv1a1.HTTP1Settings{
+						HeaderKeyFormat: &egv1a1.HTTP1HeaderKeyFormat{},
+					},
+				}
+			},
+			wantErrors: []string{
+				`spec.http1.headerKeyFormat.type: Unsupported value: "": supported values: "ProperCaseWords"`,
+			},
+		},
 	}
 
 	for _, tc := range cases {
