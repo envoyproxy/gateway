@@ -24,10 +24,13 @@ spec:
     {{- include "eg.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.deployment.pod.annotations }}
+      {{- /* A configuration change rolls the controller, so it is applied when the
+             rollout completes instead of when the kubelet refreshes the mounted ConfigMap.
+             The computed checksum/config takes precedence over a pod annotation of the same
+             name, which would otherwise be emitted as a duplicate key that shadows it. */}}
+      {{- $checksum := dict "checksum/config" (include (print $.Template.BasePath "/envoy-gateway-config.yaml") . | sha256sum) }}
       annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- toYaml (merge $checksum (.Values.deployment.pod.annotations | default dict)) | nindent 8 }}
       labels:
         control-plane: envoy-gateway
       {{- include "eg.selectorLabels" . | nindent 8 }}

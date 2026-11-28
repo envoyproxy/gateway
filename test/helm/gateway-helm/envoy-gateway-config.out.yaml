@@ -438,6 +438,7 @@ spec:
   template:
     metadata:
       annotations:
+        checksum/config: 042e34526ad4acd41153758ad10c33dafebbd57c1a84d418332e0376b2e606c0
         prometheus.io/port: "19001"
         prometheus.io/scrape: "true"
       labels:

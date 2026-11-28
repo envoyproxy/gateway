@@ -1,0 +1,1 @@
+Fixed controller configuration changes made by helm upgrade taking effect only when the kubelet refreshed the mounted ConfigMap, by rolling the controller Deployment when its rendered configuration changes.

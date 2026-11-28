@@ -178,14 +178,6 @@ func getConfigByPath(stdout, stderr io.Writer, cfgPath string) (*config.Server, 
 // This will block until the context is done, and returns after synchronously
 // closing all the runners.
 func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message.RunnerErrors) (err error) {
-	// Derive a locally-cancelable context so that if a runner fails to start partway
-	// through the loop below, the already-started runners can be signaled to shut down
-	// via cancel() before we wait on them in the deferred cleanup. Without this, those
-	// runners would block on the caller's ctx, which isn't canceled until this function
-	// returns -- a deadlock.
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	channels := struct {
 		pResources *message.ProviderResources
 		xdsIR      *message.XdsIR
@@ -209,6 +201,13 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		return err
 	}
 
+	// The provider runner holds the leader election lease; runRunners releases it last.
+	provider := providerrunner.New(&providerrunner.Config{
+		Server:            *cfg,
+		ProviderResources: channels.pResources,
+		RunnerErrors:      runnerErrors,
+	})
+
 	runners := []struct {
 		runner Runner
 	}{
@@ -226,11 +225,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 			// Important: order matters here: the provider runner must be started before the infra manager runner because
 			// the provider runner creates the Kubernetes client that is needed by the infra manager runner to reconcile
 			// the Envoy Proxy and the rate limit infra resources.
-			runner: providerrunner.New(&providerrunner.Config{
-				Server:            *cfg,
-				ProviderResources: channels.pResources,
-				RunnerErrors:      runnerErrors,
-			}),
+			runner: provider,
 		},
 		{
 			// Start the GatewayAPI Translator Runner
@@ -298,24 +293,11 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		})
 	}
 
-	// started tracks the runners that have actually been started, so that if
-	// starting one fails partway through the loop below, the ones already
-	// running are still closed instead of being left as leaked goroutines.
-	var started []Runner
-	defer func() {
-		// Cancel first so already-started runners observe ctx.Done() and can actually
-		// return when we Close() them below -- otherwise a runner that failed to start
-		// partway through the loop leaves the others waiting on a ctx that only this
-		// function's caller would ever cancel, after this function returns.
-		cancel()
-
-		cfg.Logger.Info("runners are shutting down")
-		for _, r := range started {
-			if cerr := r.Close(); cerr != nil {
-				cfg.Logger.Error(cerr, "failed to close runner", "name", r.Name())
-			}
-		}
-
+	list := make([]Runner, 0, len(runners))
+	for _, r := range runners {
+		list = append(list, r.runner)
+	}
+	return runRunners(ctx, cfg, list, provider, func() {
 		// Close shared channels/maps only after all runner goroutines have exited.
 		//
 		// pResources is intentionally not closed: controller-runtime reconcilers may still
@@ -329,14 +311,77 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		if extMgr != nil {
 			extMgr.CleanupHookConns()
 		}
+	})
+}
+
+// runRunners starts the runners in order, blocks until ctx is done, and then closes them.
+//
+// leaseHolder is the runner that holds the leader election lease (the provider runner). Other
+// runners do leader-only work outside its controller-runtime manager, for example the
+// infrastructure runner after cfg.Elected. The manager releases the lease when its context is
+// canceled, so leaseHolder gets a context of its own, canceled only after every other runner
+// has been closed: another replica cannot take the lease while leader-only work here is
+// still in flight. cleanup runs after every runner has been closed.
+func runRunners(ctx context.Context, cfg *config.Server, runners []Runner, leaseHolder Runner, cleanup func()) (err error) {
+	// leaseCtx is not derived from the cancelable ctx below, so cancel() leaves the lease holder
+	// running until the other runners have stopped.
+	leaseCtx, cancelLease := context.WithCancel(context.WithoutCancel(ctx))
+	defer cancelLease()
+
+	// Derive a locally-cancelable context so that if a runner fails to start partway
+	// through the loop below, the already-started runners can be signaled to shut down
+	// via cancel() before we wait on them in the deferred cleanup. Without this, those
+	// runners would block on the caller's ctx, which isn't canceled until this function
+	// returns -- a deadlock.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// started tracks the runners that have actually been started, so that if
+	// starting one fails partway through the loop below, the ones already
+	// running are still closed instead of being left as leaked goroutines.
+	var started []Runner
+	defer func() {
+		// Cancel first so already-started runners observe ctx.Done() and can actually
+		// return when we Close() them below -- otherwise a runner that failed to start
+		// partway through the loop leaves the others waiting on a ctx that only this
+		// function's caller would ever cancel, after this function returns.
+		cancel()
+
+		cfg.Logger.Info("runners are shutting down")
+		holderStarted := false
+		for _, r := range started {
+			if r == leaseHolder {
+				holderStarted = true
+				continue
+			}
+			if cerr := r.Close(); cerr != nil {
+				cfg.Logger.Error(cerr, "failed to close runner", "name", r.Name())
+			}
+		}
+
+		// Every other runner has exited, so the lease can be released.
+		cancelLease()
+		if holderStarted {
+			if cerr := leaseHolder.Close(); cerr != nil {
+				cfg.Logger.Error(cerr, "failed to close runner", "name", leaseHolder.Name())
+			}
+		}
+
+		if cleanup != nil {
+			cleanup()
+		}
 	}()
 
 	// Start all runners
 	for _, r := range runners {
-		if err = startRunner(ctx, cfg, r.runner); err != nil {
+		rctx := ctx
+		if r == leaseHolder {
+			rctx = leaseCtx
+		}
+		if err = startRunner(rctx, cfg, r); err != nil {
 			return err
 		}
-		started = append(started, r.runner)
+		started = append(started, r)
 	}
 
 	// Wait until done
