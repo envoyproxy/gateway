@@ -262,6 +262,45 @@ envoyExtensionPolicies:
         status: "False"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    name: policy-for-gateway
+    namespace: default
+  spec:
+    lua:
+    - inline: |
+        function envoy_on_response(handle)
+          handle:headers():add("x-parent", "true")
+        end
+      type: Inline
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other envoyExtensionPolicies
+          for these routes: [default/httproute-with-all-invalid-extensions-failclose
+          default/httproute-with-all-invalid-extensions-failopen default/httproute-with-invalid-extensions-mixed-failclose-failopen
+          default/httproute-with-invalid-lua-invald-wasm-failopen default/httproute-with-valid-and-invalid-extension-failclose
+          default/httproute-with-valid-and-invalid-extension-failopen]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -712,6 +751,7 @@ xdsIR:
             weight: 1
         directResponse:
           statusCode: 500
+        envoyExtensions: {}
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -744,6 +784,7 @@ xdsIR:
             weight: 1
         directResponse:
           statusCode: 500
+        envoyExtensions: {}
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -776,6 +817,7 @@ xdsIR:
             weight: 1
         directResponse:
           statusCode: 500
+        envoyExtensions: {}
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -808,6 +850,7 @@ xdsIR:
             weight: 1
         directResponse:
           statusCode: 500
+        envoyExtensions: {}
         hostname: www.foo.com
         isHTTP2: false
         metadata:

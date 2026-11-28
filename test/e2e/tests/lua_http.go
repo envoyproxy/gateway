@@ -180,5 +180,43 @@ var HTTPLuaTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
+
+		t.Run("invalid route policy blocks parent extensions", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			gwNN := types.NamespacedName{Name: "lua-translation-error", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false,
+				types.NamespacedName{Name: "lua-invalid-child", Namespace: ns},
+				types.NamespacedName{Name: "lua-inherited", Namespace: ns})
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(ns),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "lua-error-parent", Namespace: ns}, suite.ControllerName, ancestorRef)
+			EnvoyExtensionPolicyMustFail(t, suite.Client, types.NamespacedName{Name: "lua-error-child", Namespace: ns}, suite.ControllerName, ancestorRef, "can't find the referenced configmap")
+
+			for _, tc := range []struct {
+				path   string
+				status int
+			}{
+				{path: "/invalid", status: 500},
+				{path: "/inherited", status: 200},
+			} {
+				t.Run(tc.path, func(t *testing.T) {
+					expectedResponse := http.ExpectedResponse{
+						Request:   http.Request{Path: tc.path},
+						Response:  http.Response{StatusCodes: []int{tc.status}},
+						Namespace: ns,
+					}
+					if tc.status == 500 {
+						expectedResponse.Response.AbsentHeaders = []string{"X-Parent-Lua"}
+					} else {
+						expectedResponse.Response.Headers = map[string]string{"X-Parent-Lua": "true"}
+					}
+					http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+				})
+			}
+		})
 	},
 }
