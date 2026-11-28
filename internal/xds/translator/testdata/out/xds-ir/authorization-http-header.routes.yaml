@@ -24,7 +24,7 @@
                       name: allow-specific-headers
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-specific-headers
                   predicate:
                     orMatcher:
                       predicate:
@@ -49,7 +49,7 @@
                       name: allow-multiple-headers
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-multiple-headers
                   predicate:
                     andMatcher:
                       predicate:
@@ -85,4 +85,4 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default

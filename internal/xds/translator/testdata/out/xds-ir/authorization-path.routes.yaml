@@ -24,7 +24,7 @@
                       name: allow-public-prefix
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-public-prefix
                   predicate:
                     andMatcher:
                       predicate:
@@ -61,7 +61,7 @@
                       name: allow-admin-exact
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                        name: ALLOW
+                        name: allow-admin-exact
                   predicate:
                     andMatcher:
                       predicate:
@@ -90,7 +90,7 @@
                       typedConfig:
                         '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                         action: DENY
-                        name: DENY
+                        name: deny-non-private
                   predicate:
                     andMatcher:
                       predicate:
@@ -118,4 +118,4 @@
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     action: DENY
-                    name: DENY
+                    name: default

@@ -35,6 +35,8 @@ type Authorization struct {
 type AuthorizationRule struct {
 	// Name is a user-friendly name for the rule.
 	// If not specified, Envoy Gateway will generate a unique name for the rule.
+	// The name is reported as the matched policy in access logs and RBAC metadata,
+	// so it should be unique within the policy. "default" is reported when no rule matches.
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1

@@ -155,30 +155,37 @@ func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	return nil
 }
 
+// rbacDefaultActionName names the action taken when no rule matches.
+const rbacDefaultActionName = "default"
+
+// buildRBACAction returns an RBAC action named after the rule. Envoy reports this
+// name as the matched policy in access logs and dynamic metadata, so naming it
+// after the rule shows which rule allowed or denied the traffic.
+func buildRBACAction(name string, allow bool) (*anypb.Any, error) {
+	rbacAction := rbacconfigv3.RBAC_DENY
+	if allow {
+		rbacAction = rbacconfigv3.RBAC_ALLOW
+	}
+	return proto.ToAnyWithValidation(&rbacconfigv3.Action{Name: name, Action: rbacAction})
+}
+
+// A rule allows unless it explicitly denies, while the default denies unless it
+// explicitly allows. This matches how the translator has always treated an empty
+// action, so only the action names change.
+func ruleAllows(rule *ir.AuthorizationRule) bool {
+	return rule.Action != egv1a1.AuthorizationActionDeny
+}
+
+func defaultAllows(authorization *ir.Authorization) bool {
+	return authorization.DefaultAction == egv1a1.AuthorizationActionAllow
+}
+
 func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, error) {
 	var (
-		rbac        *rbacv3.RBACPerRoute
-		allowAction *anypb.Any
-		denyAction  *anypb.Any
-		err         error
+		rbac *rbacv3.RBACPerRoute
+		err  error
 	)
 	matcherList := make([]*matcherv3.Matcher_MatcherList_FieldMatcher, 0, len(authorization.Rules))
-
-	allow := &rbacconfigv3.Action{
-		Name:   "ALLOW",
-		Action: rbacconfigv3.RBAC_ALLOW,
-	}
-	if allowAction, err = proto.ToAnyWithValidation(allow); err != nil {
-		return nil, err
-	}
-
-	deny := &rbacconfigv3.Action{
-		Name:   "DENY",
-		Action: rbacconfigv3.RBAC_DENY,
-	}
-	if denyAction, err = proto.ToAnyWithValidation(deny); err != nil {
-		return nil, err
-	}
 
 	// Build a list of matchers based on the rules.
 	// The matchers will be evaluated in order, and the first one that matches
@@ -212,10 +219,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			finalPredicate *matcherv3.Matcher_MatcherList_Predicate
 		)
 
-		// Determine the action for the current rule.
-		ruleAction := allowAction
-		if rule.Action == egv1a1.AuthorizationActionDeny {
-			ruleAction = denyAction
+		ruleAction, err := buildRBACAction(rule.Name, ruleAllows(rule))
+		if err != nil {
+			return nil, err
 		}
 
 		if len(rule.Principal.ClientCIDRs) > 0 {
@@ -326,10 +332,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		})
 	}
 
-	// Set the default action.
-	defaultAction := denyAction
-	if authorization.DefaultAction == egv1a1.AuthorizationActionAllow {
-		defaultAction = allowAction
+	defaultAction, err := buildRBACAction(rbacDefaultActionName, defaultAllows(authorization))
+	if err != nil {
+		return nil, err
 	}
 
 	rbac = &rbacv3.RBACPerRoute{
@@ -344,7 +349,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 				OnNoMatch: &matcherv3.Matcher_OnMatch{
 					OnMatch: &matcherv3.Matcher_OnMatch_Action{
 						Action: &cncfv3.TypedExtensionConfig{
-							Name:        "default",
+							Name:        rbacDefaultActionName,
 							TypedConfig: defaultAction,
 						},
 					},

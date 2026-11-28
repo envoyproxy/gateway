@@ -18,7 +18,7 @@
                   name: allow-office
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                    name: ALLOW
+                    name: allow-office
               predicate:
                 singlePredicate:
                   customMatch:
@@ -39,7 +39,7 @@
               typedConfig:
                 '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                 action: DENY
-                name: DENY
+                name: default
         statPrefix: tls-passthrough-8443
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
@@ -62,7 +62,7 @@
                   name: allow-all-ipv4
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                    name: ALLOW
+                    name: allow-all-ipv4
               predicate:
                 singlePredicate:
                   customMatch:
@@ -82,7 +82,7 @@
                   name: allow-all-ipv6
                   typedConfig:
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
-                    name: ALLOW
+                    name: allow-all-ipv6
               predicate:
                 singlePredicate:
                   customMatch:
@@ -103,7 +103,7 @@
               typedConfig:
                 '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                 action: DENY
-                name: DENY
+                name: default
         statPrefix: tls-passthrough-8443
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
