@@ -80,6 +80,11 @@ type gatewayAPIReconciler struct {
 	extSecretGVKs        []schema.GroupVersionKind
 	gatewayNamespaceMode bool
 
+	// endpointRevisions gives each backend's endpoints a revision. Both the full
+	// and endpoint controllers load endpoints through it, so the two paths agree
+	// on revisions.
+	endpointRevisions revisionTracker
+
 	backendCRDExists       bool
 	btlsCRDExists          bool
 	btpCRDExists           bool
@@ -232,10 +237,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		Reconciler:         r,
 		SkipNameValidation: skipNameValidation(),
 		NewQueue: func(controllerName string, rateLimiter workqueue.TypedRateLimiter[reconcile.Request]) workqueue.TypedRateLimitingInterface[reconcile.Request] {
-			q := workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[reconcile.Request]{
-				Name:            controllerName,
-				MetricsProvider: workqueuemetrics.WorkqueueMetricsProvider{},
-			})
+			q := newWorkqueue(controllerName, rateLimiter)
 			if !debounce.Enabled() {
 				return q
 			}
@@ -250,6 +252,11 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	// Watch resources
 	if err := r.watchResources(ctx, mgr, c); err != nil {
 		return fmt.Errorf("error watching resources: %w", err)
+	}
+	if r.endpointFastPathEnabled() {
+		if err := r.watchEndpointUpdates(mgr, name+"-endpoints"); err != nil {
+			return fmt.Errorf("error watching endpoint updates: %w", err)
+		}
 	}
 
 	leaderElectionEnabled := cfg.EnvoyGateway.Provider.IsRunningOnKubernetes() &&
@@ -324,6 +331,14 @@ func byNamespaceSelectorEnabled(eg *egv1a1.EnvoyGateway) bool {
 	}
 }
 
+// newWorkqueue builds a controller queue that reports EG's workqueue metrics.
+func newWorkqueue[T comparable](name string, rateLimiter workqueue.TypedRateLimiter[T]) workqueue.TypedRateLimitingInterface[T] {
+	return workqueue.NewTypedRateLimitingQueueWithConfig(rateLimiter, workqueue.TypedRateLimitingQueueConfig[T]{
+		Name:            name,
+		MetricsProvider: workqueuemetrics.WorkqueueMetricsProvider{},
+	})
+}
+
 // isTransientError reports whether err is likely to clear up on its own, either an
 // API server response such as a timeout or throttling, or a connection-level failure
 // (refused, reset, dropped) that client-go returns without a Kubernetes status.
@@ -376,6 +391,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	if managedGCs == nil {
+		if r.endpointFastPathEnabled() {
+			r.endpointRevisions.pruneBackends(nil)
+		}
 		r.resources.GatewayAPIResources.Delete(string(r.classController))
 		logger.Info("no accepted gatewayclass")
 		return reconcile.Result{}, nil
@@ -398,6 +416,15 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			return reconcile.Result{}, err
 		}
 		gwcResources = append(gwcResources, gwcResource)
+	}
+
+	if r.endpointFastPathEnabled() {
+		// Load each referenced backend's endpoints now that every reference is known.
+		// This takes turns with the endpoint controller, so full and fast updates
+		// always see the same endpoints and revisions.
+		if err := r.loadBackendEndpoints(ctx, gwcResources); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Sort before storing to:
@@ -933,8 +960,13 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 			}
 		}
 
-		// Retrieve the EndpointSlices associated with the Service and ServiceImport
-		if endpointSliceLabelKey != "" {
+		// Retrieve the EndpointSlices associated with the Service and ServiceImport.
+		// With the endpoint fast path, loadBackendEndpoints loads them at the end
+		// of reconcile instead, so the slices and the BackendEndpoints revision come
+		// from the same read.
+		// TODO(robin): Always load endpoints through loadBackendEndpoints so there
+		// is a single source of endpoint data, and remove this listing: https://github.com/envoyproxy/gateway/issues/10712
+		if endpointSliceLabelKey != "" && !r.endpointFastPathEnabled() {
 			endpointSliceList := new(discoveryv1.EndpointSliceList)
 			opts := []client.ListOption{
 				client.InNamespace(string(*backendRef.Namespace)),
@@ -1407,6 +1439,10 @@ func (r *gatewayAPIReconciler) processRateLimitService(ctx context.Context, reso
 		r.log.Info("processing rate limit Service", "namespace", r.namespace, "name", rateLimitServiceName)
 	}
 
+	if r.endpointFastPathEnabled() {
+		// Full and fast collection share a serialized capture at the end of reconcile.
+		return nil
+	}
 	endpointSliceList := new(discoveryv1.EndpointSliceList)
 	opts := []client.ListOption{client.InNamespace(r.namespace)}
 	if r.endpointSliceIndexEnabled() {

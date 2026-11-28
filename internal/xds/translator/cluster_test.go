@@ -28,6 +28,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
@@ -157,7 +158,7 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 		Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
 	}
 	settings := []*ir.DestinationSetting{ds}
-	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil, nil, nil)
+	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, &types.LoadAssignmentArgs{Settings: settings})
 
 	requireCmpNoDiff(t, bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0])
 }
@@ -205,7 +206,12 @@ func TestBuildXdsClusterLoadAssignmentEndpointHostname(t *testing.T) {
 					}
 					settings := []*ir.DestinationSetting{{Endpoints: []*ir.DestinationEndpoint{irEndpoint}}}
 					healthCheck := &ir.HealthCheck{Active: &ir.ActiveHealthCheck{HTTP: &ir.HTTPHealthChecker{}}}
-					actual := buildXdsClusterLoadAssignment("test-cluster", settings, healthCheck, locality.preferLocal, locality.weightedZones)
+					actual := buildXdsClusterLoadAssignment("test-cluster", &types.LoadAssignmentArgs{
+						Settings:      settings,
+						HealthCheck:   healthCheck,
+						PreferLocal:   locality.preferLocal,
+						WeightedZones: locality.weightedZones,
+					})
 					require.Len(t, actual.Endpoints, 1)
 					require.Len(t, actual.Endpoints[0].LbEndpoints, 1)
 					endpoint := actual.Endpoints[0].LbEndpoints[0].GetEndpoint()
@@ -266,7 +272,7 @@ func TestBuildXdsClusterLoadAssignmentWithHealthCheckConfig(t *testing.T) {
 				Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: 8080}},
 			}}
 
-			clusterLoadAssignment := buildXdsClusterLoadAssignment("test-cluster", settings, tc.healthCheck, nil, nil)
+			clusterLoadAssignment := buildXdsClusterLoadAssignment("test-cluster", &types.LoadAssignmentArgs{Settings: settings, HealthCheck: tc.healthCheck})
 
 			require.Len(t, clusterLoadAssignment.GetEndpoints(), 1)
 			require.Len(t, clusterLoadAssignment.GetEndpoints()[0].GetLbEndpoints(), 1)

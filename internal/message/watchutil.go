@@ -152,7 +152,7 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 		}
 	}
 	for snapshot := range subscription {
-		for _, update := range coalesceUpdates(l, snapshot.Updates) {
+		for _, update := range CoalesceUpdates(l, snapshot.Updates) {
 			handleWithCrashRecovery(l, handle, Update[K, V]{
 				Key:    update.Key,
 				Value:  update.Value,
@@ -162,10 +162,10 @@ func HandleSubscription[K comparable, V any](l logging.Logger,
 	}
 }
 
-// coalesceUpdates merges multiple updates for the same key into a single update,
+// CoalesceUpdates merges multiple updates for the same key into a single update,
 // preserving the latest state for each key.
 // This helps reduce redundant processing and ensures that only the most recent update per key is handled.
-func coalesceUpdates[K comparable, V any](logger logging.Logger, updates []watchable.Update[K, V]) []watchable.Update[K, V] {
+func CoalesceUpdates[K comparable, V any](logger logging.Logger, updates []watchable.Update[K, V]) []watchable.Update[K, V] {
 	if len(updates) <= 1 {
 		return updates
 	}

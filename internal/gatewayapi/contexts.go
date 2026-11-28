@@ -18,6 +18,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -989,6 +990,7 @@ type TranslatorContext struct {
 	ConfigMapMap            map[types.NamespacedName]*corev1.ConfigMap
 	ClusterTrustBundleMap   map[types.NamespacedName]*certificatesv1.ClusterTrustBundle
 	EndpointSliceMap        map[backendServiceKey][]*discoveryv1.EndpointSlice
+	BackendEndpointsByKey   map[ir.ServiceKey]*endpoint.BackendEndpoints
 	BackendClusterMap       map[BackendClusterKey]*ir.BackendCluster
 	ExtensionBackendMap     map[ExtensionBackendKey]*ir.ExtensionBackend
 	ExtensionResourceMap    map[ExtensionResourceKey]*ir.UnstructuredRef
@@ -1135,6 +1137,19 @@ func (t *TranslatorContext) SetEndpointSlicesForBackend(slices []*discoveryv1.En
 		if name, ok := slice.Labels[mcsapiv1a1.LabelServiceName]; ok {
 			t.addEndpointSliceForBackend(resource.KindServiceImport, name, slice)
 		}
+	}
+}
+
+// SetBackendEndpoints indexes the provider's captured endpoints by backend, so a
+// destination finds its backend's endpoints without a scan. The index stays nil
+// when there are none, which is the case unless EndpointFastPath is enabled.
+func (t *TranslatorContext) SetBackendEndpoints(backendEndpoints []endpoint.BackendEndpoints) {
+	if len(backendEndpoints) == 0 {
+		return
+	}
+	t.BackendEndpointsByKey = make(map[ir.ServiceKey]*endpoint.BackendEndpoints, len(backendEndpoints))
+	for i := range backendEndpoints {
+		t.BackendEndpointsByKey[backendEndpoints[i].Backend] = &backendEndpoints[i]
 	}
 }
 

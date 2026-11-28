@@ -19,6 +19,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/endpoint"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -298,7 +299,7 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			endpoints, addrType := getIREndpointsFromEndpointSlices(tt.endpointSlices, tt.portName, tt.portProtocol)
+			endpoints, addrType := endpoint.FromSlices(tt.endpointSlices, tt.portName, tt.portProtocol)
 
 			fmt.Printf("Test case: %s\n", tt.name)
 			fmt.Printf("Number of endpoints: %d\n", len(endpoints))

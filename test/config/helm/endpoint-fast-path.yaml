@@ -1,0 +1,12 @@
+config:
+  envoyGateway:
+    # Debounce only delays full reconciliation; the endpoint fast path isn't debounced.
+    # This makes full translation reliably slower than the fast path without adding
+    # load, so the EndpointFastPath e2e test can check that the fast path switches
+    # traffic first. Keep after in sync with fullPathDelay in endpoint_fast_path.go.
+    debounce:
+      after: 5s
+      max: 10s
+    runtimeFlags:
+      enabled:
+      - EndpointFastPath

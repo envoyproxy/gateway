@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: endpoint-fast-path
+  namespace: gateway-conformance-infra
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: endpoint-fast-path
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /endpoint-fast-path
+    backendRefs:
+    - name: endpoint-fast-path
+      port: 8080

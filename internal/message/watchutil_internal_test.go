@@ -69,7 +69,7 @@ func TestCoalesceUpdates(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual := coalesceUpdates(logger, tc.input)
+			actual := CoalesceUpdates(logger, tc.input)
 			require.Equal(t, tc.expected, actual)
 		})
 	}
@@ -82,7 +82,7 @@ func TestCoalesceUpdatesReleasesDiscardedValues(t *testing.T) {
 		old, latest := new([1024]byte), new([1024]byte)
 		latest[0] = 1
 		ref := weak.Make(old)
-		return coalesceUpdates(logger, []watchable.Update[string, *[1024]byte]{
+		return CoalesceUpdates(logger, []watchable.Update[string, *[1024]byte]{
 			{Key: "gateway", Value: old},
 			{Key: "gateway", Value: latest},
 		}), ref
@@ -111,7 +111,7 @@ func BenchmarkCoalesceUpdates(b *testing.B) {
 				b.ReportAllocs()
 				for b.Loop() {
 					updates := append([]watchable.Update[int, *int](nil), input...)
-					runtime.KeepAlive(coalesceUpdates(logger, updates))
+					runtime.KeepAlive(CoalesceUpdates(logger, updates))
 				}
 			})
 		}

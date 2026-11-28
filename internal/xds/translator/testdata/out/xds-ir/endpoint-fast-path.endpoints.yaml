@@ -1,0 +1,40 @@
+- clusterName: orders
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.0.2
+            portValue: 8080
+        healthCheckConfig:
+          portValue: 9090
+      healthStatus: DRAINING
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: orders/tls/0
+    loadBalancingWeight: 3
+    locality:
+      region: orders/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: orders
+            namespace: default
+            sectionName: "8080"
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.1.7
+            portValue: 9090
+        healthCheckConfig:
+          portValue: 9090
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: orders/backend/1
+    priority: 1
