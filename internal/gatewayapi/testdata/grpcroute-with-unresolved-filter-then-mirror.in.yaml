@@ -1,0 +1,47 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-unresolved-then-mirror
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    # An unresolved ExtensionRef installs a synthetic 500. A later RequestMirror
+    # must not be treated as IncompatibleFilters with a configured DirectResponse.
+    # Accepted stays True; only ResolvedRefs is False.
+    - matches:
+      - method:
+          method: "Ping"
+          service: "com.example"
+          type: Exact
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: missing-filter
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            kind: Service
+            name: service-1
+            port: 8080

@@ -66,6 +66,21 @@ grpcRoutes:
           name: mirror-direct-response
         type: ExtensionRef
     - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: mirror-direct-response
+        type: ExtensionRef
+      - requestMirror:
+          backendRef:
+            kind: Service
+            name: service-1
+            port: 8080
+        type: RequestMirror
+    - backendRefs:
       - name: service-2
         port: 8080
   status:
@@ -77,8 +92,9 @@ grpcRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: 'Dropped Rule(s) [0]: RequestMirror filter cannot be used when the
-          rule also configures a DirectResponse filter.'
+        message: |-
+          Dropped Rule(s) [0 1]: RequestMirror filter cannot be used when the rule also configures a DirectResponse filter.
+          RequestMirror filter cannot be used when the rule also configures a DirectResponse filter.
         reason: IncompatibleFilters
         status: "True"
         type: PartiallyInvalid
@@ -156,13 +172,7 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - addResponseHeaders:
-        - addIfAbsent: false
-          append: false
-          name: Content-Type
-          value:
-          - text/plain
-        directResponse:
+      - directResponse:
           statusCode: 500
         hostname: '*'
         isHTTP2: true
@@ -171,12 +181,21 @@ xdsIR:
           name: mirror-direct-response
           namespace: default
         name: grpcroute/default/mirror-direct-response/rule/0/match/-1/*
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: mirror-direct-response
+          namespace: default
+        name: grpcroute/default/mirror-direct-response/rule/1/match/-1/*
       - destination:
           metadata:
             kind: GRPCRoute
             name: mirror-direct-response
             namespace: default
-          name: grpcroute/default/mirror-direct-response/rule/1
+          name: grpcroute/default/mirror-direct-response/rule/2
           settings:
           - addressType: IP
             endpoints:
@@ -187,7 +206,7 @@ xdsIR:
               name: service-2
               namespace: default
               sectionName: "8080"
-            name: grpcroute/default/mirror-direct-response/rule/1/backend/0
+            name: grpcroute/default/mirror-direct-response/rule/2/backend/0
             protocol: GRPC
             weight: 1
         hostname: '*'
@@ -196,7 +215,7 @@ xdsIR:
           kind: GRPCRoute
           name: mirror-direct-response
           namespace: default
-        name: grpcroute/default/mirror-direct-response/rule/1/match/-1/*
+        name: grpcroute/default/mirror-direct-response/rule/2/match/-1/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
