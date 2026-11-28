@@ -32,7 +32,7 @@ The Envoy Proxy column shows the supported minor version. The exact image that a
 {{% alert title="Overriding the Envoy Proxy image" color="warning" %}}
 Setting `image` on the EnvoyProxy resource pins the data plane independently of the control plane. If the pinned image is a different Envoy Proxy minor version than the one listed above, the combination is untested, and Envoy Gateway may generate configuration that the proxy rejects.
 
-A rejected configuration is silent while the proxies keep running, because Envoy continues to serve its last known good configuration. The failure surfaces when a proxy restarts, because a new proxy has no previous configuration to fall back on — and pod readiness can still pass while a listener is missing. To detect this, watch the xDS rejection metrics described in [Gateway Exported Metrics](/latest/tasks/observability/gateway-exported-metrics/).
+A rejected configuration is silent while the proxies keep running, because Envoy continues to serve its last known good configuration. The failure surfaces when a proxy restarts, because a new proxy has no previous configuration to fall back on — and pod readiness can still pass while a listener is missing. To detect this, watch the xDS rejection metrics described in [Gateway Exported Metrics](/latest/concepts/gateway-exported-metrics/).
 
 If you only need to pull the image from a private registry, prefer `imageRepository` over `image`. Envoy Gateway then supplies the tag, so the data plane tracks the control plane automatically.
 {{% /alert %}}
