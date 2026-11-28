@@ -85,6 +85,7 @@
         name: envoy.load_balancing_policies.maglev
         typedConfig:
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
+          localityWeightedLbConfig: {}
   name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   perConnectionBufferLimitBytes: 32768
   type: EDS

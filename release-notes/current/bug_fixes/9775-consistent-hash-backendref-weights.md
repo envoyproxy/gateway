@@ -1,0 +1,1 @@
+Fixed backendRef weights being ignored by the ConsistentHash load balancer when the backendRefs share a single cluster. The Maglev policy now enables locality weighted load balancing whenever every locality in the cluster carries a weight, so some hash keys on affected routes are remapped once after upgrading.

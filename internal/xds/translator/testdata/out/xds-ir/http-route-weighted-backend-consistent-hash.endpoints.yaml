@@ -22,3 +22,25 @@
     loadBalancingWeight: 20
     locality:
       region: first-route-dest/backend/1
+- clusterName: second-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.3.3.3
+            portValue: 50003
+      loadBalancingWeight: 1
+    loadBalancingWeight: 5
+    locality:
+      region: second-route-dest/backend/0
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 4.4.4.4
+            portValue: 50004
+      loadBalancingWeight: 1
+    loadBalancingWeight: 95
+    locality:
+      region: second-route-dest/backend/1

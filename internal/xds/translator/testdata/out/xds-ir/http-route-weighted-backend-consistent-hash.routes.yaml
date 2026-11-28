@@ -32,3 +32,13 @@
                 value: backup
             weight: 20
           useHashPolicy: true
+    - match:
+        pathSeparatedPrefix: /single-cluster
+      name: second-route
+      route:
+        cluster: second-route-dest
+        hashPolicy:
+        - header:
+            headerName: x-user-id
+        upgradeConfigs:
+        - upgradeType: websocket

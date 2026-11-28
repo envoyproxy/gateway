@@ -17,3 +17,35 @@ udp:
         - host: "5.6.7.8"
           port: 50001
         name: "udp-route-dest/backend/0"
+# A topology-aware backend shares the cluster with a plain one. Its zonal
+# localities carry no weight, so Maglev must not enable locality weighted
+# load balancing here or those localities would receive no traffic.
+- name: "udp-route-mixed-zonal"
+  address: "::"
+  port: 10081
+  route:
+    name: "udp-route-mixed-zonal"
+    loadBalancer:
+      consistentHash:
+        sourceIP: true
+    destination:
+      name: "udp-route-mixed-zonal-dest"
+      settings:
+      - endpoints:
+        - host: "1.1.1.1"
+          port: 50000
+          zone: us-east-1a
+        - host: "2.2.2.2"
+          port: 50000
+          zone: us-east-1b
+        weight: 30
+        preferLocal:
+          force:
+            minEndpointsInZoneThreshold: 1
+          minEndpointsThreshold: 1
+        name: "udp-route-mixed-zonal-dest/backend/0"
+      - endpoints:
+        - host: "3.3.3.3"
+          port: 50000
+        weight: 70
+        name: "udp-route-mixed-zonal-dest/backend/1"
