@@ -2854,7 +2854,10 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		if cost.Request != nil {
 			irRule.RequestCost = translateRateLimitCost(cost.Request)
 		}
-		if cost.Response != nil {
+		if ptr.Deref(cost.RefundOnResponse, false) && cost.Request != nil {
+			irRule.ResponseCost = translateRateLimitCost(cost.Request)
+			irRule.ResponseCost.Negative = true
+		} else if cost.Response != nil {
 			irRule.ResponseCost = translateRateLimitCost(cost.Response)
 		}
 	}

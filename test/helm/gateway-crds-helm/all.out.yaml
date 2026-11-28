@@ -26869,6 +26869,14 @@ spec:
                                 This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on
                                 the request path and do not reduce the rate limit counters on the response path.
                               properties:
+                                refundOnResponse:
+                                  description: |-
+                                    RefundOnResponse gives the request cost back to the counters when the stream is closed
+                                    instead of consuming another cost. This tracks the number of requests in flight for
+                                    each descriptor, which can be used to limit concurrency.
+
+                                    This is only supported for a Number request cost and HTTP Global Rate Limits.
+                                  type: boolean
                                 request:
                                   description: |-
                                     Request specifies the number to reduce the rate limit counters
@@ -26927,8 +26935,6 @@ spec:
 
                                     This is optional and if not specified, the rate limit counters are not reduced
                                     on the response path.
-
-                                    Currently, this is only supported for HTTP Global Rate Limits.
                                   properties:
                                     from:
                                       description: From specifies where to get the
@@ -26968,6 +26974,12 @@ spec:
                                       specified
                                     rule: '!(has(self.number) && has(self.metadata))'
                               type: object
+                              x-kubernetes-validations:
+                              - message: refundOnResponse requires a Number request
+                                  cost and cannot be used with a response cost
+                                rule: '!has(self.refundOnResponse) || !self.refundOnResponse
+                                  || (has(self.request) && self.request.from == ''Number''
+                                  && has(self.request.number) && !has(self.response))'
                             limit:
                               description: |-
                                 Limit holds the rate limit values.
@@ -27281,6 +27293,14 @@ spec:
                                 This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on
                                 the request path and do not reduce the rate limit counters on the response path.
                               properties:
+                                refundOnResponse:
+                                  description: |-
+                                    RefundOnResponse gives the request cost back to the counters when the stream is closed
+                                    instead of consuming another cost. This tracks the number of requests in flight for
+                                    each descriptor, which can be used to limit concurrency.
+
+                                    This is only supported for a Number request cost and HTTP Global Rate Limits.
+                                  type: boolean
                                 request:
                                   description: |-
                                     Request specifies the number to reduce the rate limit counters
@@ -27339,8 +27359,6 @@ spec:
 
                                     This is optional and if not specified, the rate limit counters are not reduced
                                     on the response path.
-
-                                    Currently, this is only supported for HTTP Global Rate Limits.
                                   properties:
                                     from:
                                       description: From specifies where to get the
@@ -27380,6 +27398,12 @@ spec:
                                       specified
                                     rule: '!(has(self.number) && has(self.metadata))'
                               type: object
+                              x-kubernetes-validations:
+                              - message: refundOnResponse requires a Number request
+                                  cost and cannot be used with a response cost
+                                rule: '!has(self.refundOnResponse) || !self.refundOnResponse
+                                  || (has(self.request) && self.request.from == ''Number''
+                                  && has(self.request.number) && !has(self.response))'
                             limit:
                               description: |-
                                 Limit holds the rate limit values.
@@ -27471,8 +27495,10 @@ spec:
                         maxItems: 16
                         type: array
                         x-kubernetes-validations:
-                        - message: response cost is not supported for Local Rate Limits
-                          rule: self.all(r, !has(r.cost) || !has(r.cost.response))
+                        - message: response cost and refundOnResponse are not supported
+                            for Local Rate Limits
+                          rule: self.all(r, !has(r.cost) || (!has(r.cost.response)
+                            && (!has(r.cost.refundOnResponse) || !r.cost.refundOnResponse)))
                         - message: limit fromMetadata is not supported for Local Rate
                             Limits
                           rule: self.all(r, !has(r.limit.fromMetadata))
