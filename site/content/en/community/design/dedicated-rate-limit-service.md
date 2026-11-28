@@ -69,9 +69,14 @@ needs to be isolated.
   certificate to the shared RLS, which keeps accepting every proxy as today.
 * Automatic certificate renewal or revocation before expiry. Operators manage certificate expiry (see
   [RLS identities and certificates](#rls-identities-and-certificates)).
-* Restart-safe cleanup of per-Gateway proxy resources. Dedicated RLS resources are swept after every
-  start (see [Cleanup](#cleanup)), but proxy resources left behind while Envoy Gateway was stopped are
-  not; that needs a separate change.
+* Cleanup of changes Envoy Gateway did not observe. A dedicated RLS is removed when Envoy Gateway
+  observes its Gateway being deleted or dropping `rateLimit`, as proxy resources are today. Changes
+  made while Envoy Gateway is stopped, and turning off `enableDedicatedRateLimit`, leave dedicated RLS
+  resources behind; admins remove them manually (see [Cleanup](#cleanup)). An automatic sweep is
+  deferred (see [TODO](#sweeping-stale-dedicated-rls-resources)).
+* Multiple Envoy Gateway installations managing Gateways in the same namespace while dedicated RLS is
+  enabled. This design assumes one controller per namespace in the first iteration; that combination
+  is unsupported.
 * Hardening tenant namespaces or proxy workloads. Proxy `patch`, privileged containers, host
   networking and host path mounts can already let a tenant's proxy escape its namespace's network
   isolation, for every namespace-based NetworkPolicy and not only for the RLS. This proposal relies on
@@ -235,9 +240,17 @@ therefore confirm the controller's permissions each time they turn the feature o
 
   Missing permissions also surface as a startup warning and as `RateLimitReady=False` with reason
   `ProvisioningFailed` on each affected Gateway.
-* **After turning it off**, confirm that no dedicated RLS remains, for example with
-  `kubectl get deployments -A -l gateway.envoyproxy.io/ratelimit-scope=gateway`, and then decide
-  whether to keep the permission. Keep it if the feature may be turned on again; otherwise set
+* **After turning it off**, check for dedicated RLS left behind, for example with
+  `kubectl get deployments -A -l gateway.envoyproxy.io/ratelimit-scope=gateway`. Envoy Gateway does not
+  remove them when the switch is turned off (see [Cleanup](#cleanup)). Once every proxy has moved to the
+  shared RLS, delete them:
+
+  ```shell
+  kubectl delete deployment,service,hpa,pdb,serviceaccount,configmap -A \
+    -l gateway.envoyproxy.io/ratelimit-scope=gateway
+  ```
+
+  Then decide whether to keep the permission. Keep it if the feature may be turned on again; otherwise set
   `dedicatedRateLimit.rbac.enabled: false` to return the controller to its previous privileges.
   Removal does not depend on the permission (see [Cleanup](#cleanup)).
 
@@ -261,10 +274,10 @@ switch does not reject the Gateway or remove its listeners. With dedicated RLS d
 configured, global rate limit policies are rejected as today.
 
 Disabling the setting after dedicated RLS is in use has the same effect: each affected Gateway moves
-back to the shared RLS, if configured, and its dedicated RLS is removed, with the transition behavior
-in [Changing the configuration](#changing-the-configuration). The control plane reloads with the new
-setting, so removal comes from the sweep after that reload and from Secret ownership, not from the
-previous runner's state (see [Cleanup](#cleanup)).
+back to the shared RLS, if configured, with the transition behavior in
+[Changing the configuration](#changing-the-configuration). The dedicated RLS is **not** removed: the
+control plane reloads with the new setting and starts without the previous desired state, so nothing
+deletes it. Admins remove it manually (see [Cleanup](#cleanup)).
 Re-enabling the setting moves it to a dedicated RLS again. RLS workload fields on an `EnvoyProxy`
 without `rateLimit` have no effect either way.
 
@@ -272,11 +285,13 @@ without `rateLimit` have no effect either way.
 > change that affects every Gateway with a dedicated RLS at once, not a per-Gateway rollback.
 > Before turning it off, admins should understand that:
 >
-> * **Enforcement can be lost or traffic denied.** The sweep after the reload deletes every dedicated
->   RLS without waiting for proxies to move to the shared RLS. Until each proxy has switched, its rate
->   limit calls fail: with `failClosed: true` those requests are denied, and with `failClosed: false`
->   they pass unlimited. A proxy that has switched but still calls a previous RLS can also bypass limits
->   (see [Changing the configuration](#changing-the-configuration)).
+> * **Enforcement can be lost or traffic denied.** Proxies move to the shared RLS without
+>   coordination. Until each proxy has switched, it keeps calling a dedicated RLS that no longer
+>   receives rule updates, and once that RLS is removed its calls fail: with `failClosed: true` those
+>   requests are denied, and with `failClosed: false` they pass unlimited. Unknown domains can also
+>   bypass limits (see [Changing the configuration](#changing-the-configuration)).
+> * **Leftover resources.** The dedicated RLS Deployments, Services and Secrets stay until an admin
+>   deletes them (see [Cleanup](#cleanup)).
 > * **Without a shared RLS, global rate limits stop.** If `EnvoyGateway.rateLimit` is not set, the
 >   global rate limit policies of those Gateways are rejected, and their routes serve without global
 >   rate limiting until the setting is re-enabled.
@@ -677,25 +692,43 @@ their removal (see [Cleanup](#cleanup)).
 
 #### Cleanup
 
-Removing a dedicated RLS must not depend on the controller still holding Secret permissions or
-remembering the RLS:
+Envoy Gateway removes a dedicated RLS the way it removes proxy resources today: when it observes the
+Gateway being deleted or no longer setting `rateLimit`, it deletes that Gateway's RLS resources,
+selected by that Gateway's labels. Removal does not depend on the controller holding Secret
+permissions:
 
 * **Secrets are owned by the RLS Deployment.** Every Secret of a dedicated RLS (its certificate Secret
   and, in the default mode, its credential copies) has a single owner reference, to that RLS's
   Deployment in the same namespace. Deleting the Deployment lets Kubernetes garbage-collect the
   Secrets, so removal needs only the infrastructure permissions the controller always has, and still
-  works where an admin has removed the Secret permission. The Deployment, in turn, carries an owner reference to the Gateway in Gateway namespace
-  mode, so deleting the Gateway removes everything.
-* **Stale resources are swept after every start.** A configuration reload starts a new
-  infrastructure runner without the previous desired state, and changes made while Envoy Gateway was
-  stopped are never observed. So after each start, including a reload, once the infrastructure leader
-  has processed the first complete set of desired infrastructure, Envoy Gateway lists dedicated RLS
-  resources by the `gateway.envoyproxy.io/ratelimit-scope` label in the namespaces it manages and
-  deletes those whose scope is not desired. That covers a Gateway that was deleted or dropped
-  `rateLimit` while Envoy Gateway was stopped, and turning off `enableDedicatedRateLimit`. The sweep
-  uses direct API reads, because the label-filtered informer caches select only the shared RLS and
-  proxy names. It never runs before the first complete set, so a partial view cannot delete a live
-  RLS.
+  works where an admin has removed the Secret permission. The Deployment, in turn, carries an owner
+  reference to the Gateway in Gateway namespace mode, so deleting the Gateway removes everything.
+
+**Changes Envoy Gateway does not observe leave resources behind.** The first iteration has no sweep
+of stale resources. A configuration reload starts a new infrastructure runner without the previous
+desired state, and changes made while Envoy Gateway is stopped are never seen. Dedicated RLS resources
+therefore stay behind when:
+
+* `enableDedicatedRateLimit` is turned off;
+* a Gateway drops `rateLimit` while Envoy Gateway is stopped;
+* in the default mode, a Gateway is deleted while Envoy Gateway is stopped. In Gateway namespace mode,
+  the owner reference removes them.
+
+Leftover RLS no longer receive traffic once every proxy has moved, but keep consuming resources and
+holding Redis credentials. Admins find them by label and delete them; deleting the Deployment also
+removes its Secrets:
+
+```shell
+kubectl delete deployment,service,hpa,pdb,serviceaccount,configmap -A \
+    -l gateway.envoyproxy.io/ratelimit-scope=gateway
+```
+
+This deletes every dedicated RLS in the cluster, so run it only after turning off
+`enableDedicatedRateLimit`. For a single Gateway, add the `owning-gateway-namespace` and
+`owning-gateway-name` labels to the selector. Because label-selected deletion relies on each Gateway's
+namespace and name being unique to one controller, multiple Envoy Gateway installations managing
+Gateways in the same namespace are not supported with dedicated RLS (see [Non-Goals](#non-goals)).
+An automatic sweep is deferred (see [TODO](#sweeping-stale-dedicated-rls-resources)).
 
 **Configuration server address.** The shared RLS reaches the configuration server through the short
 Service name `envoy-gateway:18001`, which only resolves from the controller namespace. Every dedicated
@@ -1033,15 +1066,20 @@ actual enforcement separately before restoring traffic after planned maintenance
 
 `RateLimitReady=False` uses the following reasons, in priority order when multiple failures apply:
 
-| Reason                       | Meaning                                                                         |
-| ---------------------------- | ------------------------------------------------------------------------------- |
-| `InvalidCredentials`         | A required credential or its authorization cannot be resolved.                  |
-| `CertificateUnavailable`     | A required CA or leaf certificate is missing, invalid or expired.             |
-| `ProvisioningFailed`         | Creation or update of a required Kubernetes resource failed.                    |
-| `RolloutFailed`              | The Deployment reports that the desired rollout exceeded its progress deadline. |
-| `Provisioning`               | Required resources have not yet been observed.                                  |
-| `RollingOut`                 | The current Deployment rollout has not completed.                               |
-| `NoReadyEndpoints`           | The Service has no ready endpoint from the current rollout.                     |
+| Reason                   | Meaning                                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| `InvalidCredentials`     | A required credential or its authorization cannot be resolved.                                     |
+| `CertificateUnavailable` | The RLS CA is missing, invalid or expired, or a leaf certificate is invalid or expired.¹           |
+| `ProvisioningFailed`     | Creation or update of a required Kubernetes resource failed, including the RLS certificate Secret. |
+| `RolloutFailed`          | The Deployment reports that the desired rollout exceeded its progress deadline.                    |
+| `Provisioning`           | Required resources have not yet been observed.                                                     |
+| `RollingOut`             | The current Deployment rollout has not completed.                                                  |
+| `NoReadyEndpoints`       | The Service has no ready endpoint from the current rollout.                                        |
+
+¹ A leaf certificate that is missing only because writing its Secret failed, for example because the
+controller lacks Secret write permission (see [Namespace](#namespace)), is reported as
+`ProvisioningFailed`, not `CertificateUnavailable`. A missing leaf counts as `CertificateUnavailable`
+only when the controller cannot issue it, because the RLS CA is unusable.
 
 An unknown observation state uses `RateLimitReady=Unknown` with reason `PendingObservation`. Successful
 convergence uses reason `Ready`. A Gateway that no longer uses global rate limiting has this condition
@@ -1212,8 +1250,10 @@ These are the author's recommendations and are open for review.
   through a separate, default-off Helm value, `dedicatedRateLimit.rbac.enabled`, not through
   `enableDedicatedRateLimit`, which can change at runtime. Admins confirm the permissions after
   turning the feature on or off.
-* Make each dedicated RLS's Secrets owned by its Deployment, and sweep stale dedicated RLS resources
-  by label after every start, so removal works after reloads, offline changes and feature disablement.
+* Make each dedicated RLS's Secrets owned by its Deployment, so removal never needs Secret
+  permissions. Remove dedicated RLS on observed changes only; leave resources from unobserved changes
+  and feature disablement to manual cleanup, and defer an automatic sweep. Multiple installations
+  managing one namespace are unsupported.
 * Use ordinary reconciliation for scope changes and require planned maintenance when continuous
   enforcement is needed, including with `failClosed: true`.
 
@@ -1264,7 +1304,7 @@ Implementation must cover the following cases with meaningful automated tests:
   in the default mode and in Gateway namespaces in Gateway namespace mode, and the controller never
   modifies Secrets it did not create. With the knob enabled, turning `enableDedicatedRateLimit` on by
   editing the `EnvoyGateway` configuration alone provisions working dedicated RLS; without it, each
-  dedicated RLS reports `ProvisioningFailed`; with `watch.namespaces` in Gateway
+  dedicated RLS reports `ProvisioningFailed`, not `CertificateUnavailable`; with `watch.namespaces` in Gateway
   namespace mode, the grant is on each per-namespace Role. In both modes every dedicated RLS is
   rendered with the fully qualified configuration server address; in Gateway namespace mode it loads
   its rules from a pod in a namespace other than the controller's. With `watch.namespaces` that omits the controller namespace,
@@ -1287,10 +1327,10 @@ Implementation must cover the following cases with meaningful automated tests:
   removes only its resources; updates preserve scope-specific selectors and HPA targets; the shared RLS
   Service and PDB never select dedicated pods; in dedicated-only mode, and when one of several dedicated
   RLS is deleted, the remaining dedicated RLS keep their ServiceAccounts and ConfigMaps. Every dedicated
-  RLS Secret is owned only by its Deployment and is garbage-collected with it. Turning off
-  `enableDedicatedRateLimit`, through Helm or by editing the configuration, removes every dedicated
-  RLS and its Secrets, also when `dedicatedRateLimit.rbac.enabled` is turned off at the same time. Removing `rateLimit` or deleting a Gateway while Envoy Gateway is
-  stopped is cleaned up after the next start, and the sweep never deletes a desired RLS.
+  RLS Secret is owned only by its Deployment and is garbage-collected with it, also when
+  `dedicatedRateLimit.rbac.enabled` is off. Removing `rateLimit` or deleting a Gateway while Envoy
+  Gateway runs removes its dedicated RLS and Secrets. Turning off `enableDedicatedRateLimit` leaves
+  dedicated RLS in place, and the documented label-selected delete removes them with their Secrets.
 * **API:** an `EnvoyProxy` whose `rateLimit` omits `failClosed` is accepted and behaves as `false`;
   generated API docs for `urlRef` and `certificateRef` describe both the `EnvoyGateway` and the
   `EnvoyProxy` namespace rules.
@@ -1324,6 +1364,22 @@ for implementation; this proposal itself changes no executable behavior.
 ## TODO
 
 The following are follow-ups, not requirements for the supported v1 deployment modes.
+
+### Sweeping stale dedicated RLS resources
+
+Automatically remove dedicated RLS left behind by changes Envoy Gateway did not observe, such as
+turning off `enableDedicatedRateLimit` or changes made while it was stopped. After each start,
+including a reload, once the infrastructure leader has processed the first complete set of desired
+infrastructure, Envoy Gateway could list dedicated RLS resources by label and delete those whose scope
+is not desired. The design must:
+
+* Add an installation identity label, for example a hash of the controller name and namespace, and
+  restrict the sweep to it, so that installations sharing a namespace never delete each other's RLS.
+  This would also lift the single-installation restriction.
+* Use direct API reads, because the label-filtered informer caches select only the shared RLS and
+  proxy names.
+* Never run before the first complete desired set, so a partial view cannot delete a live RLS.
+* Consider covering per-Gateway proxy resources at the same time.
 
 ### Coordinated RLS scope changes
 
