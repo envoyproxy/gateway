@@ -354,14 +354,12 @@ func accessLogRefs(ep *egv1a1.EnvoyProxy) []string {
 			}
 
 			for _, ref := range backendRefs {
-				if ref.Kind == nil || string(*ref.Kind) == resource.KindService {
-					refs = append(refs,
-						types.NamespacedName{
-							Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
-							Name:      string(ref.Name),
-						}.String(),
-					)
-				}
+				refs = append(refs,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+						Name:      string(ref.Name),
+					}.String(),
+				)
 			}
 		}
 	}
@@ -379,14 +377,12 @@ func metricRefs(ep *egv1a1.EnvoyProxy) []string {
 	for _, sink := range ep.Spec.Telemetry.Metrics.Sinks {
 		if sink.OpenTelemetry != nil {
 			for _, backend := range sink.OpenTelemetry.BackendRefs {
-				if backend.Kind == nil || string(*backend.Kind) == resource.KindService {
-					refs = append(refs,
-						types.NamespacedName{
-							Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, ep.Namespace),
-							Name:      string(backend.Name),
-						}.String(),
-					)
-				}
+				refs = append(refs,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, ep.Namespace),
+						Name:      string(backend.Name),
+					}.String(),
+				)
 			}
 		}
 	}
@@ -402,14 +398,12 @@ func traceRefs(ep *egv1a1.EnvoyProxy) []string {
 	}
 
 	for _, ref := range ep.Spec.Telemetry.Tracing.Provider.BackendRefs {
-		if ref.Kind == nil || string(*ref.Kind) == resource.KindService {
-			refs = append(refs,
-				types.NamespacedName{
-					Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
-					Name:      string(ref.Name),
-				}.String(),
-			)
-		}
+		refs = append(refs,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+				Name:      string(ref.Name),
+			}.String(),
+		)
 	}
 
 	return refs
