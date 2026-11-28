@@ -209,6 +209,12 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		return err
 	}
 
+	providerRunner := providerrunner.New(&providerrunner.Config{
+		Server:            *cfg,
+		ProviderResources: channels.pResources,
+		RunnerErrors:      runnerErrors,
+	})
+
 	runners := []struct {
 		runner Runner
 	}{
@@ -226,11 +232,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 			// Important: order matters here: the provider runner must be started before the infra manager runner because
 			// the provider runner creates the Kubernetes client that is needed by the infra manager runner to reconcile
 			// the Envoy Proxy and the rate limit infra resources.
-			runner: providerrunner.New(&providerrunner.Config{
-				Server:            *cfg,
-				ProviderResources: channels.pResources,
-				RunnerErrors:      runnerErrors,
-			}),
+			runner: providerRunner,
 		},
 		{
 			// Start the GatewayAPI Translator Runner
@@ -339,9 +341,10 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 		started = append(started, r.runner)
 	}
 
-	// Wait until done
-	<-ctx.Done()
-	return nil
+	// Wait until done, or until the provider stops on its own, e.g. because it
+	// lost its leader lease. Its error then stops the other runners, through the
+	// deferred cancel, and ends the process, through the config loader.
+	return providerRunner.Wait(ctx)
 }
 
 func startRunner(ctx context.Context, cfg *config.Server, runner Runner) error {
