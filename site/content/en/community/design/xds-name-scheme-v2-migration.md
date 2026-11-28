@@ -22,7 +22,7 @@ the shared resource after one of the Gateway listeners (`<namespace>/<gateway>/<
 | HTTP RouteConfiguration | `<ns>/<gw>/<section>` | `http-<port>` |
 | HTTPS filter chain and RouteConfiguration | unchanged | unchanged |
 | VirtualHost | `<ns>/<gw>/<section>/<host>` | `<host>` (dots replaced by `_` in both) |
-| HCM stat prefix | `http-<container port>` | `http-<listener port>` |
+| HCM stat prefix | `http-<container port>`, `https-<container port>` | `http-<listener port>`, `https-<listener port>` |
 | Clusters, endpoints, secrets | unchanged | unchanged |
 
 `<port>` is the Gateway listener port. The container port differs for privileged ports, e.g. 80
@@ -241,14 +241,14 @@ For each EnvoyPatchPolicy, for each `jsonPatches[i]`:
 | Input | Output | Result |
 |---|---|---|
 | `name` is a v1 name of a Listener or RouteConfiguration | `selector.sectionName` (plus `name`/`namespace` under `mergeGateways`) | migrated |
-| `name` is already a v2 name | `selector` the same way | migrated |
+| `name` is already a v2 name | unchanged | none: v2 names stay valid after the flag is removed |
 | `name` of a type v2 doesn't rename | unchanged | none |
 | `jsonPath` filters on a v1 VirtualHost name | filter on `domains` | migrated |
 | `name` matches no resource in the input | unchanged | error: a Gateway, route or policy is missing from the input, or the patch is already broken |
 | `jsonPath` too complex to rewrite safely | unchanged | error: listed for a manual fix |
 | `name` is a v1 name of a QUIC Listener, or of a resource that serves only ListenerSet listeners | unchanged | error: no selector exists; listed for a manual fix, with the v2 name |
 | A v1 name of a renamed resource elsewhere in the patch, e.g. an HCM `rds.route_config_name` in `operation.value`, or a `jsonPath` filter on a filter chain or RouteConfiguration name | unchanged | error: listed for a manual fix |
-| `op: add` with an empty path (adds a new resource) | unchanged | none for the new resource's own name, which the user picks, nor for later patches that target it by that name; v1 names inside it, e.g. an HCM `rds.route_config_name`, are checked like any other value |
+| `op: add` with an empty path (adds a new resource) | unchanged | none for the new resource's own name, which the user picks, nor for later patches that target it by that name, or by a name an earlier patch set with `/name`; v1 names inside it, e.g. an HCM `rds.route_config_name`, are checked like any other value |
 
 The tool looks for v1 names of renamed resources everywhere in a patch: the target, `jsonPath`,
 and `operation.value`, including the body of a new resource added with an empty path. A patch is
