@@ -848,6 +848,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/api-spec/1.5/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details. |
 | `forwardUsernameHeader` | _string_ |  false  |  | This field specifies the header name to forward a successfully authenticated user to<br />the backend. The header will be added to the request with the username as the value.<br />If it is not specified, the username will not be forwarded. |
+| `realm` | _string_ |  false  |  | Realm sets the value of the WWW-Authenticate realm field returned in 401 responses.<br />Browsers cache Basic Auth credentials per (origin, realm) per RFC 7617, so setting<br />a fixed realm allows credential reuse across different paths of the same protected route.<br />If unset, Envoy defaults the realm to the full request URI. |
 
 
 #### BodyToExtAuth

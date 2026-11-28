@@ -32,4 +32,12 @@ type BasicAuth struct {
 	//
 	// +optional
 	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty"`
+
+	// Realm sets the value of the WWW-Authenticate realm field returned in 401 responses.
+	// Browsers cache Basic Auth credentials per (origin, realm) per RFC 7617, so setting
+	// a fixed realm allows credential reuse across different paths of the same protected route.
+	// If unset, Envoy defaults the realm to the full request URI.
+	//
+	// +optional
+	Realm *string `json:"realm,omitempty"`
 }
