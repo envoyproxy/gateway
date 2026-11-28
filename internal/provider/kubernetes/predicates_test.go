@@ -1425,12 +1425,21 @@ func TestValidateServiceImportForReconcile(t *testing.T) {
 	remotePolicy := policy.DeepCopy()
 	remotePolicy.Spec.Backends[0].BackendRef.Namespace = new(gwapiv1.Namespace("other"))
 	route := test.GetHTTPRoute(types.NamespacedName{Name: "app", Namespace: "default"}, "gateway", backendRef, "")
+	securityPolicy := &egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "ext-auth", Namespace: "default"},
+		Spec: egv1a1.SecurityPolicySpec{ExtAuth: &egv1a1.ExtAuth{
+			GRPC: &egv1a1.GRPCExtAuthService{BackendCluster: egv1a1.BackendCluster{
+				BackendRefs: []egv1a1.BackendRef{{BackendObjectReference: backendRef}},
+			}},
+		}},
+	}
 
 	testCases := []struct {
 		name         string
 		namespace    string
 		configs      []client.Object
 		eepCRDExists bool
+		spCRDExists  bool
 		expect       bool
 	}{
 		{
@@ -1453,17 +1462,23 @@ func TestValidateServiceImportForReconcile(t *testing.T) {
 			name: "route backend without an extension policy", namespace: "default",
 			configs: []client.Object{route}, expect: true,
 		},
+		{
+			name: "security policy ExtAuth backend", namespace: "default",
+			configs: []client.Object{securityPolicy}, spCRDExists: true, expect: true,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := gatewayAPIReconciler{
 				log:          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 				eepCRDExists: tc.eepCRDExists,
+				spCRDExists:  tc.spCRDExists,
 				client: fakeclient.NewClientBuilder().
 					WithScheme(envoygateway.GetScheme()).
 					WithObjects(tc.configs...).
 					WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 					WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
+					WithIndex(&egv1a1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
 					Build(),
 			}
 			serviceImport := &mcsapiv1a1.ServiceImport{
