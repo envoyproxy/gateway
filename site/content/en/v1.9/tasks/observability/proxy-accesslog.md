@@ -143,7 +143,7 @@ curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={
 ## gGRPC Access Log Service(ALS) Sink
 
 Envoy Gateway can send logs to a backend implemented [gRPC access log service proto](https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/accesslog/v3/als.proto).
-There's an example service [here](https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/envoy-als.yaml), which simply count the log and export to prometheus endpoint.
+The OpenTelemetry Collector's [Envoy ALS receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/envoyalsreceiver) implements this service. The OpenTelemetry Collector installed by the `gateway-addons-helm` chart enables it on port 9000, which is the backend used below.
 
 The following configuration sends logs to the gRPC access log service:
 
