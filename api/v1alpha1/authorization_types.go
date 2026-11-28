@@ -13,6 +13,13 @@ import (
 //
 // Note: if neither `Rules` nor `DefaultAction` is specified, the default action is to deny all requests.
 type Authorization struct {
+	// Mode defines the authorization mode: Enforce or Shadow.
+	// If not specified, the default is Enforce.
+	//
+	// +optional
+	// +kubebuilder:default=Enforce
+	Mode *AuthorizationMode `json:"mode,omitempty"`
+
 	// Rules defines a list of authorization rules.
 	// These rules are evaluated in order, the first matching rule will be applied,
 	// and the rest will be skipped.
@@ -334,4 +341,18 @@ const (
 	AuthorizationActionAllow AuthorizationAction = "Allow"
 	// AuthorizationActionDeny is the action to deny the request.
 	AuthorizationActionDeny AuthorizationAction = "Deny"
+)
+
+// AuthorizationMode defines the mode of authorization enforcement.
+//
+// +kubebuilder:validation:Enum=Enforce;Shadow
+type AuthorizationMode string
+
+const (
+	// AuthorizationModeEnforce enforces authorization rules and denies unauthorized requests.
+	AuthorizationModeEnforce AuthorizationMode = "Enforce"
+
+	// AuthorizationModeShadow evaluates authorization rules in shadow / dry-run mode,
+	// emitting metrics and dynamic metadata without denying requests.
+	AuthorizationModeShadow AuthorizationMode = "Shadow"
 )

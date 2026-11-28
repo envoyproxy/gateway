@@ -33546,6 +33546,15 @@ spec:
                     - Allow
                     - Deny
                     type: string
+                  mode:
+                    default: Enforce
+                    description: |-
+                      Mode defines the authorization mode: Enforce or Shadow.
+                      If not specified, the default is Enforce.
+                    enum:
+                    - Enforce
+                    - Shadow
+                    type: string
                   rules:
                     description: |-
                       Rules defines a list of authorization rules.

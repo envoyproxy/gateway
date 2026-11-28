@@ -1975,11 +1975,21 @@ type GRPCExtAuthService struct {
 //
 // +k8s:deepcopy-gen=true
 type Authorization struct {
+	// Mode defines the authorization mode: Enforce or Shadow.
+	// If not specified, the default is Enforce.
+	//
+	// +optional
+	Mode *egv1a1.AuthorizationMode `json:"mode,omitempty"`
+
 	// Rules defines the authorization rules.
 	Rules []*AuthorizationRule `json:"rules,omitempty"`
 
 	// DefaultAction defines the default action to be taken if no rules match.
 	DefaultAction egv1a1.AuthorizationAction `json:"defaultAction"`
+}
+
+func (a *Authorization) IsShadow() bool {
+	return a != nil && a.Mode != nil && *a.Mode == egv1a1.AuthorizationModeShadow
 }
 
 func (a *Authorization) UsesClientIPGeoLocations() bool {

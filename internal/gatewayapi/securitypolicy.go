@@ -1012,6 +1012,9 @@ func validateSecurityPolicyForL4(p *egv1a1.SecurityPolicy, proto string) error {
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
 		return nil
 	}
+	if proto == "UDP" && p.Spec.Authorization.Mode != nil && *p.Spec.Authorization.Mode == egv1a1.AuthorizationModeShadow {
+		return fmt.Errorf("shadow mode is not supported for UDP")
+	}
 	for i := range p.Spec.Authorization.Rules {
 		rule := &p.Spec.Authorization.Rules[i]
 		if rule.CEL != nil {
@@ -3523,6 +3526,7 @@ func (t *Translator) buildAuthorization(
 		defaultAction = *authorization.DefaultAction
 	}
 	irAuth.DefaultAction = defaultAction
+	irAuth.Mode = authorization.Mode
 
 	for i := range authorization.Rules {
 		rule := &authorization.Rules[i]

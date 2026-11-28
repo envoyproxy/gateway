@@ -261,6 +261,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `mode` | _[AuthorizationMode](#authorizationmode)_ |  false  | Enforce | Mode defines the authorization mode: Enforce or Shadow.<br />If not specified, the default is Enforce. |
 | `rules` | _[AuthorizationRule](#authorizationrule) array_ |  false  |  | Rules defines a list of authorization rules.<br />These rules are evaluated in order, the first matching rule will be applied,<br />and the rest will be skipped.<br />For example, if there are two rules: the first rule allows the request<br />and the second rule denies it, when a request matches both rules, it will be allowed. |
 | `defaultAction` | _[AuthorizationAction](#authorizationaction)_ |  false  |  | DefaultAction defines the default action to be taken if no rules match.<br />If not specified, the default action is Deny. |
 
@@ -294,6 +295,21 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name of the HTTP header.<br />The header name is case-insensitive unless PreserveHeaderCase is set to true.<br />For example, "Foo" and "foo" are considered the same header. |
 | `values` | _string array_ |  true  |  | Values are the values that the header must match.<br />If multiple values are specified, the rule will match if any of the values match. |
+
+
+#### AuthorizationMode
+
+_Underlying type:_ _string_
+
+AuthorizationMode defines the mode of authorization enforcement.
+
+_Appears in:_
+- [Authorization](#authorization)
+
+| Value | Description |
+| ----- | ----------- |
+| `Enforce` | AuthorizationModeEnforce enforces authorization rules and denies unauthorized requests.<br /> | 
+| `Shadow` | AuthorizationModeShadow evaluates authorization rules in shadow / dry-run mode,<br />emitting metrics and dynamic metadata without denying requests.<br /> | 
 
 
 #### AuthorizationRule
