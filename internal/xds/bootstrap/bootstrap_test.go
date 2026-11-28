@@ -146,31 +146,18 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			// a backendRefs sink is rendered from the list translation resolved for it.
 			name: "otel-metrics-backendref",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Prometheus: &egv1a1.ProxyPrometheusProvider{
 						Disable: true,
 					},
-					Sinks: []egv1a1.ProxyMetricSink{
-						{
-							Type: egv1a1.MetricSinkTypeOpenTelemetry,
-							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: new("otel-collector.monitoring.svc"),
-								Port: 4317,
-								BackendCluster: egv1a1.BackendCluster{
-									BackendRefs: []egv1a1.BackendRef{
-										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name:      "otel-collector",
-												Namespace: new(gwapiv1.Namespace("monitoring")),
-												Port:      new(gwapiv1.PortNumber(4317)),
-											},
-										},
-									},
-								},
-							},
-						},
+				},
+				ResolvedMetricSinks: []MetricSink{
+					{
+						Address: "otel-collector.monitoring.svc",
+						Port:    4317,
 					},
 				},
 				SdsConfig: sds,
@@ -407,32 +394,6 @@ func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name: "backendRef without port",
-			opts: &RenderBootstrapConfigOptions{
-				ProxyMetrics: &egv1a1.ProxyMetrics{
-					Sinks: []egv1a1.ProxyMetricSink{
-						{
-							Type: egv1a1.MetricSinkTypeOpenTelemetry,
-							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								BackendCluster: egv1a1.BackendCluster{
-									BackendRefs: []egv1a1.BackendRef{
-										{
-											BackendObjectReference: gwapiv1.BackendObjectReference{
-												Name:      "otel-collector",
-												Namespace: new(gwapiv1.Namespace("monitoring")),
-												// Port is nil
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expectedError: "metrics sink backendRef otel-collector has no port",
-		},
-		{
 			name: "prometheus compression minContentLength overflows uint32",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
@@ -470,6 +431,39 @@ func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
 			require.EqualError(t, err, tc.expectedError)
 		})
 	}
+}
+
+// TestGetRenderedBootstrapConfigSkipsUnresolvedBackendRefSink verifies a rejected backendRefs sink is not rendered.
+func TestGetRenderedBootstrapConfigSkipsUnresolvedBackendRefSink(t *testing.T) {
+	rendered, err := GetRenderedBootstrapConfig(&RenderBootstrapConfigOptions{
+		ProxyMetrics: &egv1a1.ProxyMetrics{
+			Prometheus: &egv1a1.ProxyPrometheusProvider{
+				Disable: true,
+			},
+			Sinks: []egv1a1.ProxyMetricSink{
+				{
+					Type: egv1a1.MetricSinkTypeOpenTelemetry,
+					OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+						// the deprecated host is ignored too, so it cannot replace the rejected backendRef.
+						Host: new("otel-collector.monitoring.svc"),
+						Port: 4317,
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{
+								{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name:      "otel-collector",
+										Namespace: new(gwapiv1.Namespace("monitoring")),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	assert.NotContains(t, rendered, "otel_metric_sink")
 }
 
 func readTestData(caseName string) (string, error) {

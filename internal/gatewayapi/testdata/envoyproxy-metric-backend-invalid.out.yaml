@@ -14,13 +14,6 @@ gateways:
       port: 80
       protocol: HTTP
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Invalid metrics backendRefs in the referenced EnvoyProxy: service
-        monitoring/service-not-found not found'
-      reason: InvalidParameters
-      status: "False"
-      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -171,6 +164,11 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    metrics:
+      enableCircuitBreakerRemainingStats: false
+      enablePerEndpointStats: false
+      enableRequestResponseSizesStats: false
+      enableVirtualHostStats: false
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

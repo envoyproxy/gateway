@@ -14,13 +14,6 @@ gateways:
       port: 80
       protocol: HTTP
   status:
-    conditions:
-    - lastTransitionTime: null
-      message: 'Invalid tracing backendRefs in the referenced EnvoyProxy: service
-        monitoring/service-not-found not found'
-      reason: InvalidParameters
-      status: "False"
-      type: Accepted
     listeners:
     - attachedRoutes: 0
       conditions:

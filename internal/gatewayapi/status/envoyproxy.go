@@ -150,11 +150,71 @@ func SetEnvoyProxyWarnings(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentRefere
 	})
 }
 
-// mergeBoundedWarningMessages merges next into the existing warning message like
-// mergePolicyWarningMessages. If the result would be longer than a condition message can be, the
-// existing message is cut short to make room for next, so the newer warning is not truncated off
-// the end. If next alone is too long, the merged message is returned as is and newCondition
-// truncates it.
+// AddEnvoyProxyWarning adds warnings to the Warning condition, keeping what SetEnvoyProxyWarnings set.
+func AddEnvoyProxyWarning(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference, warnings ...*EnvoyProxyWarning) {
+	if ep == nil || ancestor == nil {
+		return
+	}
+
+	var (
+		reason egv1a1.EnvoyProxyConditionReason
+		msg    string
+	)
+	for _, w := range warnings {
+		if w == nil || w.Message == "" {
+			continue
+		}
+		if msg == "" {
+			reason = w.Reason
+			msg = w.Message
+			continue
+		}
+		if strings.Contains(msg, w.Message) {
+			continue
+		}
+		reason = mergeWarningReasons(reason, w.Reason)
+		msg = mergeBoundedWarningMessages(msg, w.Message)
+	}
+	if msg == "" {
+		return
+	}
+
+	for i := range ep.Status.Ancestors {
+		item := &ep.Status.Ancestors[i]
+		if !ancestorRefsEqual(&item.AncestorRef, ancestor) {
+			continue
+		}
+		existing := meta.FindStatusCondition(item.Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+		if existing != nil {
+			if strings.Contains(existing.Message, msg) {
+				return
+			}
+			reason = mergeWarningReasons(egv1a1.EnvoyProxyConditionReason(existing.Reason), reason)
+			msg = mergeBoundedWarningMessages(existing.Message, msg)
+		}
+		cond := newCondition(string(egv1a1.EnvoyProxyConditionWarning), metav1.ConditionTrue, string(reason), msg, ep.Generation)
+		item.Conditions = MergeConditions(item.Conditions, cond)
+		return
+	}
+
+	// ancestor not found, append a new one
+	ep.Status.Ancestors = append(ep.Status.Ancestors, egv1a1.EnvoyProxyAncestorStatus{
+		AncestorRef: *ancestor,
+		Conditions: []metav1.Condition{
+			newCondition(string(egv1a1.EnvoyProxyConditionWarning), metav1.ConditionTrue, string(reason), msg, ep.Generation),
+		},
+	})
+}
+
+// mergeWarningReasons returns the reason for a Warning condition that holds both warnings.
+func mergeWarningReasons(a, b egv1a1.EnvoyProxyConditionReason) egv1a1.EnvoyProxyConditionReason {
+	if a == b {
+		return a
+	}
+	return egv1a1.EnvoyProxyReasonMultipleWarnings
+}
+
+// mergeBoundedWarningMessages merges next, cutting short existing so the newer warning survives.
 func mergeBoundedWarningMessages(existing, next string) string {
 	const sep = "; "
 	merged := mergePolicyWarningMessages(existing, next)

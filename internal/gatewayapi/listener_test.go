@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"io"
 	"strings"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -23,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 // expectedListenerStatus defines the expected status for a listener in the test
@@ -1316,6 +1319,347 @@ func TestProcessAccessLog(t *testing.T) {
 			require.Equal(t, tc.expected, actual)
 		})
 	}
+}
+
+// telemetryTestResources returns one healthy collector, so only its backendRef resolves.
+func telemetryTestResources() *resource.Resources {
+	return &resource.Resources{
+		Services: []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "monitoring",
+					Name:      "otel-collector",
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "3.3.3.3",
+					Ports: []corev1.ServicePort{
+						{
+							Name:        "grpc",
+							Port:        4317,
+							TargetPort:  intstr.IntOrString{IntVal: 4317},
+							Protocol:    corev1.ProtocolTCP,
+							AppProtocol: new("grpc"),
+						},
+					},
+				},
+			},
+		},
+		EndpointSlices: []*discoveryv1.EndpointSlice{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "monitoring",
+					Name:      "otel-collector",
+					Labels: map[string]string{
+						"kubernetes.io/service-name": "otel-collector",
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"10.0.0.1"},
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:        new("grpc"),
+						Protocol:    new(corev1.ProtocolTCP),
+						Port:        new(int32(4317)),
+						AppProtocol: new("grpc"),
+					},
+				},
+			},
+		},
+	}
+}
+
+func newTelemetryTestTranslator(resources *resource.Resources) *Translator {
+	translator := &Translator{Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelError)}
+	translatorContext := &TranslatorContext{}
+	translatorContext.SetServices(resources.Services)
+	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
+	translator.TranslatorContext = translatorContext
+	return translator
+}
+
+func otelBackendRef(name string) egv1a1.BackendRef {
+	return egv1a1.BackendRef{
+		BackendObjectReference: gwapiv1.BackendObjectReference{
+			Name:      gwapiv1.ObjectName(name),
+			Port:      new(gwapiv1.PortNumber(4317)),
+			Namespace: new(gwapiv1.Namespace("monitoring")),
+		},
+	}
+}
+
+func TestProcessAccessLogKeepsValidSinks(t *testing.T) {
+	resources := telemetryTestResources()
+	translator := newTelemetryTestTranslator(resources)
+	envoyProxy := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-proxy", Namespace: "test-namespace"},
+		Spec: egv1a1.EnvoyProxySpec{
+			Telemetry: &egv1a1.ProxyTelemetry{
+				AccessLog: &egv1a1.ProxyAccessLog{
+					Settings: []egv1a1.ProxyAccessLogSetting{
+						{
+							Format: &egv1a1.ProxyAccessLogFormat{
+								Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+								Text: new("[%START_TIME%]"),
+							},
+							Sinks: []egv1a1.ProxyAccessLogSink{
+								{
+									Type: egv1a1.ProxyAccessLogSinkTypeFile,
+									File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+								},
+								{
+									Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{otelBackendRef("otel-collector")},
+										},
+									},
+								},
+								{
+									Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{otelBackendRef("service-not-found")},
+										},
+									},
+								},
+							},
+						},
+						{
+							// the invalid expression is dropped, the valid one kept.
+							Matches: []string{"response.code >= 400", ")+++"},
+							Format: &egv1a1.ProxyAccessLogFormat{
+								Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+								Text: new("[%START_TIME%]"),
+							},
+							Sinks: []egv1a1.ProxyAccessLogSink{
+								{
+									Type: egv1a1.ProxyAccessLogSinkTypeFile,
+									File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stderr"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	accessLog, err := translator.processAccessLog(&GatewayContext{}, envoyProxy, resources)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "telemetry.accessLog.settings[0].sinks[2]")
+	assert.Contains(t, err.Error(), "telemetry.accessLog.settings[1].matches")
+	require.NotNil(t, accessLog)
+	// only the broken sink is dropped.
+	require.Len(t, accessLog.Text, 2)
+	assert.Equal(t, "/dev/stdout", accessLog.Text[0].Path)
+	// the setting keeps its file sink and the valid expression.
+	assert.Equal(t, "/dev/stderr", accessLog.Text[1].Path)
+	assert.Equal(t, []string{"response.code >= 400"}, accessLog.Text[1].CELMatches)
+	require.Len(t, accessLog.OpenTelemetry, 1)
+	assert.Equal(t, "accesslog_otel_0_1", accessLog.OpenTelemetry[0].Destination.Name)
+}
+
+func TestProcessMetricsKeepsValidSinks(t *testing.T) {
+	resources := telemetryTestResources()
+	translator := newTelemetryTestTranslator(resources)
+	envoyProxy := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-proxy", Namespace: "test-namespace"},
+		Spec: egv1a1.EnvoyProxySpec{
+			Telemetry: &egv1a1.ProxyTelemetry{
+				Metrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{otelBackendRef("otel-collector")},
+								},
+							},
+						},
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{otelBackendRef("service-not-found")},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	metrics, resolvedSinks, err := translator.processMetrics(&GatewayContext{}, envoyProxy, resources)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "telemetry.metrics.sinks[1]")
+	require.NotNil(t, metrics)
+	require.Len(t, resolvedSinks, 1)
+	assert.Equal(t, "metrics_otel_0", resolvedSinks[0].Destination.Name)
+}
+
+func TestProcessProxyObservabilityKeepsWorkingFeatures(t *testing.T) {
+	resources := telemetryTestResources()
+	translator := newTelemetryTestTranslator(resources)
+	envoyProxy := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-proxy", Namespace: "test-namespace"},
+		Spec: egv1a1.EnvoyProxySpec{
+			Telemetry: &egv1a1.ProxyTelemetry{
+				AccessLog: &egv1a1.ProxyAccessLog{
+					Settings: []egv1a1.ProxyAccessLogSetting{
+						{
+							Format: &egv1a1.ProxyAccessLogFormat{
+								Type: new(egv1a1.ProxyAccessLogFormatTypeText),
+								Text: new("[%START_TIME%]"),
+							},
+							Sinks: []egv1a1.ProxyAccessLogSink{
+								{
+									Type: egv1a1.ProxyAccessLogSinkTypeFile,
+									File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+								},
+								{
+									Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{otelBackendRef("service-not-found")},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Tracing: &egv1a1.ProxyTracing{
+					Provider: egv1a1.TracingProvider{
+						Type: egv1a1.TracingProviderTypeOpenTelemetry,
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{otelBackendRef("otel-collector")},
+						},
+					},
+				},
+				Metrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{otelBackendRef("service-not-found")},
+								},
+							},
+						},
+					},
+				},
+				HealthCheckLog: &egv1a1.ProxyHealthCheckLog{
+					Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure},
+				},
+			},
+		},
+	}
+
+	gwCtx := &GatewayContext{
+		Gateway: &gwapiv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		},
+		envoyProxy:            envoyProxy,
+		envoyProxyFromGateway: true,
+		gatewayEnvoyProxy:     envoyProxy,
+	}
+	xdsIR := &ir.Xds{}
+	proxyInfra := &ir.ProxyInfra{Config: envoyProxy}
+
+	translator.processProxyObservability(gwCtx, xdsIR, proxyInfra, resources)
+
+	// the Gateway keeps serving despite the telemetry problem.
+	assert.False(t, status.GatewayNotAccepted(gwCtx.Gateway))
+
+	// the valid access log sink, tracing, and health check logs are still translated.
+	require.NotNil(t, xdsIR.AccessLog)
+	require.Len(t, xdsIR.AccessLog.Text, 1)
+	assert.Empty(t, xdsIR.AccessLog.OpenTelemetry)
+	require.NotNil(t, xdsIR.Tracing)
+	require.NotNil(t, xdsIR.HealthCheckLog)
+	assert.True(t, xdsIR.HealthCheckLog.AlwaysLogHealthCheckFailures)
+	// the failing metrics sink is skipped, metrics stay enabled.
+	require.NotNil(t, xdsIR.Metrics)
+	assert.Empty(t, proxyInfra.ResolvedMetricSinks)
+
+	// the warning names the failing fields and is attached to the Gateway.
+	require.Len(t, envoyProxy.Status.Ancestors, 1)
+	assert.Equal(t, gwapiv1.ObjectName("test-gateway"), envoyProxy.Status.Ancestors[0].AncestorRef.Name)
+	require.NotNil(t, envoyProxy.Status.Ancestors[0].AncestorRef.Kind)
+	assert.Equal(t, resource.KindGateway, string(*envoyProxy.Status.Ancestors[0].AncestorRef.Kind))
+	cond := meta.FindStatusCondition(envoyProxy.Status.Ancestors[0].Conditions, string(egv1a1.EnvoyProxyConditionWarning))
+	require.NotNil(t, cond)
+	assert.Equal(t, string(egv1a1.EnvoyProxyReasonInvalidField), cond.Reason)
+	assert.Contains(t, cond.Message, "telemetry.accessLog.settings[0].sinks[1]")
+	assert.Contains(t, cond.Message, "telemetry.metrics.sinks[0]")
+}
+
+func TestProcessProxyObservabilityWarnsAboutInheritedTelemetry(t *testing.T) {
+	resources := telemetryTestResources()
+	resources.GatewayClass = &gwapiv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-class"},
+	}
+	classProxy := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Name: "class-proxy", Namespace: "test-namespace"},
+		Spec: egv1a1.EnvoyProxySpec{
+			Telemetry: &egv1a1.ProxyTelemetry{
+				AccessLog: &egv1a1.ProxyAccessLog{
+					Settings: []egv1a1.ProxyAccessLogSetting{
+						{
+							Sinks: []egv1a1.ProxyAccessLogSink{
+								{
+									Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.OpenTelemetryEnvoyProxyAccessLog{
+										BackendCluster: egv1a1.BackendCluster{
+											BackendRefs: []egv1a1.BackendRef{otelBackendRef("service-not-found")},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	resources.EnvoyProxyForGatewayClass = classProxy
+
+	// the Gateway-level EnvoyProxy only sets a merge type, telemetry is inherited.
+	gatewayProxy := &egv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway-proxy", Namespace: "test-namespace"},
+		Spec:       egv1a1.EnvoyProxySpec{MergeType: new(egv1a1.StrategicMerge)},
+	}
+
+	translator := newTelemetryTestTranslator(resources)
+	gwCtx := &GatewayContext{
+		Gateway: &gwapiv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		},
+		envoyProxy:            classProxy,
+		envoyProxyFromGateway: true,
+		gatewayEnvoyProxy:     gatewayProxy,
+	}
+	proxyInfra := &ir.ProxyInfra{Config: gwCtx.envoyProxy}
+
+	translator.processProxyObservability(gwCtx, &ir.Xds{}, proxyInfra, resources)
+
+	// the warning belongs to the EnvoyProxy that configures the failing field.
+	assert.Empty(t, gatewayProxy.Status.Ancestors)
+	require.Len(t, classProxy.Status.Ancestors, 1)
+	ancestor := classProxy.Status.Ancestors[0].AncestorRef
+	require.NotNil(t, ancestor.Kind)
+	assert.Equal(t, resource.KindGatewayClass, string(*ancestor.Kind))
+	assert.Equal(t, gwapiv1.ObjectName("test-class"), ancestor.Name)
+	cond := meta.FindStatusCondition(classProxy.Status.Ancestors[0].Conditions,
+		string(egv1a1.EnvoyProxyConditionWarning))
+	require.NotNil(t, cond)
+	assert.Contains(t, cond.Message, "telemetry.accessLog.settings[0].sinks[0]")
 }
 
 func TestProcessTelemetryWithAbsoluteHostname(t *testing.T) {

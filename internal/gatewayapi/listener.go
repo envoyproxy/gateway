@@ -772,34 +772,133 @@ func getDrainStrategy(envoyProxy *egv1a1.EnvoyProxy) egv1a1.DrainStrategy {
 	return *envoyProxy.Spec.Shutdown.DrainStrategy
 }
 
+// telemetryFeature identifies a telemetry feature, so its failures can be reported on the layer that configures it.
+type telemetryFeature int
+
+const (
+	telemetryAccessLog telemetryFeature = iota
+	telemetryTracing
+	telemetryMetrics
+)
+
 func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {
-	var err error
 	envoyProxy := proxyInfra.Config
 
-	xdsIR.AccessLog, err = t.processAccessLog(gwCtx, envoyProxy, resources)
-	if err != nil {
-		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
-			fmt.Sprintf("Invalid access log backendRefs in the referenced EnvoyProxy: %v", err))
-		return
+	// translate each feature independently and warn instead of rejecting the Gateway.
+	type failure struct {
+		feature telemetryFeature
+		err     error
 	}
+	var failures []failure
 
-	xdsIR.Tracing, err = t.processTracing(gwCtx, envoyProxy, t.MergeGateways, resources)
+	accessLog, err := t.processAccessLog(gwCtx, envoyProxy, resources)
 	if err != nil {
-		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
-			fmt.Sprintf("Invalid tracing backendRefs in the referenced EnvoyProxy: %v", err))
-		return
+		failures = append(failures, failure{telemetryAccessLog, err})
 	}
+	xdsIR.AccessLog = accessLog
 
-	var resolvedSinks []ir.ResolvedMetricSink
-	xdsIR.Metrics, resolvedSinks, err = t.processMetrics(gwCtx, envoyProxy, resources)
+	tracing, err := t.processTracing(gwCtx, envoyProxy, t.MergeGateways, resources)
 	if err != nil {
-		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
-			fmt.Sprintf("Invalid metrics backendRefs in the referenced EnvoyProxy: %v", err))
-		return
+		failures = append(failures, failure{telemetryTracing, err})
 	}
+	xdsIR.Tracing = tracing
+
+	metrics, resolvedSinks, err := t.processMetrics(gwCtx, envoyProxy, resources)
+	if err != nil {
+		failures = append(failures, failure{telemetryMetrics, err})
+	}
+	xdsIR.Metrics = metrics
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
 
 	xdsIR.HealthCheckLog = processHealthCheckLog(envoyProxy)
+
+	if len(failures) == 0 {
+		return
+	}
+
+	errs := make([]error, 0, len(failures))
+	for _, f := range failures {
+		errs = append(errs, f.err)
+	}
+	t.Logger.Error(utilerrors.NewAggregate(errs), "Ignoring invalid telemetry configuration in the referenced EnvoyProxy",
+		"gateway", gwCtx.Name, "namespace", gwCtx.Namespace)
+
+	// a merged config can take each feature from a different layer, so warn the layer that sets it.
+	type warning struct {
+		ep       *egv1a1.EnvoyProxy
+		ancestor *gwapiv1.ParentReference
+		msgs     []string
+	}
+	var warnings []*warning
+	for _, f := range failures {
+		ep, ancestor := telemetryWarningTarget(gwCtx, resources, f.feature)
+		if ep == nil || ancestor == nil {
+			continue
+		}
+		var w *warning
+		for _, candidate := range warnings {
+			if candidate.ep == ep {
+				w = candidate
+				break
+			}
+		}
+		if w == nil {
+			w = &warning{ep: ep, ancestor: ancestor}
+			warnings = append(warnings, w)
+		}
+		w.msgs = append(w.msgs, f.err.Error())
+	}
+
+	for _, w := range warnings {
+		status.AddEnvoyProxyWarning(w.ep, w.ancestor, &status.EnvoyProxyWarning{
+			Reason:  egv1a1.EnvoyProxyReasonInvalidField,
+			Message: fmt.Sprintf("The following invalid telemetry fields were ignored: %s", strings.Join(w.msgs, "; ")),
+		})
+	}
+}
+
+// telemetryWarningTarget returns the layer that configures the failing feature, where it can be fixed.
+func telemetryWarningTarget(gwCtx *GatewayContext, resources *resource.Resources, feature telemetryFeature) (*egv1a1.EnvoyProxy, *gwapiv1.ParentReference) {
+	if gwCtx.envoyProxyFromGateway && gwCtx.gatewayEnvoyProxy != nil &&
+		configuresTelemetryFeature(gwCtx.gatewayEnvoyProxy, feature) {
+		return gwCtx.gatewayEnvoyProxy, &gwapiv1.ParentReference{
+			Group:     GroupPtr(gwapiv1.GroupName),
+			Kind:      KindPtr(resource.KindGateway),
+			Name:      gwapiv1.ObjectName(gwCtx.Name),
+			Namespace: NamespacePtr(gwCtx.Namespace),
+		}
+	}
+
+	if resources.EnvoyProxyForGatewayClass != nil && resources.GatewayClass != nil &&
+		configuresTelemetryFeature(resources.EnvoyProxyForGatewayClass, feature) {
+		return resources.EnvoyProxyForGatewayClass, &gwapiv1.ParentReference{
+			Group: GroupPtr(gwapiv1.GroupName),
+			Kind:  KindPtr(resource.KindGatewayClass),
+			Name:  gwapiv1.ObjectName(resources.GatewayClass.Name),
+		}
+	}
+
+	return nil, nil
+}
+
+// configuresTelemetryFeature reports whether the EnvoyProxy sets the field the feature fails on.
+func configuresTelemetryFeature(ep *egv1a1.EnvoyProxy, feature telemetryFeature) bool {
+	if ep == nil || ep.Spec.Telemetry == nil {
+		return false
+	}
+
+	switch feature {
+	case telemetryAccessLog:
+		accessLog := ep.Spec.Telemetry.AccessLog
+		return accessLog != nil && accessLog.Settings != nil
+	case telemetryTracing:
+		return ep.Spec.Telemetry.Tracing != nil
+	case telemetryMetrics:
+		metrics := ep.Spec.Telemetry.Metrics
+		return metrics != nil && metrics.Sinks != nil
+	}
+
+	return false
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
@@ -851,6 +950,8 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 	}
 
 	irAccessLog := &ir.AccessLog{}
+	// collect errors per sink, so one bad sink does not drop the rest.
+	var errs []error
 	// translate the access log configuration to the IR
 	for i, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
 		var accessLogType *ir.ProxyAccessLogType
@@ -894,17 +995,21 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 
 		var (
 			validExprs []string
-			errs       []error
+			celErrs    []error
 		)
 		for _, expr := range accessLog.Matches {
 			if !validCELExpression(expr) {
-				errs = append(errs, fmt.Errorf("invalid CEL expression: %s", expr))
+				celErrs = append(celErrs, fmt.Errorf("invalid CEL expression: %s", expr))
 				continue
 			}
 			validExprs = append(validExprs, expr)
 		}
-		if len(errs) > 0 {
-			return nil, utilerrors.NewAggregate(errs)
+		if len(celErrs) > 0 {
+			// drop invalid expressions only; a setting with none left is skipped, since no match means log everything.
+			errs = append(errs, fmt.Errorf("telemetry.accessLog.settings[%d].matches: %w", i, utilerrors.NewAggregate(celErrs)))
+			if len(validExprs) == 0 {
+				continue
+			}
 		}
 
 		if len(accessLog.Sinks) == 0 {
@@ -970,7 +1075,8 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 				// TODO: how to get authority from the backendRefs?
 				ds, traffic, err := t.processBackendRefsForTelemetry(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
 				if err != nil {
-					return nil, err
+					errs = append(errs, fmt.Errorf("telemetry.accessLog.settings[%d].sinks[%d]: %w", i, j, err))
+					continue
 				}
 				// ALS should always use GRPC protocol. Setting this adds http2 by default to the cluster.
 				for _, setting := range ds {
@@ -1015,7 +1121,8 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 				settingName := irDestinationSettingName(destName, -1)
 				ds, traffic, err := t.processBackendRefsForTelemetry(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
 				if err != nil {
-					return nil, err
+					errs = append(errs, fmt.Errorf("telemetry.accessLog.settings[%d].sinks[%d]: %w", i, j, err))
+					continue
 				}
 				// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
 				for _, d := range ds {
@@ -1060,6 +1167,9 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 			}
 		}
 	}
+	if len(errs) > 0 {
+		return irAccessLog, utilerrors.NewAggregate(errs)
+	}
 	return irAccessLog, nil
 }
 
@@ -1078,7 +1188,7 @@ func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	settingName := irDestinationSettingName(destName, -1)
 	ds, traffic, err := t.processBackendRefsForTelemetry(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("telemetry.tracing.provider: %w", err)
 	}
 	if tracing.Provider.Type == egv1a1.TracingProviderTypeOpenTelemetry {
 		// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
@@ -1269,6 +1379,8 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}
 
 	var resolvedSinks []ir.ResolvedMetricSink
+	// collect errors per sink, so one bad sink does not drop the rest.
+	var errs []error
 	seen := sets.New[string]()
 
 	for i, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
@@ -1280,7 +1392,8 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		settingName := irDestinationSettingName(destName, -1)
 		ds, _, err := t.processBackendRefsForTelemetry(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
 		if err != nil {
-			return nil, nil, err
+			errs = append(errs, fmt.Errorf("telemetry.metrics.sinks[%d]: %w", i, err))
+			continue
 		}
 		// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
 		for _, d := range ds {
@@ -1320,12 +1433,16 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 		}
 	}
 
-	return &ir.Metrics{
+	irMetrics := &ir.Metrics{
 		EnableVirtualHostStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
 		EnablePerEndpointStats:             ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
 		EnableRequestResponseSizesStats:    ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
 		EnableCircuitBreakerRemainingStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableCircuitBreakerRemainingStats, false),
-	}, resolvedSinks, nil
+	}
+	if len(errs) > 0 {
+		return irMetrics, resolvedSinks, utilerrors.NewAggregate(errs)
+	}
+	return irMetrics, resolvedSinks, nil
 }
 
 func (t *Translator) processProxyGRPCSettings(
