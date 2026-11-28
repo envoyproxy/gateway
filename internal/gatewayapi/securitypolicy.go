@@ -2615,6 +2615,11 @@ func extractRedirectPath(redirectURL string) (string, error) {
 		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
 	}
 	path := redirectURL[schemeDelimiter+3+hostDelimiter:]
+	// Envoy matches the redirect path against the request path without its query and fragment,
+	// so a query in the redirect URL must not end up in the path matcher.
+	if i := strings.IndexAny(path, "?#"); i >= 0 {
+		path = path[:i]
+	}
 	if path == "/" {
 		return "", fmt.Errorf("invalid redirect URL %s", redirectURL)
 	}
