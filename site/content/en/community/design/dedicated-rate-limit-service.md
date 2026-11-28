@@ -71,8 +71,8 @@ needs to be isolated.
   [RLS identities and certificates](#rls-identities-and-certificates)).
 * Cleanup of changes Envoy Gateway did not observe. A dedicated RLS is removed when Envoy Gateway
   observes its Gateway being deleted or dropping `rateLimit`, as proxy resources are today. Changes
-  made while Envoy Gateway is stopped, and turning off `enableDedicatedRateLimit`, leave dedicated RLS
-  resources behind; admins remove them manually (see [Cleanup](#cleanup)). An automatic sweep is
+  made while Envoy Gateway is stopped, turning off `enableDedicatedRateLimit` and switching the
+  deployment mode leave dedicated RLS resources behind; admins remove them manually (see [Cleanup](#cleanup)). An automatic sweep is
   deferred (see [TODO](#sweeping-stale-dedicated-rls-resources)).
 * Multiple Envoy Gateway installations managing Gateways in the same namespace while dedicated RLS is
   enabled. This design assumes one controller per namespace in the first iteration; that combination
@@ -240,15 +240,11 @@ therefore confirm the controller's permissions each time they turn the feature o
 
   Missing permissions also surface as a startup warning and as `RateLimitReady=False` with reason
   `ProvisioningFailed` on each affected Gateway.
-* **After turning it off**, check for dedicated RLS left behind, for example with
-  `kubectl get deployments -A -l gateway.envoyproxy.io/ratelimit-scope=gateway`. Envoy Gateway does not
-  remove them when the switch is turned off (see [Cleanup](#cleanup)). Once every proxy has moved to the
-  shared RLS, delete them:
-
-  ```shell
-  kubectl delete deployment,service,hpa,pdb,serviceaccount,configmap -A \
-    -l gateway.envoyproxy.io/ratelimit-scope=gateway
-  ```
+* **After turning it off**, check for dedicated RLS left behind in the namespaces this installation
+  manages, for example with
+  `kubectl get deployments -n <namespace> -l gateway.envoyproxy.io/ratelimit-scope=gateway`. Envoy
+  Gateway does not remove them when the switch is turned off (see [Cleanup](#cleanup)). Once every
+  proxy has moved to the shared RLS, delete them with the command in [Cleanup](#cleanup).
 
   Then decide whether to keep the permission. Keep it if the feature may be turned on again; otherwise set
   `dedicatedRateLimit.rbac.enabled: false` to return the controller to its previous privileges.
@@ -627,9 +623,9 @@ Gateway's proxies:
 | `GatewayNamespace`              | The Gateway's namespace  | The Gateway's namespace  |
 
 The shared RLS stays in the controller namespace in both modes. All resources of a dedicated RLS
-(Deployment, Service, HPA, PDB, ServiceAccount, statsd ConfigMap and Secrets) live in its namespace.
-In Gateway namespace mode they carry an owner reference to the Gateway, as proxy resources do, and
-count against that namespace's quota rather than the controller's.
+(Deployment, Service, HPA, PDB, ServiceAccount, statsd ConfigMap and Secrets) live in its namespace
+and, in Gateway namespace mode, count against that namespace's quota rather than the controller's.
+Resource ownership and garbage collection are described in [Cleanup](#cleanup).
 
 Following the proxies means a dedicated RLS adds no new kind of exposure in either mode. In the default
 mode, Gateway owners can already configure pods in the controller namespace through proxy settings. In
@@ -701,8 +697,8 @@ permissions:
   and, in the default mode, its credential copies) has a single owner reference, to that RLS's
   Deployment in the same namespace. Deleting the Deployment lets Kubernetes garbage-collect the
   Secrets, so removal needs only the infrastructure permissions the controller always has, and still
-  works where an admin has removed the Secret permission. The Deployment, in turn, carries an owner
-  reference to the Gateway in Gateway namespace mode, so deleting the Gateway removes everything.
+  works where an admin has removed the Secret permission. In Gateway namespace mode, all other RLS
+  resources are owned by the Gateway, so deleting the Gateway also removes the Deployment and its Secrets.
 
 **Changes Envoy Gateway does not observe leave resources behind.** The first iteration has no sweep
 of stale resources. A configuration reload starts a new infrastructure runner without the previous
@@ -712,23 +708,31 @@ therefore stay behind when:
 * `enableDedicatedRateLimit` is turned off;
 * a Gateway drops `rateLimit` while Envoy Gateway is stopped;
 * in the default mode, a Gateway is deleted while Envoy Gateway is stopped. In Gateway namespace mode,
-  the owner reference removes them.
+  the owner reference removes them;
+* the deployment mode is switched and the RLS namespace changes. The reloaded control plane provisions
+  the new placement without deleting the old one. Existing Gateways keep the old resources' owner
+  references live, so garbage collection does not remove them.
 
-Leftover RLS no longer receive traffic once every proxy has moved, but keep consuming resources and
-holding Redis credentials. Admins find them by label and delete them; deleting the Deployment also
+Leftover RLS keep consuming resources and holding Redis credentials. For each Gateway, verify that
+its proxies no longer use the old RLS and that the selected resources belong to this installation and
+are no longer desired. Then delete that Gateway's stale placement; deleting the Deployment also
 removes its Secrets:
 
 ```shell
-kubectl delete deployment,service,hpa,pdb,serviceaccount,configmap -A \
-    -l gateway.envoyproxy.io/ratelimit-scope=gateway
+kubectl delete deployment,service,hpa,pdb,serviceaccount,configmap -n <old-rls-namespace> \
+    -l 'gateway.envoyproxy.io/ratelimit-scope=gateway,gateway.envoyproxy.io/owning-gateway-namespace=<gateway-namespace>,gateway.envoyproxy.io/owning-gateway-name=<gateway-name>'
 ```
 
-This deletes every dedicated RLS in the cluster, so run it only after turning off
-`enableDedicatedRateLimit`. For a single Gateway, add the `owning-gateway-namespace` and
-`owning-gateway-name` labels to the selector. Because label-selected deletion relies on each Gateway's
-namespace and name being unique to one controller, multiple Envoy Gateway installations managing
-Gateways in the same namespace are not supported with dedicated RLS (see [Non-Goals](#non-goals)).
-An automatic sweep is deferred (see [TODO](#sweeping-stale-dedicated-rls-resources)).
+Use this procedure for feature disablement, deployment mode changes and individual Gateway cleanup.
+After a mode change, only the placement outside the Gateway's current RLS namespace is stale.
+Gateways in the controller namespace keep the same placement in either mode; do not delete their RLS.
+Always specify the old RLS namespace and both Gateway labels; do not use `-A`.
+
+
+Because label-selected deletion relies on each Gateway's namespace and name being unique to one
+controller, multiple Envoy Gateway installations managing Gateways in the same namespace are not
+supported with dedicated RLS (see [Non-Goals](#non-goals)). An automatic sweep is deferred (see
+[TODO](#sweeping-stale-dedicated-rls-resources)).
 
 **Configuration server address.** The shared RLS reaches the configuration server through the short
 Service name `envoy-gateway:18001`, which only resolves from the controller namespace. Every dedicated
@@ -753,12 +757,12 @@ client certificate that every proxy presents. Dedicated RLS use a separate certi
 **RLS CA**, and a separate identity per Gateway.
 
 **The RLS CA.** certgen creates the RLS CA together with the existing control plane certificates and
-stores them in the `envoy-rate-limit-ca` Secret in the controller namespace. The Secret has type
+stores its certificate and key in the `envoy-rate-limit-ca` Secret in the controller namespace. The Secret has type
 `kubernetes.io/tls` and requires `tls.crt` containing a PEM-encoded CA certificate and `tls.key`
 containing its matching PEM-encoded private key. The certificate must have CA basic constraints and
 certificate-signing key usage. V1 uses a single self-signed root CA; intermediate CA chains are outside
-scope. Custom installations supply the same Secret format. Only the controller reads it; no pod mounts it. It is separate from the control
-plane CA for two reasons:
+scope. Custom installations supply the same Secret format. Only the controller reads it; no pod mounts
+it. It is separate from the control plane CA for two reasons:
 
 * The existing Secrets contain only certificates signed by the control plane CA, not the CA private key,
   which certgen discards. Their keys cannot sign new certificates.
@@ -772,13 +776,17 @@ own certificates must also provide this Secret before enabling dedicated RLS.
 **Gateway identity.** Each dedicated RLS uses its Service FQDN as its Gateway's certificate identity:
 `<rls-service>.<rls-namespace>.svc.<dns-domain>`, where `<rls-namespace>` is the namespace the RLS
 runs in (see [Namespace](#namespace)). The Service name is derived from the Gateway's namespace/name,
-so the FQDN is unique in both deployment modes, and `<dns-domain>` uses the existing configured `DNSDomain`, as control-plane
-certificate generation does today. Resource names, Redis key prefixes and certificate identities remain
-stable when a Gateway is recreated with the same namespace and name in the same installation. The
-configuration server maps this identity, carried in the URI SAN of the RLS configuration client
-certificate described below, to the corresponding scope's snapshot. The RLS checks this DNS SAN through
-`GRPC_CLIENT_TLS_SAN`; proxies verify the same FQDN in the RLS server certificate. The
-separate RLS CA remains the trust boundary. The RLS CA never issues wildcard SANs.
+so the FQDN is unique in both deployment modes. `<dns-domain>` uses the configured `DNSDomain`, as
+control plane certificate generation does today. Proxies verify this DNS SAN in the RLS serving
+certificate; the RLS requires it in proxy client certificates through `GRPC_CLIENT_TLS_SAN`.
+
+Configuration clients use a separate URI SAN derived from the Gateway's namespace/name:
+`urn:envoy-gateway:ratelimit:<gateway-namespace>:<gateway-name>`. The configuration server maps this
+identity to the Gateway's scope and authorizes requests for that scope only. The RLS CA never issues
+wildcard SANs.
+
+Resource names, Redis key prefixes and certificate identities remain stable when a Gateway is
+recreated with the same namespace and name in the same installation and deployment mode.
 
 Reusing a Gateway name assumes the same trust ownership. Certificates from the previous Gateway remain
 accepted by the recreated RLS until expiry, provided they are signed by the current RLS CA; a former
@@ -792,18 +800,15 @@ issues new certificates with the same identity.
 **Certificates the controller issues.** For each dedicated RLS, the controller signs three certificates
 with the RLS CA:
 
-* A **proxy client certificate** with the Gateway identity as its only SAN and the `clientAuth` usage.
-  It is sent to that Gateway's proxies only, over SDS, as the client certificate for the dedicated RLS
-  cluster. Proxy pods do not change: the RLS client certificate already reaches proxies over xDS
-  today, not from a mounted Secret. The certificate and key are kept in controller memory, not in a
-  Secret. Each controller replica issues its own; all are valid because the RLS checks the CA and the
-  SAN, not a specific certificate. A controller restart issues new ones, which proxies receive over SDS
-  without restarting.
-* An **RLS serving certificate** with the RLS Service DNS names, including its identity FQDN, as SANs,
-  and only the `serverAuth` usage.
-* An **RLS configuration client certificate** with only the `clientAuth` usage and a single URI SAN
-  derived from the scope identity, for example
-  `urn:envoy-gateway:ratelimit:<gateway-namespace>:<gateway-name>`. It has no DNS SAN.
+| Certificate | SANs | Extended key usage | Delivery and storage |
+| --- | --- | --- | --- |
+| Proxy client | Gateway identity FQDN as its only DNS SAN | `clientAuth` | Controller memory; delivered only to that Gateway's proxies over SDS |
+| RLS serving | RLS Service DNS names, including the identity FQDN | `serverAuth` | RLS certificate Secret |
+| RLS configuration client | Scope URI above as its only SAN; no DNS SAN | `clientAuth` | RLS certificate Secret |
+
+Each controller replica issues its own proxy client certificate. All are accepted because the RLS
+checks the CA and SAN, not a specific certificate. A controller restart issues a new certificate and
+delivers it over SDS without restarting proxies or changing their pod specification.
 
 Both RLS certificates are stored in the RLS's own certificate Secret in the RLS's namespace, together
 with the RLS CA certificate and the control plane CA certificate, and are written by the controller
@@ -838,6 +843,12 @@ carry B's SAN and `clientAuth` and be accepted.
   client certificate and verifies the configuration server against the control plane CA, at the
   address in [Namespace](#namespace).
 
+**The configuration server follows the RLS CA Secret.** The server reloads RLS CA trust from the same
+watched `envoy-rate-limit-ca` Secret used for certificate issuance. Creating, fixing or replacing the
+Secret takes effect for new TLS handshakes without a restart; existing connections retain their
+verified identity until they reconnect. With no valid RLS CA, the server rejects new dedicated RLS TLS handshakes.
+Its control plane certificates and shared RLS authentication remain unchanged.
+
 ```mermaid
 sequenceDiagram
     participant CG as certgen
@@ -858,10 +869,9 @@ sequenceDiagram
 certgen lifetime of 1,825 days (five years). Every issued leaf certificate's expiry is capped at its
 CA's expiry; custom CAs may have a shorter remaining lifetime. V1 does not automatically renew
 certificates. Provisioning issues missing certificates when a valid CA is available and reuses valid
-matching certificates. Expiry alone does not trigger replacement: an expired persisted RLS serving or configuration client certificate
-remains an operator-managed failure. Controller restarts reissue in-memory
-proxy client certificates, still capped at the same CA expiry, and deliver them over SDS without proxy
-restarts. This does not extend the CA's lifetime.
+matching certificates. Expiry alone does not trigger replacement: an expired persisted RLS serving
+or configuration client certificate remains an operator-managed failure. Reissuing proxy client
+certificates on controller restart does not extend the CA's lifetime.
 
 Operators are responsible for monitoring certificate expiry and arranging replacement. An expired or
 not-yet-valid CA reports `CertificateUnavailable`; expired certificates clear readiness, and TLS calls
@@ -881,8 +891,8 @@ or proxy reconciliation. On first creation without a usable CA, the Service and 
 provisioned, but RLS pods cannot start without their certificate Secret. The proxy configuration keeps
 the dedicated RLS cluster and rate limit filter; without a client certificate, the cluster cannot make
 authenticated calls. Unavailable calls follow `failClosed`. Once the CA becomes available, ordinary
-reconciliation issues the certificates and delivers them to the RLS and proxies. The shared RLS is not
-affected.
+reconciliation issues the certificates and delivers them to the RLS and proxies, and the configuration
+server trusts the new CA without a restart. The shared RLS is not affected.
 
 ### Isolation between Gateways
 
@@ -1250,9 +1260,10 @@ These are the author's recommendations and are open for review.
   through a separate, default-off Helm value, `dedicatedRateLimit.rbac.enabled`, not through
   `enableDedicatedRateLimit`, which can change at runtime. Admins confirm the permissions after
   turning the feature on or off.
-* Make each dedicated RLS's Secrets owned by its Deployment, so removal never needs Secret
-  permissions. Remove dedicated RLS on observed changes only; leave resources from unobserved changes
-  and feature disablement to manual cleanup, and defer an automatic sweep. Multiple installations
+* Make each dedicated RLS's Secrets owned only by its Deployment, so removal never needs Secret
+  permissions. Remove dedicated RLS on observed changes only; leave resources from unobserved changes,
+  feature disablement and deployment mode switches to per-Gateway manual cleanup, and defer an
+  automatic sweep. Have the configuration server follow the RLS CA Secret without a restart. Multiple installations
   managing one namespace are unsupported.
 * Use ordinary reconciliation for scope changes and require planned maintenance when continuous
   enforcement is needed, including with `failClosed: true`.
@@ -1286,7 +1297,8 @@ Implementation must cover the following cases with meaningful automated tests:
   by that RLS or by another Gateway's RLS in the same namespace.
 * **Certificates:** a fresh install and an upgraded install both get the RLS CA Secret without changing
   existing certificates; a missing or invalid RLS CA reports `CertificateUnavailable` and leaves the
-  shared RLS working; controller restarts deliver reissued proxy client certificates without proxy
+  shared RLS working; when the RLS CA Secret is created or fixed after the controller started, the
+  dedicated RLS loads its rules from the configuration server without a controller restart; controller restarts deliver reissued proxy client certificates without proxy
   restarts; new RLS certificates are written to the Secret before updating the pod template; dedicated-only
   installations work without the `envoy-rate-limit` Secret; with several controller replicas, every
   replica's certificates are accepted. Recreating a Gateway with the same namespace/name accepts its previous
@@ -1298,8 +1310,9 @@ Implementation must cover the following cases with meaningful automated tests:
   to complete its rollout.
 * **Namespace placement:** in the default mode every dedicated RLS resource is created in the controller
   namespace; in Gateway namespace mode every dedicated RLS resource, including its certificate Secret,
-  is created in the Gateway's namespace with an owner reference to the Gateway, and nothing for it in
-  the controller namespace. The Helm chart grants Secret write access, and `ReferenceGrant` reads in
+  is created in the Gateway's namespace, and nothing for it in the controller namespace. Every resource
+  except the Secrets has an owner reference to the Gateway; the Secrets have only their Deployment as
+  owner. The Helm chart grants Secret write access, and `ReferenceGrant` reads in
   the controller namespace, only with `dedicatedRateLimit.rbac.enabled`, in the controller namespace
   in the default mode and in Gateway namespaces in Gateway namespace mode, and the controller never
   modifies Secrets it did not create. With the knob enabled, turning `enableDedicatedRateLimit` on by
@@ -1330,7 +1343,11 @@ Implementation must cover the following cases with meaningful automated tests:
   RLS Secret is owned only by its Deployment and is garbage-collected with it, also when
   `dedicatedRateLimit.rbac.enabled` is off. Removing `rateLimit` or deleting a Gateway while Envoy
   Gateway runs removes its dedicated RLS and Secrets. Turning off `enableDedicatedRateLimit` leaves
-  dedicated RLS in place, and the documented label-selected delete removes them with their Secrets.
+  dedicated RLS in place, and the documented per-Gateway delete removes them with their Secrets
+  without touching other Gateways or another installation's dedicated RLS. Switching the deployment
+  mode in either direction provisions the RLS in the new namespace and leaves the old placement, which
+  the documented per-Gateway delete removes without touching the new one. Gateways in the
+  controller namespace retain their RLS when switching modes and are excluded from cleanup.
 * **API:** an `EnvoyProxy` whose `rateLimit` omits `failClosed` is accepted and behaves as `false`;
   generated API docs for `urlRef` and `certificateRef` describe both the `EnvoyGateway` and the
   `EnvoyProxy` namespace rules.
@@ -1368,7 +1385,8 @@ The following are follow-ups, not requirements for the supported v1 deployment m
 ### Sweeping stale dedicated RLS resources
 
 Automatically remove dedicated RLS left behind by changes Envoy Gateway did not observe, such as
-turning off `enableDedicatedRateLimit` or changes made while it was stopped. After each start,
+turning off `enableDedicatedRateLimit`, switching the deployment mode or changes made while it was
+stopped. After each start,
 including a reload, once the infrastructure leader has processed the first complete set of desired
 infrastructure, Envoy Gateway could list dedicated RLS resources by label and delete those whose scope
 is not desired. The design must:
