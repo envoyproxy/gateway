@@ -1,0 +1,1 @@
+Fixed changes to a Backend referenced by EnvoyProxy access log, metrics, or tracing backendRefs not being reconciled, which left Envoy with a missing or stale telemetry backend until an unrelated reconcile.
