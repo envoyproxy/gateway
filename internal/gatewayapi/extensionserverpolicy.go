@@ -13,6 +13,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -340,8 +341,7 @@ func (t *Translator) processExtensionServerPolicyForRoute(
 		}
 
 		policyStatus := ExtServerPolicyStatusAsPolicyStatus(policy)
-		gatewayNN := utils.NamespacedName(gtwCtx)
-		ancestorRef := getAncestorRefForPolicy(gatewayNN, p.SectionName)
+		ancestorRef := parentRefCtx.PolicyAncestorRef()
 
 		if !supportedRouteKind {
 			status.SetTranslationErrorForPolicyAncestor(
@@ -529,10 +529,10 @@ func resolveExtServerPolicyRouteTargetRef(
 }
 
 func PolicyStatusToUnstructured(policyStatus gwapiv1.PolicyStatus) map[string]any {
-	ret := map[string]any{}
-	// No need to check the marshal/unmarshal error here
-	d, _ := json.Marshal(policyStatus)
-	_ = json.Unmarshal(d, &ret)
+	// Use the unstructured converter rather than a JSON round trip, so that numbers such as the port of an
+	// ancestorRef are int64 as in any unstructured object, not float64.
+	// No need to check the error here, the policyStatus is a typed object.
+	ret, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(&policyStatus)
 	return ret
 }
 
