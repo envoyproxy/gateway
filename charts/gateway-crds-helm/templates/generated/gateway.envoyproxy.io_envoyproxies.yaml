@@ -952,6 +952,11 @@ spec:
                   MergeType controls how this EnvoyProxy merges with less specific configurations
                   in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).
                   If unset, this EnvoyProxy completely replaces less specific settings.
+                  When merging, if this EnvoyProxy sets envoyDeployment or envoyDaemonSet and a less
+                  specific configuration sets the other, the less specific workload is converted to
+                  the selected kind: its container, pod and name settings are kept, and settings that
+                  only apply to the previous kind (including its patch, and envoyHpa when switching
+                  to envoyDaemonSet) are dropped.
                   Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec.
                 enum:
                 - Replace
