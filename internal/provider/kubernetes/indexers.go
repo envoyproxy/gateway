@@ -58,6 +58,7 @@ const (
 	backendEnvoyExtensionPolicyIndex = "backendEnvoyExtensionPolicyIndex"
 	backendEnvoyProxyTelemetryIndex  = "backendEnvoyProxyTelemetryIndex"
 	secretEnvoyProxyIndex            = "secretEnvoyProxyIndex"
+	configMapEnvoyProxyIndex         = "configMapEnvoyProxyIndex"
 	secretEnvoyExtensionPolicyIndex  = "secretEnvoyExtensionPolicyIndex"
 	httpRouteFilterHTTPRouteIndex    = "httpRouteFilterHTTPRouteIndex"
 	httpRouteFilterGRPCRouteIndex    = "httpRouteFilterGRPCRouteIndex"
@@ -66,10 +67,11 @@ const (
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
 	// ClusterTrustBundle related indexers
-	clusterTrustBundleEepIndex     = "clusterTrustBundleEepIndex"
-	clusterTrustBundleBackendIndex = "clusterTrustBundleBackendIndex"
-	clusterTrustBundleBtlsIndex    = "clusterTrustBundleBtlsIndex"
-	clusterTrustBundleCtpIndex     = "clusterTrustBundleCtpIndex"
+	clusterTrustBundleEepIndex        = "clusterTrustBundleEepIndex"
+	clusterTrustBundleBackendIndex    = "clusterTrustBundleBackendIndex"
+	clusterTrustBundleBtlsIndex       = "clusterTrustBundleBtlsIndex"
+	clusterTrustBundleCtpIndex        = "clusterTrustBundleCtpIndex"
+	clusterTrustBundleEnvoyProxyIndex = "clusterTrustBundleEnvoyProxyIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -304,6 +306,14 @@ func addEnvoyProxyIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.EnvoyProxy{}, configMapEnvoyProxyIndex, configMapEnvoyProxyIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.EnvoyProxy{}, clusterTrustBundleEnvoyProxyIndex, clusterTrustBundleEnvoyProxyIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -321,6 +331,20 @@ func backendEnvoyProxyTelemetryIndexFunc(rawObj client.Object) []string {
 func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
 	ep := rawObj.(*egv1a1.EnvoyProxy)
 	var secretReferences []string
+	for _, ref := range dynamicModulePullSecretRefs(ep) {
+		secretReferences = append(secretReferences,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+				Name:      string(ref.Name),
+			}.String())
+	}
+	for _, ref := range dynamicModuleCACertRefs(ep, resource.KindSecret) {
+		secretReferences = append(secretReferences,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+				Name:      string(ref.Name),
+			}.String())
+	}
 	if ep.Spec.BackendTLS != nil {
 		if ep.Spec.BackendTLS.ClientCertificateRef != nil {
 			if *ep.Spec.BackendTLS.ClientCertificateRef.Kind == resource.KindSecret {
@@ -333,6 +357,62 @@ func secretEnvoyProxyIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return secretReferences
+}
+
+// dynamicModulePullSecretRefs returns the pull secrets of the dynamic modules
+// from OCI images registered in the EnvoyProxy.
+func dynamicModulePullSecretRefs(ep *egv1a1.EnvoyProxy) []gwapiv1.SecretObjectReference {
+	var refs []gwapiv1.SecretObjectReference
+	for _, dm := range ep.Spec.DynamicModules {
+		if dm.Source.Image != nil && dm.Source.Image.PullSecretRef != nil && refsSecret(dm.Source.Image.PullSecretRef) {
+			refs = append(refs, *dm.Source.Image.PullSecretRef)
+		}
+	}
+	return refs
+}
+
+// dynamicModuleCACertRefs returns the CA certificate references of the given kind
+// of the dynamic modules from OCI images registered in the EnvoyProxy.
+func dynamicModuleCACertRefs(ep *egv1a1.EnvoyProxy, kind string) []gwapiv1.SecretObjectReference {
+	var refs []gwapiv1.SecretObjectReference
+	for _, dm := range ep.Spec.DynamicModules {
+		if dm.Source.Image == nil || dm.Source.Image.TLS == nil {
+			continue
+		}
+		ref := dm.Source.Image.TLS.CACertificateRef
+		refKind := resource.KindSecret
+		if ref.Kind != nil {
+			refKind = string(*ref.Kind)
+		}
+		if refKind == kind {
+			refs = append(refs, ref)
+		}
+	}
+	return refs
+}
+
+func configMapEnvoyProxyIndexFunc(rawObj client.Object) []string {
+	ep := rawObj.(*egv1a1.EnvoyProxy)
+	caCertRefs := dynamicModuleCACertRefs(ep, resource.KindConfigMap)
+	refs := make([]string, 0, len(caCertRefs))
+	for _, ref := range caCertRefs {
+		refs = append(refs,
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, ep.Namespace),
+				Name:      string(ref.Name),
+			}.String())
+	}
+	return refs
+}
+
+func clusterTrustBundleEnvoyProxyIndexFunc(rawObj client.Object) []string {
+	ep := rawObj.(*egv1a1.EnvoyProxy)
+	caCertRefs := dynamicModuleCACertRefs(ep, resource.KindClusterTrustBundle)
+	refs := make([]string, 0, len(caCertRefs))
+	for _, ref := range caCertRefs {
+		refs = append(refs, string(ref.Name))
+	}
+	return refs
 }
 
 func accessLogRefs(ep *egv1a1.EnvoyProxy) []string {
