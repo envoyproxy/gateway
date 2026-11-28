@@ -91,6 +91,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 
 	totalLen := len(al.Text) + len(al.JSON) + len(al.OpenTelemetry)
 	accessLogs := make([]*accesslog.AccessLog, 0, totalLen)
+	omitEmptyValues := al.OmitEmptyValues
 
 	// handle text file access logs
 	for _, text := range al.Text {
@@ -121,6 +122,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 						},
 					},
 				},
+				OmitEmptyValues: omitEmptyValues,
 			},
 		}
 
@@ -181,6 +183,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 					Format: &cfgcore.SubstitutionFormatString_JsonFormat{
 						JsonFormat: jsonFormat,
 					},
+					OmitEmptyValues: omitEmptyValues,
 				},
 			},
 		}
